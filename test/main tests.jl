@@ -25,6 +25,12 @@ settings = Settings(nits, 0.5, false)
 Random.seed!(123)
 out = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
+priors = FixedPrior(fill(0.1, size(x0)), 0.2, 1.0, 0.0)
+nits = 1_000_000
+settings = Settings(nits, 0.5, false)
+Random.seed!(123)
+out = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+
 plot(out["t"][1:nits], vec(out["Sk_x"][:,1,:])[1:nits])
 plot!(out["t"][1:nits], vec(out["Sk_x"][:,2,:])[1:nits])
 plot!(out["t"][1:100], vec(out["Sk_x"][:,3,:])[1:100])
@@ -35,6 +41,7 @@ plot(out["t"][1:100], vec(out["Sk_x"][:,7,:])[1:100])
 plot!(out["t"][1:100], vec(out["Sk_x"][:,8,:])[1:100])
 
 plot(out["t"],vec(sum(out["Sk_s"], dims = 2)))
+histogram(vec(sum(out["Sk_s"], dims = 2)))
 
 smps = post_estimates(out, dat, collect(1:3:out["t"][end]))
 
