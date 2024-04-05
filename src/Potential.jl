@@ -14,10 +14,16 @@ function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianInd
         ∇Uλ += sum(dat.covar[j1,c].*exp.(sum(dot.(x[:,j2],dat.covar[:,c]),dims = 1)))*(dat.s[s[j2]] - dat.s[s[j2-1]])
     end
     ∇Uλ += prior_add(x, s, priors, j)
+    return ∇Uλ
 end
 
 function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors, j::Int64)
-    return -logpdf(Normal(x[j[1], s[j[1], j[2]-1]], priors.σ), x[j])
+    if isnothing(findfirst(s[j[1],1:(j[2]-1)]))
+        # First evaluation - draw from initial prior
+        return -logpdf(Normal(priors.μ0, priors.σ0), x[j])
+    else
+        return -logpdf(Normal(x[j[1], s[j[1], j[2]-1]], priors.σ), x[j])
+    end
 end
 
 function ∇U_bound(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, priors::Prior, j::CartesianIndex, dyn::Dynamics)

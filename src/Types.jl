@@ -2,7 +2,7 @@
 struct PEMData
     y::Vector{Float64}
     cens::Vector{Float64}
-    cov::Matrix{Float64}
+    covar::Matrix{Float64}
     p::Int64
     n::Int64
     s::Vector{Float64}
@@ -11,12 +11,27 @@ end
 
 struct Settings
     max_ind::Int64
+    tb_init::Float64
 end
 
 abstract type Prior end
 
+struct FixedPrior <: Prior
+    ω::Vector{Float64}
+    σ::Float64
+    σ0::Float64
+    μ0::Float64
+end
 
 # Sampler tracking
+mutable struct SamplerEval
+    bounds::Int64
+    flip_attempts::Int64
+    flips::Int64
+    splits::Int64
+    merges::Int64
+end
+
 mutable struct Dynamics
     ind::Int64
     t_bound::Matrix{Float64}
@@ -24,9 +39,8 @@ mutable struct Dynamics
     b::Matrix{Float64}
     t_set::Matrix{Float64}
     new_t::Matrix{Bool}
+    sampler_eval::SamplerEval
 end
 
-mutable struct SamplerEval
 
-end
 

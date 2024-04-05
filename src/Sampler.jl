@@ -1,15 +1,15 @@
 include("Types.jl")
 include("Potential.jl")
-include("SplitMerge.jl")
+include("Fixed priors.jl")
 
 function pem_sample(x0::Matrix{Float64}, s0::Vector{Bool}, v0::Matrix{Float64}, t0::Float64, dat::PEMData, priors::Prior, settings::Settings)
     x, s, v, t = copy(x0), copy(s0), copy(v0), copy(t0)
     Q_f = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     Q_s = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     Q_m = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
-    dyn = Dynamics()
+    dyn = Dynamics(1, settings.tb_int.*ones(size(x)), zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), 
+                    SamplerEval(0,0,0,0,0))
     start_queue!(Q_f, Q_s, Q_m, x, s, v, dat, dyn)  
-    sampler_eval = SamplerEval()
     x_track = zeros(dat.p, size(dat.s,1), settings.max_ind)
     v_track = zeros(dat.p, size(dat.s,1), settings.max_ind)
     s_track = zeros(dat.p, size(dat.s,1), settings.max_ind)
@@ -17,31 +17,33 @@ function pem_sample(x0::Matrix{Float64}, s0::Vector{Bool}, v0::Matrix{Float64}, 
     x_track[:,:,1] = copy(x)
     v_track[:,:,1] = copy(v)
     s_track[:,:,1] = copy(s)
+    # Hyperparameters depends on the prior specification so need functions
+    h_track = h_track_init(priors)
     t_track[1] = copy(t) 
     dyn.ind += 1
     for i in 1:settings.max_ind
         # Generate next event time
-        sampler_inner(x, s, v, t, dat, priors, settings, Q_f, Q_s, Q_m, dyn)
-        # Store next event
-        sampler_store(x_track, s_track, v_track, t_track)
+        sampler_inner!(x, s, v, t, Q_f, Q_s, Q_m, priors, dat, dyn)
         x_track[:,:,dyn.ind] = copy(x)
         v_track[:,:,dyn.ind] = copy(v)
         s_track[:,:,dyn.ind] = copy(s)
         t_track[dyn.ind] = copy(t) 
+        h_store!(h_track, priors, dyn)
         dyn.ind += 1
         # Print?
-        if dyn.ind % 10_000
+        if (dyn.ind % 10_000) == 0.0
             sampler_update(dyn, settings, t)
         end
     end
     # Final things
-    return Dict("Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "t" => t_track, "Eval" => sampler_eval)
+    return Dict("Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "t" => t_track, "Eval" => dyn.sampler_eval)
 end
 
 function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, x::Vector{Float64}, s::Vector{Bool}, v::Vector{Float64}, dat::PEMData,  dyn::Dynamics)
     for j in findall(s)
         # Getting bounding parameters and store final rate eval
         dyn.a[j], dyn.b[j] = ∇U_bound(x, v, s, dat, priors, j, dyn)
+        sampler_eval.bounds += 1
         # Generate next event time (from upper bound pre-thinned)
         τ = poisson_time(dyn.a[j], dyn.b[j], rand())
         if τ > dyn.t_bound[j]
@@ -56,15 +58,17 @@ function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue
         enqueue!(Q_f, j, τ)
         ## Merge queue
         l = findfirst(s[j[1],(j[2] + 1):end])
-        if l != j[2]
-            if v[j] == v[l,j[2]]
-                enqueue!(Q_m, j, Inf)
-            elseif (x[j] < x[l,j[2]]) && (v[j] > 0.0)
-                enqueue!(Q_m, j, (x[l,j[2]] - x[j])/2)
-            elseif (x[j] > x[l,j[2]]) && (v[j] < 0.0)
-                enqueue!(Q_m, j, (x[j] - x[l,j[2]])/2)
-            else
-                enqueue!(Q_m, j, Inf)
+        if !isnothing(l)
+            if l != j[2]
+                if v[j] == v[l,j[2]]
+                    enqueue!(Q_m, j, Inf)
+                elseif (x[j] < x[l,j[2]]) && (v[j] > 0.0)
+                    enqueue!(Q_m, j, (x[l,j[2]] - x[j])/2)
+                elseif (x[j] > x[l,j[2]]) && (v[j] < 0.0)
+                    enqueue!(Q_m, j, (x[j] - x[l,j[2]])/2)
+                else
+                    enqueue!(Q_m, j, Inf)
+                end
             end
         end
     end
@@ -74,7 +78,7 @@ function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue
     end
 end
 
-function sampler_inner()
+function sampler_inner!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, priors::Prior, dat::PEMData, dyn::Dynamics)
     inner_stop = false
     while !inner_stop
         τ = copy(t)
@@ -85,16 +89,20 @@ function sampler_inner()
         if type == 1
             if dyn.new_t[j]
                 new_bound!(Q_f, t, x, v, s, priors, dat, dyn, j)
+                dyn.sampler_eval.bounds += 1
             else
-                inner_stop = flip_attempt!(x, v, s, dat, j, priors, dyn)
+                dyn.sampler_eval.flip_attempts += 1
+                inner_stop = flip_attempt!(x, v, s, t, Q_f, Q_s, Q_m, dat, j, priors, dyn)
             end
         end
         if type == 2
-            split_int!()
+            dyn.sampler_eval.splits += 1
+            split_int!(x, v, s, t, Q_f, Q_s, Q_m, dat, j, priors, dyn)
             inner_stop = true
         end
         if type == 3
-            merge_int!()
+            dyn.sampler_eval.merges += 1
+            merge_int!(x, v, s, t, Q_f, Q_s, Q_m, dat, j, priors, dyn)
             inner_stop = true
         end
     end
@@ -114,7 +122,7 @@ function event_find(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, 
     return t, j, type
 end
 
-function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
+function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
     # True rate
     λ = max(v[j]*∇U(x, s, dat, j, priors), 0.0)
     # Upper bound
@@ -124,21 +132,21 @@ function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
         error("Incorrect flipping upper bound")
     end
     if λ/Λ > rand()
+        dyn.flips += 1
         v[j] = - v[j]
         nhood = neighbourhood(j, s)
         for l in nhood
             new_bound!(Q_f, t, x, v, s, priors, dat, dyn, l)
-            new_split!(Q_s, priors, l)
             new_merge!(Q_m, t, x, v, s, l)
         end
         return true
     else
-        new_bound!(Q_f, t, x, v, s, priors, dat, dyn, l)
+        new_bound!(Q_f, t, x, v, s, priors, dat, dyn, j)
         return false
     end
 end
 
-function split_int!()
+function split_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
     s[j] = true
     new_ind = findfirst(s[j[1],(j[2] + 1):end])
     v[new_ind] = 2*rand(Bernoulli(0.5)) - 1.0
@@ -151,12 +159,14 @@ function split_int!()
     # Update interval
     for l in nhood
         new_bound!(Q_f, t, x, v, s, priors, dat, dyn, l)
-        new_merge!(Q_m, t, x, v, s, l)
-        new_split!(Q_s, priors, l)
+        if l[1] == j[1]
+            new_merge!(Q_m, t, x, v, s, l)
+            new_split!(Q_s, t, priors, l)
+        end
     end
 end
 
-function merge_int!()
+function merge_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
     s[j] = false
     x[j] = Inf
     delete!(Q_s, j)
@@ -166,8 +176,10 @@ function merge_int!()
     # Update interval
     for l in nhood
         new_bound!(Q_f, t, x, v, s, priors, dat, dyn, l)
-        new_merge!(Q_m, t, x, v, s, l)
-        new_split!(Q_s, priors, l)
+        if l[1] == j[1]
+            new_merge!(Q_m, t, x, v, s, l)
+            new_split!(Q_s, t, priors, l)
+        end
     end
 end
 
@@ -197,7 +209,7 @@ function new_bound!(Q_f::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matri
     enqueue!(Q_f, j, τ)
 end
 
-function new_split!(Q_s::PriorityQueue, priors::Prior, j::CartesianIndex)
+function new_split!(Q_s::PriorityQueue, t::Float64, priors::Prior, j::CartesianIndex)
     delete!(Q_s, j)
     enqueue!(Q_s, j, t + rand(Exponential(1/split_rate(priors, j))))
 end
@@ -205,15 +217,17 @@ end
 function new_merge!(Q_m::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, j::CartesianIndex)
     delete!(Q_m,j)
     l = findfirst(s[j[1],(j[2] + 1):end])
-    if l != j[2]
-        if v[j] == v[l,j[2]]
-            enqueue!(Q_m, j, Inf)
-        elseif (x[j] < x[l,j[2]]) && (v[j] > 0.0)
-            enqueue!(Q_m, j, t + (x[l,j[2]] - x[j])/2)
-        elseif (x[j] > x[l,j[2]]) && (v[j] < 0.0)
-            enqueue!(Q_m, j, t + (x[j] - x[l,j[2]])/2)
-        else
-            enqueue!(Q_m, j, Inf)
+    if !isnothing(l)
+        if l != j[2]
+            if v[j] == v[l,j[2]]
+                enqueue!(Q_m, j, Inf)
+            elseif (x[j] < x[l,j[2]]) && (v[j] > 0.0)
+                enqueue!(Q_m, j, t + (x[l,j[2]] - x[j])/2)
+            elseif (x[j] > x[l,j[2]]) && (v[j] < 0.0)
+                enqueue!(Q_m, j, t + (x[j] - x[l,j[2]])/2)
+            else
+                enqueue!(Q_m, j, Inf)
+            end
         end
     end
 end
