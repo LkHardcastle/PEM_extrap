@@ -7,7 +7,7 @@ function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianInd
         int_start = 1
     end
     sub_ints = vcat(int_start, intersect(findall(sum(s, dims = 1) .> 0.0), (int_start + 1):j2))
-    for k in 2:axes(sub_ints,1)
+    for k in 2:length(sub_ints)
         d = findall(dat.d .∈ (sub_ints[k-1] + 1):sub_ints[k])
         c = (d[end] + 1):dat.n
         ∇Uλ += sum(dat.covar[j1,d].*exp.(sum(dot.(x[:,j2],dat.covar[:,d]),dims = 1)).*(dat.y[d] - dat.s[s[j2-1]])) - sum(dat.cens[d])
@@ -17,12 +17,12 @@ function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianInd
     return ∇Uλ
 end
 
-function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors, j::Int64)
-    if isnothing(findfirst(s[j[1],1:(j[2]-1)]))
+function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, j::CartesianIndex)
+    if isnothing(findlast(s[j[1],1:(j[2]-1)]))
         # First evaluation - draw from initial prior
-        return -logpdf(Normal(priors.μ0, priors.σ0), x[j])
+        return (1/priors.σ0^2)*(x[j] - priors.μ0)
     else
-        return -logpdf(Normal(x[j[1], s[j[1], j[2]-1]], priors.σ), x[j])
+        return (1/priors.σ^2)*(x[j] - x[j[1], findlast(s[j[1],1:(j[2]-1)])])
     end
 end
 

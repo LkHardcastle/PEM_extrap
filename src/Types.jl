@@ -12,12 +12,13 @@ end
 struct Settings
     max_ind::Int64
     tb_init::Float64
+    verbose::Bool
 end
 
 abstract type Prior end
 
 struct FixedPrior <: Prior
-    ω::Vector{Float64}
+    ω::Matrix{Float64}
     σ::Float64
     σ0::Float64
     μ0::Float64
@@ -39,6 +40,7 @@ mutable struct Dynamics
     b::Matrix{Float64}
     t_set::Matrix{Float64}
     new_t::Matrix{Bool}
+    last_type::String
     sampler_eval::SamplerEval
 end
 
