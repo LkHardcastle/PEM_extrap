@@ -182,10 +182,7 @@ function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
 end
 
 function split_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
-    #println(j);
     s[j] = true
-    #println(s);
-    #println(neighbourhood(j, s))
     delete!(Q_s, j)
     new_ind = CartesianIndex(j[1],findfirst(s[j[1],(j[2] + 1):end]) + j[2])
     l = findlast(s[j[1],begin:(j[2]-1)])
@@ -208,6 +205,8 @@ function split_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::
         if l[1] == j[1]
             if l == j
                 new_merge!(Q_m, t, x, v, s, l, true)
+            else
+                new_merge!(Q_m, t, x, v, s, l, false)
             end
         end
     end
