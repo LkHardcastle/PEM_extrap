@@ -1,14 +1,16 @@
 include("Types.jl")
 include("Potential.jl")
 include("Fixed priors.jl")
-
+#include("GeomPrior.jl")
+include("HyperPrior.jl")
 function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, t0::Float64, dat::PEMData, priors::Prior, settings::Settings)
     x, s, v, t = copy(x0), copy(s0), copy(v0), copy(t0)
     Q_f = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     Q_s = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     Q_m = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
-    dyn = Dynamics(1, settings.tb_init.*ones(size(x)) .+ rand(Normal(0.0,0.0001),size(x)), zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), "Start",
-                    SamplerEval(0,0,0,0,0))
+    #w_order = w_order_init(s, priors)
+    dyn = Dynamics(1, settings.tb_init.*ones(size(x)) .+ rand(Normal(0.0,0.0001),size(x)), zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), "Start", 0.1,
+                    SamplerEval(0,0,0,0,0,0,0))
     start_queue!(Q_f, Q_s, Q_m, x, s, v, dat, dyn)  
     x_track = zeros(dat.p, size(dat.s,1), settings.max_ind)
     v_track = zeros(dat.p, size(dat.s,1), settings.max_ind)
@@ -18,7 +20,7 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
     v_track[:,:,1] = copy(v)
     s_track[:,:,1] = copy(s)
     # Hyperparameters depends on the prior specification so need functions
-    h_track = h_track_init(priors)
+    h_track = h_track_init(priors, settings)
     t_track[1] = copy(t) 
     dyn.ind += 1
     for i in 2:settings.max_ind
@@ -37,13 +39,14 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
         h_store!(h_track, priors, dyn)
         dyn.ind += 1
         # Print?
-        if (dyn.ind % 10_000) == 0.0
+        if (dyn.ind % trunc(Int, settings.max_ind/20)) == 0.0
             sampler_update(dyn, settings, t)
         end
     end
     # Final things
-    return Dict("Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "t" => t_track, "Eval" => dyn.sampler_eval)
+    return Dict("Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "Sk_h" => h_track, "t" => t_track, "Eval" => dyn.sampler_eval)
 end
+
 
 function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, x::Matrix{Float64}, s::Matrix{Bool}, v::Matrix{Float64}, dat::PEMData,  dyn::Dynamics)
     for j in findall(s)
@@ -91,7 +94,7 @@ function sampler_inner!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool},
     inner_stop = false
     while !inner_stop
         τ = copy(t)
-        t, j, type = event_find(Q_f, Q_s, Q_m, τ)
+        t, j, type = event_find(Q_f, Q_s, Q_m, τ, settings)
         # Update x
         t_ = t - τ
         x .+= v.*t_
@@ -115,11 +118,16 @@ function sampler_inner!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool},
             dyn.last_type = "Merge"
             inner_stop = true
         end
+        if type == 4
+            hyper_update!(x, v, s, t, Q_f, Q_s, Q_m, dat, j, priors, dyn)
+            dyn.last_type = "Hyper"
+            inner_stop = true
+        end
     end
     return x, v, s, t
 end
 
-function event_find(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, τ::Float64)
+function event_find(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, τ::Float64, settings::Settings)
     j1, t1 = peek(Q_f)
     if !isempty(Q_s)
         j2, t2 = peek(Q_s)
@@ -131,9 +139,16 @@ function event_find(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, 
     else
         j3, t3 = CartesianIndex(0,0), Inf
     end
-    type = findmin([t1,t2,t3])[2]
-    t = [t1,t2,t3][type]
-    j = [j1,j2,j3][type]
+    if settings.h_rate > 0.0
+        t4 = τ + rand(Exponential(1/settings.h_rate))
+        j4 = CartesianIndex(0,0)
+    else
+        t4 = Inf
+        j4 = CartesianIndex(0,0)
+    end
+    type = findmin([t1,t2,t3,t4])[2]
+    t = [t1,t2,t3,t4][type]
+    j = [j1,j2,j3,j4][type]
     if τ > t
         println(t);println(τ)
         println(Q_f);println(Q_s);println(Q_m)
