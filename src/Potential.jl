@@ -66,6 +66,15 @@ function poisson_time(a, b, u)
     end
 end
 
-function split_rate(priors::Prior, j::CartesianIndex)
-    return (priors.ω[j]/(1 - priors.ω[j])).*pdf(Normal(0, priors.σ),0)
+function split_rate(s::Matrix{Bool}, dat::PEMData, priors::Prior, j::CartesianIndex)
+    j_prev = findlast(s[j[1],1:j[2]])
+    if isnothing(j_prev)
+        v1_prop = 100*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
+    else
+        j_prev += 1
+        v1_prop = 100*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[j_prev]))])/max(sum(dat.cens),1) + 0.01*j[2])
+    end
+    j_next = findfirst(s[j[1],(j[2] + 1):end]) + j[2]
+    v2_prop = 100*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j_next]),findall(dat.y .> dat.s[(j[2]+1)]))])/max(sum(dat.cens),1) + 0.01*j_next)
+    return 0.5*(priors.ω[j]/(1 - priors.ω[j]))*pdf(Normal(0, priors.σ),0)*(v1_prop + v2_prop)
 end

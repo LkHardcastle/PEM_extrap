@@ -4,8 +4,8 @@ using DrWatson
 using DataStructures, LinearAlgebra, Distributions, Random
 using Plots
 
-include(srcdir("PreProcessing.jl"))
 include(srcdir("Sampler.jl"))
+include(srcdir("PreProcessing.jl"))
 include(srcdir("PostProcessing.jl"))
 
 Random.seed!(123)
@@ -16,16 +16,18 @@ y = rand(Exponential(0.5),n)
 #breaks = collect(0.05:0.05:1.0)
 breaks = [0.5, 1.0]
 p = 1
-x0, v0, s0 = init_params(breaks, p)
-cens = rand(Bernoulli(0.9),n)
+cens = fill(1.0,n)
 covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
+x0, v0, s0 = init_params(p, dat)
 t0 = 0.0
 priors = FixedPrior(fill(0.5, size(x0)), 1.0, 1.0, 0.0)
-nits = 2_000_000
-settings = Settings(nits, 0.5, false, 0.0)
-Random.seed!(123)
+nits = 10
+settings = Settings(nits, 0.9, 0.0, true)
+Random.seed!(456)
 out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+out2 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+
 
 priors = HyperPrior(fill(0.1, size(x0)), 0.1, 2.5, 0.2, 1.0, 0.0)
 settings = Settings(nits, 0.5, 2.0, false)
@@ -37,23 +39,28 @@ settings = Settings(nits, 0.5, 2.0, false)
 Random.seed!(123)
 out3 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
-smps = post_estimates(out1, dat, collect(100.0:100.0:out1["t"][end]))
+smps = post_estimates(out1, dat, collect(1000.0:1000.0:out1["t"][end]))
 
 mean(smps[:,1])
 quantile(smps[:,1],0.025)
+quantile(Normal(0,1),0.025)
 quantile(smps[:,1],0.975)
+quantile(Normal(0,1),0.975)
 mean(smps[:,2])
-quantile(smps[:,2],0.025)
-quantile(smps[:,2],0.975)
+
 mean(smps[findall(smps[:,1] .== smps[:,2]),1])
 quantile(smps[findall(smps[:,1] .== smps[:,2]),1],0.025)
 quantile(smps[findall(smps[:,1] .== smps[:,2]),1],0.975)
+
 mean(smps[findall(smps[:,1] .!= smps[:,2]),1])
 quantile(smps[findall(smps[:,1] .!= smps[:,2]),1],0.025)
 quantile(smps[findall(smps[:,1] .!= smps[:,2]),1],0.975)
+
 mean(smps[findall(smps[:,1] .!= smps[:,2]),2])
 quantile(smps[findall(smps[:,1] .!= smps[:,2]),2],0.025)
 quantile(smps[findall(smps[:,1] .!= smps[:,2]),2],0.975)
+quantile(Normal(0,sqrt(2)),0.025)
+
 plot(scatter(smps[:,1],smps[:,2]))
 mean(smps[:,1] .== smps[:,2])
 
@@ -70,8 +77,15 @@ plot(out3["Sk_h"])
 plot(out2["Sk_h"])
 out2["Eval"]
 
-plot(out1["t"][1:200], vec(out1["Sk_x"][:,1,:])[1:200])
-plot!(out1["t"][1:200], vec(out1["Sk_x"][:,2,:])[1:200])
+plot(out1["t"][1:20], vec(out1["Sk_x"][:,1,:])[1:20])
+plot!(out1["t"][1:20], vec(out1["Sk_x"][:,2,:])[1:20])
+plot!(out1["t"][1:20], vec(out1["Sk_v"][:,1,:])[1:20])
+plot!(out1["t"][1:20], vec(out1["Sk_v"][:,2,:])[1:20])
+
+plot(out1["t"][20:40], vec(out1["Sk_x"][:,1,:])[20:40])
+plot!(out1["t"][20:40], vec(out1["Sk_x"][:,2,:])[20:40])
+plot!(out1["t"][20:40], vec(out1["Sk_v"][:,1,:])[20:40])
+plot!(out1["t"][20:40], vec(out1["Sk_v"][:,2,:])[20:40])
 
 histogram(vec(out1["Sk_x"][:,1,:])[1:nits])
 quantile(vec(out1["Sk_x"][:,1,:])[1:nits],0.05)

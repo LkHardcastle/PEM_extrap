@@ -39,7 +39,7 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
         h_store!(h_track, priors, dyn)
         dyn.ind += 1
         # Print?
-        if (dyn.ind % trunc(Int, settings.max_ind/20)) == 0.0
+        if (dyn.ind % trunc(Int, settings.max_ind/10)) == 0.0
             sampler_update(dyn, settings, t)
         end
     end
@@ -70,14 +70,22 @@ function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue
         if !isnothing(l)
             l += j[2]
             if l != j[2]
-                if v[j] == v[j[1],l]
-                    enqueue!(Q_m, j, Inf)
-                elseif (x[j] < x[j[1],l]) && (v[j] > 0.0)
-                    enqueue!(Q_m, j, (x[j[1],l] - x[j])/2)
-                elseif (x[j] > x[j[1],l]) && (v[j] < 0.0)
-                    enqueue!(Q_m, j, (x[j] - x[j[1],l])/2)
+                if sign(v[j]) == sign(v[j[1],l])
+                    if (abs(v[j]) > abs(v[j[1],l])) && (x[j] < x[j[1],l])
+                        enqueue!(Q_m, j, (x[j[1],l] - x[j])/(abs(v[j]) - abs(v[j[1],l])))
+                    elseif (abs(v[j]) < abs(v[j[1],l])) && (x[j] > x[j[1],l])
+                        enqueue!(Q_m, j, (x[j] - x[j[1],l])/(abs(v[j[1],l]) - abs(v[j])))
+                    else
+                        enqueue!(Q_m, j, Inf)
+                    end
                 else
-                    enqueue!(Q_m, j, Inf)
+                    if (x[j] < x[j[1],l]) && (v[j] > 0.0)
+                        enqueue!(Q_m, j, (x[j[1],l] - x[j])/(abs(v[j]) + abs(v[j[1],1])))
+                    elseif (x[j] > x[j[1],l]) && (v[j] < 0.0)
+                        enqueue!(Q_m, j, (x[j] - x[j[1],l])/(abs(v[j]) + abs(v[j[1],1])))
+                    else
+                        enqueue!(Q_m, j, Inf)
+                    end
                 end
             end
         else
@@ -86,7 +94,7 @@ function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue
     end
     for j in findall(s .== false)
         ## Split queue 
-        enqueue!(Q_s, j, rand(Exponential(1/split_rate(priors, j))))
+        enqueue!(Q_s, j, rand(Exponential(1/split_rate(s, dat, priors, j))))
     end
 end
 
@@ -207,8 +215,14 @@ function split_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::
         l += 1
     end
     prev_ind = CartesianIndex(j[1],l)
-    v[prev_ind:new_ind] .= 2*rand(Bernoulli(0.5)) - 1.0
-    v[prev_ind:j] .= -v[j]
+    #v[prev_ind:new_ind] .= (2*rand(Bernoulli(0.5)) - 1.0)
+    v[(j + CartesianIndex(0,1)):new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+    #v[prev_ind:j] .= -v[j]
+    if isnothing(findlast(s[j[1],begin:(j[2]-1)]))
+        v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
+    else
+        v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
+    end
     x[prev_ind:new_ind] .= x[new_ind]
     nhood = neighbourhood(j, s)
     for l in nhood
@@ -233,13 +247,15 @@ function merge_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::
     l = findlast(s[j[1],begin:(j[2]-1)])
     if isnothing(l)
         l = 1
+        prev_ind = CartesianIndex(j[1],l)
+        v[prev_ind:new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[new_ind[2]])])/max(sum(dat.cens),1) + 0.01*new_ind[2])
     else
         l += 1
+        prev_ind = CartesianIndex(j[1],l)
+        v[prev_ind:new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
     end
-    prev_ind = CartesianIndex(j[1],l)
-    v[prev_ind:new_ind] .= 2*rand(Bernoulli(0.5)) - 1.0
     x[prev_ind:new_ind] .= x[new_ind]
-    new_split!(Q_s, t, priors, j)
+    new_split!(Q_s, s, t, priors, j)
     delete!(Q_m, j)
     delete!(Q_f, j)
     nhood = neighbourhood(j, s)
@@ -297,8 +313,8 @@ function new_bound!(Q_f::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matri
     enqueue!(Q_f, j, t + τ)
 end
 
-function new_split!(Q_s::PriorityQueue, t::Float64, priors::Prior, j::CartesianIndex)
-    enqueue!(Q_s, j, t + rand(Exponential(1/split_rate(priors, j))))
+function new_split!(Q_s::PriorityQueue, s::Matrix{Bool}, t::Float64, priors::Prior, j::CartesianIndex)
+    enqueue!(Q_s, j, t + rand(Exponential(1/split_rate(s, dat, priors, j))))
 end
 
 function new_merge!(Q_m::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, j::CartesianIndex, new::Bool)
@@ -308,15 +324,23 @@ function new_merge!(Q_m::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matri
     l = findfirst(s[j[1],(j[2] + 1):end])
     if !isnothing(l)
         l += j[2]
-        if l != j[2] 
-            if v[j] == v[j[1],l]
-                enqueue!(Q_m, j, Inf)
-            elseif (x[j] < x[j[1],l]) && (v[j] > 0.0)
-                enqueue!(Q_m, j, t + (x[j[1],l] - x[j])/2)
-            elseif (x[j] > x[j[1],l]) && (v[j] < 0.0)
-                enqueue!(Q_m, j, t + (x[j] - x[j[1],l])/2)
+        if l != j[2]
+            if sign(v[j]) == sign(v[j[1],l])
+                if (abs(v[j]) > abs(v[j[1],l])) && (x[j] < x[j[1],l])
+                    enqueue!(Q_m, j, t + (x[j[1],l] - x[j])/(abs(v[j]) - abs(v[j[1],l])))
+                elseif (abs(v[j]) < abs(v[j[1],l])) && (x[j] > x[j[1],l])
+                    enqueue!(Q_m, j, t + (x[j] - x[j[1],l])/(abs(v[j[1],l]) - abs(v[j])))
+                else
+                    enqueue!(Q_m, j, Inf)
+                end
             else
-                enqueue!(Q_m, j, Inf)
+                if (x[j] < x[j[1],l]) && (v[j] > 0.0)
+                    enqueue!(Q_m, j, t + (x[j[1],l] - x[j])/(abs(v[j]) + abs(v[j[1],1])))
+                elseif (x[j] > x[j[1],l]) && (v[j] < 0.0)
+                    enqueue!(Q_m, j, t + (x[j] - x[j[1],l])/(abs(v[j]) + abs(v[j[1],1])))
+                else
+                    enqueue!(Q_m, j, Inf)
+                end
             end
         end
     else

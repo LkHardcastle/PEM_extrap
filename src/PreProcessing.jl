@@ -1,16 +1,20 @@
-function init_params(breaks::Vector{Float64}, p::Int64)
-    x0 = zeros(p, length(breaks))
-    v0 = rand(p, length(breaks))
-    s0 = fill(false, p, length(breaks))
+function init_params(p::Int64, dat::PEMData)
+    x0 = zeros(p, length(dat.s))
+    v0 = rand(p, length(dat.s))
+    s0 = fill(false, p, length(dat.s))
     for j in 1:p
-        ind = sort(vcat(unique(rand( DiscreteUniform(1, length(breaks)), max(trunc(Int, 0.1*length(breaks)),5) )), length(breaks)))
+        ind = sort(unique(vcat(unique(rand(DiscreteUniform(1, length(dat.s)), max(trunc(Int, 0.1*length(dat.s)),5) )), length(dat.s))))
         s0[j,ind] .= true
         x_int = rand(Normal(0.0,1), length(ind))
         v_int = 2 .*rand(Bernoulli(0.5), length(ind)) .- 1.0
         k = 1
         for i in axes(x0,2)
             x0[j,i] = x_int[k]
-            v0[j,i] = v_int[k]
+            if k == 1
+                v0[j,i] = v_int[k]*(sum(dat.cens[findall(dat.y .< dat.s[ind[k]])])/max(sum(dat.cens),1) + 0.01*ind[k])*100
+            else
+                v0[j,i] = v_int[k]*(sum(dat.cens[intersect(findall(dat.y .< dat.s[ind[k]]),findall(dat.y .> dat.s[ind[k-1]]))])/max(sum(dat.cens),1) + 0.01*ind[k])*100
+            end
             if s0[j,i] 
                 k += 1
             end
