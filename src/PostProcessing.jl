@@ -11,3 +11,11 @@ function post_estimates(out, dat, t_smp)
     end
     return smps
 end
+
+function post_smps(smps::Array{Float64})
+    est = zeros(size(smps[:,:,1],1)*size(smps[:,:,1],2), size(smps,3))
+    for i in axes(smps,3)
+        est[:,i] = vec(smps[:,:,i])
+    end
+    return transpose(est)
+end

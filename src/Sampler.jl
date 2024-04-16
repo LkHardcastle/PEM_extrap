@@ -21,12 +21,16 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
     s_track[:,:,1] = copy(s)
     x_smp = zeros(dat.p, size(dat.s,1), settings.max_smp)
     x_smp[:,:,1] = copy(x)
+    v_smp = zeros(dat.p, size(dat.s,1), settings.max_smp)
+    v_smp[:,:,1] = copy(v)
+    t_smp = zeros(settings.max_smp)
     dyn.smp_ind += 1
     # Hyperparameters depends on the prior specification so need functions
     h_track = h_track_init(priors, settings)
     t_track[1] = copy(t) 
     dyn.ind += 1
-    for i in 2:settings.max_ind
+    i = 2
+    while dyn.ind < settings.max_ind
         # Generate next event time
         if settings.verbose
             println(dyn.last_type)
@@ -42,17 +46,26 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
             t_track[dyn.ind] = copy(t) 
             h_store!(h_track, priors, dyn)
             dyn.ind += 1
+            # Print?
+            if (dyn.ind % trunc(Int, settings.max_ind/10)) == 0.0
+                sampler_update(dyn, settings, t)
+            end
         else
             x_smp[:,:,dyn.smp_ind] = copy(x)
+            v_smp[:,:,dyn.smp_ind] = copy(v)
+            t_smp[dyn.smp_ind] = copy(t)
             dyn.smp_ind += 1
-        end
-        # Print?
-        if (dyn.ind % trunc(Int, settings.max_ind/10)) == 0.0
-            sampler_update(dyn, settings, t)
+            if dyn.smp_ind > settings.max_smp
+                println("Max samples reached")
+                break
+            end
         end
     end
+    smps = post_smps(x_smp[:,:,1:(dyn.smp_ind - 1)])
+    v_smp = post_smps(v_smp[:,:,1:(dyn.smp_ind - 1)])
+    t_smp = t_smp[1:(dyn.smp_ind - 1)]
     # Final things
-    return Dict("Smp_x" => x_smp, "Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "Sk_h" => h_track, "t" => t_track, "Eval" => dyn.sampler_eval)
+    return Dict("Smp_x" => smps, "Smp_t" => t_smp, "Smp_v" => v_smp, "Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "Sk_h" => h_track, "t" => t_track, "Eval" => dyn.sampler_eval)
 end
 
 
@@ -79,12 +92,22 @@ function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue
             l += j[2]
             if l != j[2]
                 if sign(v[j]) == sign(v[j[1],l])
-                    if (abs(v[j]) > abs(v[j[1],l])) && (x[j] < x[j[1],l])
-                        enqueue!(Q_m, j, (x[j[1],l] - x[j])/(abs(v[j]) - abs(v[j[1],l])))
-                    elseif (abs(v[j]) < abs(v[j[1],l])) && (x[j] > x[j[1],l])
-                        enqueue!(Q_m, j, (x[j] - x[j[1],l])/(abs(v[j[1],l]) - abs(v[j])))
-                    else
-                        enqueue!(Q_m, j, Inf)
+                    if x[j] < x[j[1],l]
+                        if (abs(v[j]) > abs(v[j[1],l])) && (sign(v[j]) > 0.0)
+                            enqueue!(Q_m, j, t + abs(x[j[1],l] - x[j])/(abs(v[j] - v[j[1],l])))
+                        elseif (abs(v[j]) < abs(v[j[1],l])) && (sign(v[j]) < 0.0)
+                            enqueue!(Q_m, j, t + abs(x[j[1],l] - x[j])/(abs(v[j] - v[j[1],l])))
+                        else
+                            enqueue!(Q_m, j, Inf)
+                        end
+                    elseif x[j] > x[j[1],l]
+                        if (abs(v[j]) < abs(v[j[1],l])) && (sign(v[j]) > 0.0)
+                            enqueue!(Q_m, j, abs(x[j[1],l] - x[j])/(abs(v[j] - v[j[1],l])))
+                        elseif (abs(v[j]) > abs(v[j[1],l])) && (sign(v[j]) < 0.0)
+                            enqueue!(Q_m, j, abs(x[j[1],l] - x[j])/(abs(v[j] - v[j[1],l])))
+                        else
+                            enqueue!(Q_m, j, Inf)
+                        end
                     end
                 else
                     if (x[j] < x[j[1],l]) && (v[j] > 0.0)
@@ -186,7 +209,7 @@ end
 
 function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
     # True rate
-    λ = max(v[j]*∇U(x, s, dat, j, priors), 0.0)
+    λ = max(v[j]*(∇U(x, s, dat, j) + ∇U_p(x, s, j, priors)) , 0.0)
     # Upper bound
     Λ = dyn.a[j] + (t - dyn.t_set[j])*dyn.b[j]
     if  λ > Λ + 1e-05
@@ -234,13 +257,30 @@ function split_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::
         l += 1
     end
     prev_ind = CartesianIndex(j[1],l)
-    #v[prev_ind:new_ind] .= (2*rand(Bernoulli(0.5)) - 1.0)
-    v[(j + CartesianIndex(0,1)):new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
-    #v[prev_ind:j] .= -v[j]
-    if isnothing(findlast(s[j[1],begin:(j[2]-1)]))
-        v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
+    if rand() < 1/2
+        #v[prev_ind:new_ind] .= (2*rand(Bernoulli(0.5)) - 1.0)
+        v_sign = sign(v[j])
+        #v[(j + CartesianIndex(0,1)):new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        v[(j + CartesianIndex(0,1)):new_ind] .= 100*v_sign*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        if isnothing(findlast(s[j[1],begin:(j[2]-1)]))
+            #v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
+            v[prev_ind:j] .= 100*v_sign*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
+        else
+            #v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
+            v[prev_ind:j] .= 100*v_sign*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
+        end
     else
-        v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
+        #v[prev_ind:new_ind] .= (2*rand(Bernoulli(0.5)) - 1.0)
+        v_sign = 2*rand(Bernoulli(0.5)) - 1.0
+        #v[(j + CartesianIndex(0,1)):new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        v[(j + CartesianIndex(0,1)):new_ind] .= 100*v_sign*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        if isnothing(findlast(s[j[1],begin:(j[2]-1)]))
+            #v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
+            v[prev_ind:j] .= -100*v_sign*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
+        else
+            #v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
+            v[prev_ind:j] .= -100*v_sign*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
+        end
     end
     x[prev_ind:new_ind] .= x[new_ind]
     nhood = neighbourhood(j, s)
@@ -267,11 +307,19 @@ function merge_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::
     if isnothing(l)
         l = 1
         prev_ind = CartesianIndex(j[1],l)
-        v[prev_ind:new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[new_ind[2]])])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        if sign(v[j]) == sign(v[new_ind])
+            v[prev_ind:new_ind] .= 100*sign(v[j])*(sum(dat.cens[findall(dat.y .< dat.s[new_ind[2]])])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        else
+            v[prev_ind:new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[new_ind[2]])])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        end
     else
         l += 1
         prev_ind = CartesianIndex(j[1],l)
-        v[prev_ind:new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        if sign(v[j]) == sign(v[new_ind])
+            v[prev_ind:new_ind] .= 100*sign(v[j])*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        else
+            v[prev_ind:new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        end
     end
     x[prev_ind:new_ind] .= x[new_ind]
     new_split!(Q_s, s, t, priors, j)
@@ -345,12 +393,29 @@ function new_merge!(Q_m::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matri
         l += j[2]
         if l != j[2]
             if sign(v[j]) == sign(v[j[1],l])
-                if (abs(v[j]) > abs(v[j[1],l])) && (x[j] < x[j[1],l])
-                    enqueue!(Q_m, j, t + (x[j[1],l] - x[j])/(abs(v[j]) - abs(v[j[1],l])))
-                elseif (abs(v[j]) < abs(v[j[1],l])) && (x[j] > x[j[1],l])
-                    enqueue!(Q_m, j, t + (x[j] - x[j[1],l])/(abs(v[j[1],l]) - abs(v[j])))
+                if x[j] < x[j[1],l]
+                    if (abs(v[j]) > abs(v[j[1],l])) && (sign(v[j]) > 0.0)
+                        enqueue!(Q_m, j, t + abs(x[j[1],l] - x[j])/(abs(v[j] - v[j[1],l])))
+                    elseif (abs(v[j]) < abs(v[j[1],l])) && (sign(v[j]) < 0.0)
+                        enqueue!(Q_m, j, t + abs(x[j[1],l] - x[j])/(abs(v[j] - v[j[1],l])))
+                    else
+                        enqueue!(Q_m, j, Inf)
+                    end
+                elseif x[j] > x[j[1],l]
+                    if (abs(v[j]) < abs(v[j[1],l])) && (sign(v[j]) > 0.0)
+                        enqueue!(Q_m, j, t + abs(x[j[1],l] - x[j])/(abs(v[j] - v[j[1],l])))
+                    elseif (abs(v[j]) > abs(v[j[1],l])) && (sign(v[j]) < 0.0)
+                        enqueue!(Q_m, j, t + abs(x[j[1],l] - x[j])/(abs(v[j] - v[j[1],l])))
+                    else
+                        enqueue!(Q_m, j, Inf)
+                    end
                 else
-                    enqueue!(Q_m, j, Inf)
+                    if v[j] != v[j[1],l]
+                        enqueue!(Q_m, j, Inf)
+                    else
+                        println(x);println(v);println(s)
+                        error("Merge issues")
+                    end
                 end
             else
                 if (x[j] < x[j[1],l]) && (v[j] > 0.0)

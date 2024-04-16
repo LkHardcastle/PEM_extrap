@@ -1,4 +1,4 @@
-function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianIndex, priors::Prior)
+function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianIndex)
     ∇Uλ = 0.0
     j1 = j[1]
     j2 = j[2]
@@ -13,10 +13,14 @@ function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianInd
         ∇Uλ += sum(dat.covar[j1,d].*exp.(sum(dot.(x[:,j2],dat.covar[:,d]),dims = 1)).*(dat.y[d] - dat.s[s[j2-1]])) - sum(dat.cens[d])
         ∇Uλ += sum(dat.covar[j1,c].*exp.(sum(dot.(x[:,j2],dat.covar[:,c]),dims = 1)))*(dat.s[s[j2]] - dat.s[s[j2-1]])
     end
-    ∇Uλ += prior_add(x, s, priors, j)
     return ∇Uλ
 end
 
+function ∇U_p(x::Matrix{Float64}, s::Matrix{Bool}, j::CartesianIndex, priors::Prior)
+    ∇Uλ = 0.0
+    ∇Uλ += prior_add(x, s, priors, j)
+    return ∇Uλ
+end
 function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, j::CartesianIndex)
     if isnothing(findlast(s[j[1],1:(j[2]-1)]))
         # First evaluation - draw from initial prior
@@ -27,17 +31,22 @@ function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, j::Cartes
 end
 
 function ∇U_bound(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, priors::Prior, j::CartesianIndex, dyn::Dynamics)
+    a, b = 0.0, 0.0
     if v[j] > 0.0
-        ΛU1 = max(v[j]*∇U(x, s, dat, j, priors), 0.0)
-        ΛU2 = max(v[j]*∇U(x .+ v.*dyn.t_bound[j], s, dat, j, priors), 0.0)
-        a = ΛU1 + 0.01 
+        ΛU1 = max(v[j]*∇U(x, s, dat, j), 0.0)
+        ΛU2 = max(v[j]*∇U(x .+ v.*dyn.t_bound[j], s, dat, j), 0.0)
+        a = ΛU1 #+ 0.01 
         b = (ΛU2 - ΛU1)/dyn.t_bound[j]
     elseif v[j] < 0.0
-        ΛU1 = max(v[j]*∇U(x, s, dat, j, priors), 0.0)
-        ΛU2 = max(v[j]*∇U(x .+ v.*dyn.t_bound[j], s, dat, j, priors), 0.0)
-        a = max(ΛU1, ΛU2) + 0.01
+        ΛU1 = max(v[j]*∇U(x, s, dat, j), 0.0)
+        ΛU2 = max(v[j]*∇U(x .+ v.*dyn.t_bound[j], s, dat, j), 0.0)
+        a = max(ΛU1, ΛU2) #+ 0.01
         b = 0.0
     end
+    ΛU1p = max(v[j]*∇U_p(x, s, j, priors), 0.0)
+    ΛU2p = max(v[j]*∇U_p(x .+ v.*dyn.t_bound[j], s, j, priors), 0.0)
+    a += ΛU1p #+ 0.01 
+    b += (ΛU2p - ΛU1p)/dyn.t_bound[j]
     return a, b
 end
 
