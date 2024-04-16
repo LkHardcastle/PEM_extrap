@@ -9,7 +9,7 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
     Q_s = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     Q_m = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     #w_order = w_order_init(s, priors)
-    dyn = Dynamics(1, settings.tb_init.*ones(size(x)) .+ rand(Normal(0.0,0.0001),size(x)), zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), "Start", 0.1,
+    dyn = Dynamics(1, 1, settings.tb_init.*ones(size(x)) .+ rand(Normal(0.0,0.0001),size(x)), zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), "Start", 0.1,
                     SamplerEval(0,0,0,0,0,0,0))
     start_queue!(Q_f, Q_s, Q_m, x, s, v, dat, dyn)  
     x_track = zeros(dat.p, size(dat.s,1), settings.max_ind)
@@ -19,6 +19,9 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
     x_track[:,:,1] = copy(x)
     v_track[:,:,1] = copy(v)
     s_track[:,:,1] = copy(s)
+    x_smp = zeros(dat.p, size(dat.s,1), settings.max_smp)
+    x_smp[:,:,1] = copy(x)
+    dyn.smp_ind += 1
     # Hyperparameters depends on the prior specification so need functions
     h_track = h_track_init(priors, settings)
     t_track[1] = copy(t) 
@@ -31,20 +34,25 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
             println(Q_f);println(Q_s);println(Q_m)
             println("---------------------------------------------------")
         end
-        x, v, s, t = sampler_inner!(x, v, s, t, Q_f, Q_s, Q_m, priors, dat, dyn)        
-        x_track[:,:,dyn.ind] = copy(x)
-        v_track[:,:,dyn.ind] = copy(v)
-        s_track[:,:,dyn.ind] = copy(s)
-        t_track[dyn.ind] = copy(t) 
-        h_store!(h_track, priors, dyn)
-        dyn.ind += 1
+        x, v, s, t = sampler_inner!(x, v, s, t, Q_f, Q_s, Q_m, priors, dat, dyn)
+        if dyn.last_type != "Sample"        
+            x_track[:,:,dyn.ind] = copy(x)
+            v_track[:,:,dyn.ind] = copy(v)
+            s_track[:,:,dyn.ind] = copy(s)
+            t_track[dyn.ind] = copy(t) 
+            h_store!(h_track, priors, dyn)
+            dyn.ind += 1
+        else
+            x_smp[:,:,dyn.smp_ind] = copy(x)
+            dyn.smp_ind += 1
+        end
         # Print?
         if (dyn.ind % trunc(Int, settings.max_ind/10)) == 0.0
             sampler_update(dyn, settings, t)
         end
     end
     # Final things
-    return Dict("Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "Sk_h" => h_track, "t" => t_track, "Eval" => dyn.sampler_eval)
+    return Dict("Smp_x" => x_smp, "Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "Sk_h" => h_track, "t" => t_track, "Eval" => dyn.sampler_eval)
 end
 
 
@@ -80,9 +88,9 @@ function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue
                     end
                 else
                     if (x[j] < x[j[1],l]) && (v[j] > 0.0)
-                        enqueue!(Q_m, j, (x[j[1],l] - x[j])/(abs(v[j]) + abs(v[j[1],1])))
+                        enqueue!(Q_m, j, (x[j[1],l] - x[j])/(abs(v[j]) + abs(v[j[1],l])))
                     elseif (x[j] > x[j[1],l]) && (v[j] < 0.0)
-                        enqueue!(Q_m, j, (x[j] - x[j[1],l])/(abs(v[j]) + abs(v[j[1],1])))
+                        enqueue!(Q_m, j, (x[j] - x[j[1],l])/(abs(v[j]) + abs(v[j[1],l])))
                     else
                         enqueue!(Q_m, j, Inf)
                     end
@@ -131,6 +139,10 @@ function sampler_inner!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool},
             dyn.last_type = "Hyper"
             inner_stop = true
         end
+        if type == 5
+            dyn.last_type = "Sample"
+            inner_stop = true
+        end
     end
     return x, v, s, t
 end
@@ -154,9 +166,16 @@ function event_find(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, 
         t4 = Inf
         j4 = CartesianIndex(0,0)
     end
-    type = findmin([t1,t2,t3,t4])[2]
-    t = [t1,t2,t3,t4][type]
-    j = [j1,j2,j3,j4][type]
+    if settings.smp_rate > 0.0
+        t5 = τ + rand(Exponential(1/settings.smp_rate))
+        j5 = CartesianIndex(0,0)
+    else
+        t5 = Inf
+        j5 = CartesianIndex(0,0)
+    end
+    type = findmin([t1,t2,t3,t4,t5])[2]
+    t = [t1,t2,t3,t4,t5][type]
+    j = [j1,j2,j3,j4,j5][type]
     if τ > t
         println(t);println(τ)
         println(Q_f);println(Q_s);println(Q_m)
@@ -335,9 +354,9 @@ function new_merge!(Q_m::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matri
                 end
             else
                 if (x[j] < x[j[1],l]) && (v[j] > 0.0)
-                    enqueue!(Q_m, j, t + (x[j[1],l] - x[j])/(abs(v[j]) + abs(v[j[1],1])))
+                    enqueue!(Q_m, j, t + (x[j[1],l] - x[j])/(abs(v[j]) + abs(v[j[1],l])))
                 elseif (x[j] > x[j[1],l]) && (v[j] < 0.0)
-                    enqueue!(Q_m, j, t + (x[j] - x[j[1],l])/(abs(v[j]) + abs(v[j[1],1])))
+                    enqueue!(Q_m, j, t + (x[j] - x[j[1],l])/(abs(v[j]) + abs(v[j[1],l])))
                 else
                     enqueue!(Q_m, j, Inf)
                 end

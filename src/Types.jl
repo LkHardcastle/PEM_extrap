@@ -11,7 +11,9 @@ end
 
 struct Settings
     max_ind::Int64
+    max_smp::Int64
     tb_init::Float64
+    smp_rate::Float64
     h_rate::Float64
     verbose::Bool
 end
@@ -65,6 +67,7 @@ end
 
 mutable struct Dynamics
     ind::Int64
+    smp_ind::Int64
     t_bound::Matrix{Float64}
     a::Matrix{Float64}
     b::Matrix{Float64}
