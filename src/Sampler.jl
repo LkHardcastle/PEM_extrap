@@ -152,10 +152,22 @@ function sampler_inner!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool},
             inner_stop = true
         end
         if type == 3
-            dyn.sampler_eval.merges += 1
-            merge_int!(x, v, s, t, Q_f, Q_s, Q_m, dat, j, priors, dyn)
-            dyn.last_type = "Merge"
-            inner_stop = true
+            if rand() < priors.p_split
+                dyn.sampler_eval.merges += 1
+                merge_int!(x, v, s, t, Q_f, Q_s, Q_m, dat, j, priors, dyn)
+                dyn.last_type = "Merge"
+                inner_stop = true
+            else
+                nhood = neighbourhood(j, s)
+                # Update interval
+                for l in nhood
+                    new_bound!(Q_f, t, x, v, s, priors, dat, dyn, l, false)
+                    if l[1] == j[1]
+                        new_merge!(Q_m, t, x, v, s, l, false)
+                    end
+                
+                end
+            end
         end
         if type == 4
             hyper_update!(x, v, s, t, Q_f, Q_s, Q_m, dat, j, priors, dyn)
@@ -212,7 +224,7 @@ function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
     λ = max(v[j]*(∇U(x, s, dat, j) + ∇U_p(x, s, j, priors)) , 0.0)
     # Upper bound
     Λ = dyn.a[j] + (t - dyn.t_set[j])*dyn.b[j]
-    if  λ > Λ + 1e-05
+    if  λ > Λ + 1e-10
         println(λ);println(Λ); println(t)
         println(x);println(v)
         println(x[s]);println(v[s]);
@@ -257,29 +269,21 @@ function split_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::
         l += 1
     end
     prev_ind = CartesianIndex(j[1],l)
-    if rand() < 1/2
-        #v[prev_ind:new_ind] .= (2*rand(Bernoulli(0.5)) - 1.0)
+    if rand() < 0.0
         v_sign = sign(v[j])
-        #v[(j + CartesianIndex(0,1)):new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
         v[(j + CartesianIndex(0,1)):new_ind] .= 100*v_sign*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
         if isnothing(findlast(s[j[1],begin:(j[2]-1)]))
-            #v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
             v[prev_ind:j] .= 100*v_sign*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
         else
-            #v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
             v[prev_ind:j] .= 100*v_sign*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
         end
     else
-        #v[prev_ind:new_ind] .= (2*rand(Bernoulli(0.5)) - 1.0)
         v_sign = 2*rand(Bernoulli(0.5)) - 1.0
-        #v[(j + CartesianIndex(0,1)):new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
-        v[(j + CartesianIndex(0,1)):new_ind] .= 100*v_sign*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[j[2]]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+        v[(j + CartesianIndex(0,1)):new_ind] .= v_sign
         if isnothing(findlast(s[j[1],begin:(j[2]-1)]))
-            #v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
-            v[prev_ind:j] .= -100*v_sign*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
+            v[prev_ind:j] .= -v_sign
         else
-            #v[prev_ind:j] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
-            v[prev_ind:j] .= -100*v_sign*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*j[2])
+            v[prev_ind:j] .= -v_sign
         end
     end
     x[prev_ind:new_ind] .= x[new_ind]
@@ -308,17 +312,17 @@ function merge_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::
         l = 1
         prev_ind = CartesianIndex(j[1],l)
         if sign(v[j]) == sign(v[new_ind])
-            v[prev_ind:new_ind] .= 100*sign(v[j])*(sum(dat.cens[findall(dat.y .< dat.s[new_ind[2]])])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+            v[prev_ind:new_ind] .= sign(v[j])
         else
-            v[prev_ind:new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[findall(dat.y .< dat.s[new_ind[2]])])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+            v[prev_ind:new_ind] .= (2*rand(Bernoulli(0.5)) - 1.0)
         end
     else
         l += 1
         prev_ind = CartesianIndex(j[1],l)
         if sign(v[j]) == sign(v[new_ind])
-            v[prev_ind:new_ind] .= 100*sign(v[j])*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+            v[prev_ind:new_ind] .= sign(v[j])
         else
-            v[prev_ind:new_ind] .= 100*(2*rand(Bernoulli(0.5)) - 1.0)*(sum(dat.cens[intersect(findall(dat.y .< dat.s[new_ind[2]]), findall(dat.y .> dat.s[prev_ind[2] - 1]))])/max(sum(dat.cens),1) + 0.01*new_ind[2])
+            v[prev_ind:new_ind] .= (2*rand(Bernoulli(0.5)) - 1.0)
         end
     end
     x[prev_ind:new_ind] .= x[new_ind]
@@ -376,7 +380,7 @@ function new_bound!(Q_f::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matri
     else
         dyn.new_t[j] = false
     end
-    dyn.t_set[j] = t
+    dyn.t_set[j] = copy(t)
     enqueue!(Q_f, j, t + τ)
 end
 
@@ -410,12 +414,12 @@ function new_merge!(Q_m::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matri
                         enqueue!(Q_m, j, Inf)
                     end
                 else
-                    if v[j] != v[j[1],l]
+                    #if v[j] != v[j[1],l]
                         enqueue!(Q_m, j, Inf)
-                    else
-                        println(x);println(v);println(s)
-                        error("Merge issues")
-                    end
+                    #else
+                    #    println(x);println(v);println(s)
+                    #    error("Merge issues")
+                    #end
                 end
             else
                 if (x[j] < x[j[1],l]) && (v[j] > 0.0)

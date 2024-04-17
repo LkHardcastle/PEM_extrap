@@ -22,11 +22,12 @@ function ∇U_p(x::Matrix{Float64}, s::Matrix{Bool}, j::CartesianIndex, priors::
     return ∇Uλ
 end
 function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, j::CartesianIndex)
-    if isnothing(findlast(s[j[1],1:(j[2]-1)]))
+    last_ind = findlast(s[j[1],1:(j[2]-1)])
+    if isnothing(last_ind)
         # First evaluation - draw from initial prior
         return (1/priors.σ0^2)*(x[j] - priors.μ0)
     else
-        return (1/priors.σ^2)*(x[j] - x[j[1], findlast(s[j[1],1:(j[2]-1)])])
+        return (1/priors.σ^2)*(x[j] - x[j[1], last_ind])
     end
 end
 
@@ -47,6 +48,7 @@ function ∇U_bound(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, dat
     ΛU2p = max(v[j]*∇U_p(x .+ v.*dyn.t_bound[j], s, j, priors), 0.0)
     a += ΛU1p #+ 0.01 
     b += (ΛU2p - ΛU1p)/dyn.t_bound[j]
+    #println(x);println(v);println(a);println(b)
     return a, b
 end
 
@@ -76,14 +78,5 @@ function poisson_time(a, b, u)
 end
 
 function split_rate(s::Matrix{Bool}, dat::PEMData, priors::Prior, j::CartesianIndex)
-    j_prev = findlast(s[j[1],1:j[2]])
-    if isnothing(j_prev)
-        v1_prop = 100*(sum(dat.cens[findall(dat.y .< dat.s[j[2]])])/max(sum(dat.cens),1) + 0.01*j[2])
-    else
-        j_prev += 1
-        v1_prop = 100*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j[2]]), findall(dat.y .> dat.s[j_prev]))])/max(sum(dat.cens),1) + 0.01*j[2])
-    end
-    j_next = findfirst(s[j[1],(j[2] + 1):end]) + j[2]
-    v2_prop = 100*(sum(dat.cens[intersect(findall(dat.y .< dat.s[j_next]),findall(dat.y .> dat.s[(j[2]+1)]))])/max(sum(dat.cens),1) + 0.01*j_next)
-    return 0.5*(priors.ω[j]/(1 - priors.ω[j]))*pdf(Normal(0, priors.σ),0)*(v1_prop + v2_prop)
+    return priors.p_split*(priors.ω[j]/(1 - priors.ω[j]))*(0.875)*(sqrt(2*pi*priors.σ))^-1
 end
