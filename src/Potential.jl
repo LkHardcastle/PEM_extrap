@@ -26,7 +26,8 @@ function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, j::Cartes
         # First evaluation - draw from initial prior
         return (1/priors.σ0^2)*(x[j] - priors.μ0)
     else
-        return (1/priors.σ^2)*(x[j] - x[j[1], last_ind])
+        #return (1/priors.σ^2)*(x[j] - x[j[1], last_ind])
+        return (1/priors.σ^2)*x[j]
     end
 end
 

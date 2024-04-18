@@ -88,14 +88,8 @@ function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue
         dyn.t_set[j] = 0.0
         enqueue!(Q_f, j, τ)
         ## Merge queue
-        l = findfirst(s[j[1],(j[2] + 1):end])
-        if !isnothing(l)
-            l += j[2]
-            if l != j[2]
-                enqueue!(Q_m, j, merge_time(x, v, j, l))
-            end
-        else
-            enqueue!(Q_m, j, Inf)
+        if j[2] > 1
+            enqueue!(Q_m, j, merge_time(x, v, j))
         end
     end
     for j in findall(s .== false)
@@ -212,12 +206,8 @@ function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
         prev_ind = CartesianIndex(j[1],l)
         v[prev_ind:j] = - v[prev_ind:j]
         nhood = neighbourhood(j, s)
-        for l in nhood
-            new_bound!(Q_f, t, x, v, s, priors, dat, dyn, l, false)
-            if l[1] == j[1]
-                new_merge!(Q_m, t, x, v, s, l, false)
-            end
-        end
+        new_bound!(Q_f, t, x, v, s, priors, dat, dyn, j, false)
+        new_merge!(Q_m, t, x, v, s, j, false)
         dyn.last_type = "Flip"
         return true
     else
