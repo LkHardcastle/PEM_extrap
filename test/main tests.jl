@@ -22,21 +22,26 @@ dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 v0 = ones(size(v0))
 t0 = 0.0
-priors = FixedPrior(fill(0.5, size(x0)), 1.0, 1.0, 0.0, 0.5)
+priors = FixedPrior(fill(0.5, size(x0)), 1.0, 1.0, 0.0, 0.0)
 nits = 1_000_000
-nsmp = 40_000
+nsmp = 10_000
 settings = Settings(nits, nsmp, 0.9, 0.5, 0.0, false)
-Random.seed!(23525)
+Random.seed!(23653)
+v0[2] = 2.0
 out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
-Random.seed!(15153)
+Random.seed!(3546232)
 x0, v0, s0 = init_params(p, dat)
 v0 = ones(size(v0))
+#v0[2] = 2.0
+priors = FixedPrior(fill(0.5, size(x0)), 1.0, 1.0, 0.0, 1.0)
 out2 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
-Random.seed!(151222)
+Random.seed!(2222)
 x0, v0, s0 = init_params(p, dat)
 v0 = ones(size(v0))
+priors = FixedPrior(fill(0.5, size(x0)), 5.0, 1.0, 0.0, 1.0)
+v0[2] = 2.0
 out3 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
 smps1 = out1["Smp_x"]
@@ -97,7 +102,9 @@ mean(smps2[findall(smps2[:,1] .!= smps2[:,2]),2])
 mean(smps3[findall(smps3[:,1] .!= smps3[:,2]),2])
 quantile(Normal(0,sqrt(2)),0.025)
 quantile(smps1[findall(smps1[:,1] .!= smps1[:,2]),2],0.025)
+quantile(Normal(0,sqrt(1 + 5^2)),0.025)
 quantile(smps2[findall(smps2[:,1] .!= smps2[:,2]),2],0.025)
+quantile(Normal(0,sqrt(1 + 10^2)),0.025)
 quantile(smps3[findall(smps3[:,1] .!= smps3[:,2]),2],0.025)
 quantile(smps1[findall(smps1[:,1] .!= smps1[:,2]),2],0.975)
 quantile(smps2[findall(smps2[:,1] .!= smps2[:,2]),2],0.975)
@@ -133,10 +140,18 @@ mean(smps3[5_000:end,1] .> smps3[5_000:end,2])
 
 plot(collect(1:size(smps1[:,1],1)),cumsum(smps1[:,1] .== smps1[:,2])./collect(1:size(smps1[:,1],1)))
 plot!(collect(1:size(smps2[:,1],1)),cumsum(smps2[:,1] .== smps2[:,2])./(1:size(smps2[:,1],1)))
+plot!(collect(1:size(smps3[:,1],1)),cumsum(smps3[:,1] .== smps3[:,2])./(1:size(smps3[:,1],1)))
 hline!([0.5,0.5])
-n_plot = 50
-plot(out1["t"][1:n_plot], vec(out1["Sk_x"][:,1,:])[1:n_plot])
-plot!(out1["t"][1:n_plot], vec(out1["Sk_x"][:,2,:])[1:n_plot])
+n_plot = 5100
+n_start = 5000
+plot(out1["t"][n_start:n_plot], vec(out1["Sk_x"][:,1,:])[n_start:n_plot])
+plot!(out1["t"][n_start:n_plot], vec(out1["Sk_x"][:,2,:])[n_start:n_plot])
+plot(out2["t"][n_start:n_plot], vec(out2["Sk_x"][:,1,:])[n_start:n_plot])
+plot!(out2["t"][n_start:n_plot], vec(out2["Sk_x"][:,2,:])[n_start:n_plot])
+plot(out3["t"][n_start:n_plot], vec(out3["Sk_x"][:,1,:])[n_start:n_plot])
+plot!(out3["t"][n_start:n_plot], vec(out3["Sk_x"][:,2,:])[n_start:n_plot])
+
+
 plot!(out1["t"][1:n_plot], vec(out1["Sk_x"][:,3,:])[1:n_plot])
 plot!(out1["t"][1:n_plot], vec(out1["Sk_x"][:,4,:])[1:n_plot])
 plot!(out1["t"][1:n_plot], vec(out1["Sk_x"][:,5,:])[1:n_plot])
@@ -154,3 +169,12 @@ plot!(out1["t"][1:100], vec(out1["Sk_v"][:,2,:])[1:100])
 plot(scatter(quantile(Normal(0,1), collect(0.000002:0.000002:0.999998)),sort(smps1[2:end,1])))
 plot(scatter(quantile(Normal(0,2), collect(0.00001:0.00001:0.99999)),sort(smps2[2:end,1])))
 plot(scatter(quantile(Normal(0,2), collect(0.00001:0.00001:0.99999)),sort(smps3[2:end,1])))
+
+n_plot = 100
+n_start = 50
+plot(out1["t"][n_start:n_plot], vec(out1["Sk_x"][:,1,:])[n_start:n_plot] .- vec(out1["Sk_x"][:,2,:])[n_start:n_plot])
+plot!(out1["t"][n_start:n_plot], vec(out1["Sk_x"][:,1,:])[n_start:n_plot])
+plot!(out1["t"][n_start:n_plot], vec(out1["Sk_x"][:,2,:])[n_start:n_plot])
+plot(out2["t"][n_start:n_plot], vec(out2["Sk_x"][:,1,:])[n_start:n_plot] .- vec(out2["Sk_x"][:,2,:])[n_start:n_plot])
+plot!(out2["t"][n_start:n_plot], vec(out2["Sk_x"][:,1,:])[n_start:n_plot])
+plot!(out2["t"][n_start:n_plot], vec(out2["Sk_x"][:,2,:])[n_start:n_plot])

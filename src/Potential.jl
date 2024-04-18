@@ -17,8 +17,7 @@ function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianInd
 end
 
 function ∇U_p(x::Matrix{Float64}, s::Matrix{Bool}, j::CartesianIndex, priors::Prior)
-    ∇Uλ = 0.0
-    ∇Uλ += prior_add(x, s, priors, j)
+    ∇Uλ = prior_add(x, s, priors, j)
     return ∇Uλ
 end
 function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, j::CartesianIndex)
@@ -77,6 +76,4 @@ function poisson_time(a, b, u)
     end
 end
 
-function split_rate(s::Matrix{Bool}, dat::PEMData, priors::Prior, j::CartesianIndex)
-    return priors.p_split*(priors.ω[j]/(1 - priors.ω[j]))*(0.875)*(sqrt(2*pi*priors.σ))^-1
-end
+
