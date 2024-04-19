@@ -40,6 +40,15 @@ plot_dat = survival_plot(0.02:0.02:3.0, breaks, vcat(median(exp.(smps1), dims = 
 
 plot(plot_dat[:,1], plot_dat[:,2])
 
+smps1 = out1["Smp_trans"]
+plot_dat1 = survival_plot(0.02:0.02:3.0, breaks, vcat(median(exp.(smps1), dims = 2), median(exp.(smps1), dims = 2)[end]), 0.1)
+plot_dat1l = survival_plot(0.02:0.02:3.0, breaks, vcat(exp.(quantile.(eachrow(smps1), 0.025)), exp.(quantile.(eachrow(smps1), 0.025))[end]), 0.1)
+plot_dat1u = survival_plot(0.02:0.02:3.0, breaks, vcat(exp.(quantile.(eachrow(smps1), 0.975)), exp.(quantile.(eachrow(smps1), 0.975))[end]), 0.1)
+plot(plot_dat1[:,1], plot_dat1[:,2], colour = :red)
+plot!(plot_dat1l[:,1], plot_dat1l[:,2], colour = :red, linestyle = :dot)
+plot!(plot_dat1u[:,1], plot_dat1u[:,2], colour = :red, linestyle = :dot)
+
+
 df = CSV.read(datadir("lung.csv"), DataFrame)
 men = findall(df.sex .== 1)
 y = (df.time./365)[men]
