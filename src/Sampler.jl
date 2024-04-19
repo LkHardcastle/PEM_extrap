@@ -10,7 +10,7 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
     Q_s = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     Q_m = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     #w_order = w_order_init(s, priors)
-    dyn = Dynamics(1, 1, settings.tb_init.*ones(size(x)) .+ rand(Normal(0.0,0.0001),size(x)), zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), "Start", 0.1,
+    dyn = Dynamics(1, 1, settings.tb_init.*ones(size(x)) .+ rand(Normal(0.0,0.0001),size(x)), zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), "Start", settings.v_abs, 0.1,
                     SamplerEval(0,0,0,0,0,0,0))
     start_queue!(Q_f, Q_s, Q_m, x, s, v, dat, dyn)  
     x_track = zeros(dat.p, size(dat.s,1), settings.max_ind)
@@ -73,6 +73,7 @@ end
 function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, x::Matrix{Float64}, s::Matrix{Bool}, v::Matrix{Float64}, dat::PEMData,  dyn::Dynamics)
     for j in findall(s)
         # Getting bounding parameters and store final rate eval
+        println(s);println(j)
         dyn.a[j], dyn.b[j] = ∇U_bound(x, v, s, dat, priors, j, dyn)
         dyn.sampler_eval.bounds += 1
         # Generate next event time (from upper bound pre-thinned)
@@ -88,19 +89,13 @@ function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue
         dyn.t_set[j] = 0.0
         enqueue!(Q_f, j, τ)
         ## Merge queue
-        l = findfirst(s[j[1],(j[2] + 1):end])
-        if !isnothing(l)
-            l += j[2]
-            if l != j[2]
-                enqueue!(Q_m, j, merge_time(x, v, j, l))
-            end
-        else
-            enqueue!(Q_m, j, Inf)
+        if j[2] > 1
+            enqueue!(Q_m, j, merge_time(x, v, j))
         end
     end
     for j in findall(s .== false)
         ## Split queue 
-        new_split!(Q_s, s, 0.0, priors, j)
+        new_split!(Q_s, s, 0.0, priors, j, dyn)
     end
 end
 
@@ -193,31 +188,25 @@ function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
     # Upper bound
     Λ = dyn.a[j] + (t - dyn.t_set[j])*dyn.b[j]
     if  λ > Λ + 1e-10
+        print("At iteration: ");print(dyn.ind);print("\n")
         println(λ);println(Λ); println(t)
         println(x);println(v)
         println(x[s]);println(v[s]);
         println(s);
         println(j);
-        println(dyn.t_set[j])
+        println(dyn.t_set[j]);
+        println(dyn.a[j]);println(dyn.b[j])
         error("Incorrect flipping upper bound")
     end
     if λ/Λ > rand()
         dyn.sampler_eval.flips += 1
-        l = findlast(s[j[1],begin:(j[2]-1)])
-        if isnothing(l)
-            l = 1
-        else
-            l += 1
-        end
-        prev_ind = CartesianIndex(j[1],l)
-        v[prev_ind:j] = - v[prev_ind:j]
-        nhood = neighbourhood(j, s)
-        for l in nhood
-            new_bound!(Q_f, t, x, v, s, priors, dat, dyn, l, false)
-            if l[1] == j[1]
-                new_merge!(Q_m, t, x, v, s, l, false)
+        v[j] = - v[j]
+        for l in j[2]:size(x0,2)
+            if s[l]
+                new_bound!(Q_f, t, x, v, s, priors, dat, dyn, CartesianIndex(j[1],l), false)
             end
         end
+        new_merge!(Q_m, t, x, v, s, j, false)
         dyn.last_type = "Flip"
         return true
     else

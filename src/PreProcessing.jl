@@ -11,9 +11,9 @@ function init_params(p::Int64, dat::PEMData)
         for i in axes(x0,2)
             x0[j,i] = x_int[k]
             if k == 1
-                v0[j,i] = v_int[k]*(sum(dat.cens[findall(dat.y .< dat.s[ind[k]])])/max(sum(dat.cens),1) + 0.01*ind[k])*100
+                v0[j,i] = v_int[k]
             else
-                v0[j,i] = v_int[k]*(sum(dat.cens[intersect(findall(dat.y .< dat.s[ind[k]]),findall(dat.y .> dat.s[ind[k-1]]))])/max(sum(dat.cens),1) + 0.01*ind[k])*100
+                v0[j,i] = v_int[k]
             end
             if s0[j,i] 
                 k += 1

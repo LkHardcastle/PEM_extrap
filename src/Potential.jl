@@ -1,18 +1,15 @@
 function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianIndex)
     ∇Uλ = 0.0
-    j1 = j[1]
-    j2 = j[2]
-    int_start = findlast(s[j1,begin:(j2-1)])
-    if isnothing(int_start)
-        int_start = 1
+    Uλ = 0.0
+    int_start = findlast(s[j[1],begin:(j[2])])
+    d = findall(dat.d .∈ int_start:j[2])
+    c = findall(dat.d .> j[2])
+    if j[2] > 1
+        sj_1 = dat.s[j[2] - 1]
+    else
+        sj_1 = 0.0
     end
-    sub_ints = vcat(int_start, intersect(findall(sum(s, dims = 1) .> 0.0), (int_start + 1):j2))
-    for k in 2:length(sub_ints)
-        d = findall(dat.d .∈ (sub_ints[k-1] + 1):sub_ints[k])
-        c = (d[end] + 1):dat.n
-        ∇Uλ += sum(dat.covar[j1,d].*exp.(sum(dot.(x[:,j2],dat.covar[:,d]),dims = 1)).*(dat.y[d] - dat.s[s[j2-1]])) - sum(dat.cens[d])
-        ∇Uλ += sum(dat.covar[j1,c].*exp.(sum(dot.(x[:,j2],dat.covar[:,c]),dims = 1)))*(dat.s[s[j2]] - dat.s[s[j2-1]])
-    end
+    ∇Uλ += exp(sum(x[1:j[2]]))*(sum(dat.y[d] .- sj_1) + length(c)*(dat.s[j[2]] - sj_1)) - sum(dat.cens[d])
     return ∇Uλ
 end
 
@@ -26,7 +23,8 @@ function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, j::Cartes
         # First evaluation - draw from initial prior
         return (1/priors.σ0^2)*(x[j] - priors.μ0)
     else
-        return (1/priors.σ^2)*(x[j] - x[j[1], last_ind])
+        #return (1/priors.σ^2)*(x[j] - x[j[1], last_ind])
+        return (1/priors.σ^2)*x[j]
     end
 end
 

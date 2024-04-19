@@ -15,6 +15,7 @@ struct Settings
     tb_init::Float64
     smp_rate::Float64
     h_rate::Float64
+    v_abs::Matrix{Float64}
     verbose::Bool
 end
 
@@ -75,6 +76,7 @@ mutable struct Dynamics
     t_set::Matrix{Float64}
     new_t::Matrix{Bool}
     last_type::String
+    v_abs::Matrix{Float64}
     adapt_h::Float64
     sampler_eval::SamplerEval
 end
