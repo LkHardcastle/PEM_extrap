@@ -1,13 +1,3 @@
-using DrWatson
-@quickactivate "PEM_extrap"
-# For src
-using DataStructures, LinearAlgebra, Distributions, Random
-using Plots
-
-include(srcdir("Sampler.jl"))
-include(srcdir("PreProcessing.jl"))
-include(srcdir("PostProcessing.jl"))
-
 Random.seed!(123)
 n = 100
 y = rand(Exponential(1.0),n)
@@ -73,10 +63,6 @@ plot(exp.(vec(smps1[22,:])))
 plot(vec(sum(out1["Smp_s"], dims = 1)))
 plot(vec(sum(out2["Smp_s"], dims = 1)))
 plot(vec(sum(out3["Smp_s"], dims = 1)))
-
-plot(scatter(quantile(Normal(0,1), collect(0.000002:0.000002:0.999998)),sort(smps1[2:end,1])))
-plot(scatter(quantile(Normal(0,2), collect(0.00001:0.00001:0.99999)),sort(smps2[2:end,1])))
-plot(scatter(quantile(Normal(0,2), collect(0.00001:0.00001:0.99999)),sort(smps3[2:end,1])))
 
 n_plot = 10_000
 n_start = 5000

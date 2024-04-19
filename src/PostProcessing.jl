@@ -17,5 +17,14 @@ function post_smps(smps::Array{Float64})
     for i in axes(smps,3)
         est[:,i] = vec(smps[:,:,i])
     end
-    return transpose(est)
+    return est
+end
+
+function transform_smps(smps::Array{Float64})
+    out_smps = copy(smps)
+    # Faster way of doing this but don't worry for now
+    for i in axes(smps, 1)
+        out_smps[i,:] = sum(smps[1:i,:], dims = 1)
+    end
+    return out_smps
 end

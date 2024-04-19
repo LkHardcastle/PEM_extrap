@@ -2,9 +2,19 @@ function h_track_init(priors::FixedPrior, settings::Settings)
     return 0.0
 end
 
+function h_smp_init(priors::FixedPrior, settings::Settings)
+    return 0.0
+end
+
+
 function h_store!(h_track, priors::FixedPrior, dyn::Dynamics)
 end
 
+function h_store_smp!(h_track, priors::FixedPrior, dyn::Dynamics)
+end
+function h_post(h_smp, priors::FixedPrior, dyn::Dynamics)
+    return 0.0
+end
 function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::FixedPrior, dyn::Dynamics)
     error("Fixed prior structure - hyper update rate ")
 end

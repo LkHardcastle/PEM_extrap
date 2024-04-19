@@ -2,10 +2,21 @@ function h_track_init(priors::Union{HyperPrior,HyperPrior2}, settings::Settings)
     return zeros(settings.max_ind)
 end
 
+function h_smp_init(priors::Union{HyperPrior,HyperPrior2}, settings::Settings)
+    return zeros(settings.max_smp)
+end
+
 function h_store!(h_track, priors::Union{HyperPrior,HyperPrior2}, dyn::Dynamics)
     h_track[dyn.ind] = priors.ω0
 end
 
+function h_store_smp!(h_track, priors::Union{HyperPrior,HyperPrior2}, dyn::Dynamics)
+    h_track[dyn.smp_ind] = priors.ω0
+end
+
+function h_post(h_smp, priors::Union{HyperPrior,HyperPrior2}, dyn::Dynamics)
+    return h_smp[1:(dyn.smp_ind-1)]
+end
 function w_order_int(s::Matrix{Bool}, priors::Union{HyperPrior,HyperPrior2})
     return zeros(size(s,1),size(s,2)), priors
 end
@@ -27,10 +38,10 @@ function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
     end
     # Adaptation
     dyn.adapt_h = exp(log(dyn.adapt_h) + dyn.sampler_eval.h_updates^(-0.6)*(min(1,exp(logpi2 - logpi1)) - 0.44))
-    for j in findall(s .== false)
+    for l in findall(s .== false)
         ## Split queue 
-        delete!(Q_s,j)
-        enqueue!(Q_s, j, t + rand(Exponential(1/split_rate(priors, j))))
+        delete!(Q_s,l)
+        enqueue!(Q_s, l, t + rand(Exponential(1/split_rate(s, dat, priors, l ,dyn))))
     end
 end
 
@@ -40,9 +51,9 @@ function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
     Σs = sum(s)
     priors.ω0 = rand(Beta(priors.a + Σs, priors.b + sum(size(s)) - Σs))
     priors.ω = fill(priors.ω0, size(x0))
-    for j in findall(s .== false)
+    for l in findall(s .== false)
         ## Split queue 
-        delete!(Q_s,j)
-        enqueue!(Q_s, j, t + rand(Exponential(1/split_rate(priors, j))))
+        delete!(Q_s,l)
+        enqueue!(Q_s, l, t + rand(Exponential(1/split_rate(s, dat, priors, l ,dyn))))
     end
 end

@@ -24,11 +24,16 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
     x_smp[:,:,1] = copy(x)
     v_smp = zeros(dat.p, size(dat.s,1), settings.max_smp)
     v_smp[:,:,1] = copy(v)
+    s_smp = zeros(dat.p, size(dat.s,1), settings.max_smp)
+    s_smp[:,:,1] = copy(s)
     t_smp = zeros(settings.max_smp)
-    dyn.smp_ind += 1
     # Hyperparameters depends on the prior specification so need functions
     h_track = h_track_init(priors, settings)
+    h_store!(h_track, priors, dyn)
+    h_smp = h_smp_init(priors, settings)
+    h_store_smp!(h_smp, priors, dyn)
     t_track[1] = copy(t) 
+    dyn.smp_ind += 1
     dyn.ind += 1
     i = 2
     while dyn.ind < settings.max_ind
@@ -54,7 +59,9 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
         else
             x_smp[:,:,dyn.smp_ind] = copy(x)
             v_smp[:,:,dyn.smp_ind] = copy(v)
+            s_smp[:,:,dyn.smp_ind] = copy(s)
             t_smp[dyn.smp_ind] = copy(t)
+            h_store_smp!(h_smp, priors, dyn)
             dyn.smp_ind += 1
             if dyn.smp_ind > settings.max_smp
                 println("Max samples reached")
@@ -63,17 +70,20 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
         end
     end
     smps = post_smps(x_smp[:,:,1:(dyn.smp_ind - 1)])
-    v_smp = post_smps(v_smp[:,:,1:(dyn.smp_ind - 1)])
+    v_smp = transpose(post_smps(v_smp[:,:,1:(dyn.smp_ind - 1)]))
+    s_smps = post_smps(s_smp[:,:,1:(dyn.smp_ind - 1)])
     t_smp = t_smp[1:(dyn.smp_ind - 1)]
+    smps_new = transform_smps(smps)
+    smps = transpose(smps)
+    h_smp = h_post(h_smp, priors, dyn)
     # Final things
-    return Dict("Smp_x" => smps, "Smp_t" => t_smp, "Smp_v" => v_smp, "Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "Sk_h" => h_track, "t" => t_track, "Eval" => dyn.sampler_eval)
+    return Dict("Smp_trans" => smps_new, "Smp_h" => h_smp, "Smp_s" =>s_smps, "Smp_x" => smps, "Smp_t" => t_smp, "Smp_v" => v_smp, "Sk_x" => x_track, "Sk_v" => v_track, "Sk_s" => s_track, "Sk_h" => h_track, "t" => t_track, "Eval" => dyn.sampler_eval)
 end
 
 
 function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, x::Matrix{Float64}, s::Matrix{Bool}, v::Matrix{Float64}, dat::PEMData,  dyn::Dynamics)
     for j in findall(s)
         # Getting bounding parameters and store final rate eval
-        println(s);println(j)
         dyn.a[j], dyn.b[j] = ∇U_bound(x, v, s, dat, priors, j, dyn)
         dyn.sampler_eval.bounds += 1
         # Generate next event time (from upper bound pre-thinned)

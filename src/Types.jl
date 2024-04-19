@@ -55,6 +55,7 @@ mutable struct HyperPrior2 <: Prior
     σ::Float64
     σ0::Float64
     μ0::Float64
+    p_split::Float64
 end
 # Sampler tracking
 mutable struct SamplerEval
