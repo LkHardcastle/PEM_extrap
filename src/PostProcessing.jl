@@ -28,3 +28,17 @@ function transform_smps(smps::Array{Float64})
     end
     return out_smps
 end
+
+function survival_plot(t, breaks, h_vec, break_int)
+    S_store = []
+    for t_ in t
+        past_ind = findfirst(breaks .>= t_) - 1
+        if past_ind == 0
+            push!(S_store, exp(-h_vec[past_ind + 1]*(t_)))
+        else
+            S_init = exp(-break_int*sum(h_vec[1:past_ind]))
+            push!(S_store, S_init*exp(-h_vec[past_ind + 1]*(t_ - breaks[past_ind])))
+        end
+    end
+    return hcat(t, S_store)
+end
