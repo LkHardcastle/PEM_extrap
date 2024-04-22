@@ -197,7 +197,7 @@ function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
     λ = max(v[j]*(∇U(x, s, dat, j) + ∇U_p(x, s, j, priors)) , 0.0)
     # Upper bound
     Λ = dyn.a[j] + (t - dyn.t_set[j])*dyn.b[j]
-    if  λ > Λ + 1e-10
+    if  λ/Λ > 1 + 1e-5
         print("At iteration: ");print(dyn.ind);print("\n")
         println(λ);println(Λ); println(t)
         println(x);println(v)
