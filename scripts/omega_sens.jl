@@ -25,10 +25,10 @@ v_abs = vcat(1.0,collect(0.01:0.01:0.30))
 x0, v0, s0 = init_params(p, dat, v_abs)
 t0 = 0.0
 nits = 2_000_000
-nsmp = 20_000
-settings = Settings(nits, nsmp, 0.9, 1.0, 1.0, v0, false)
+nsmp = 100_000
+settings = Settings(nits, nsmp, 0.9, 0.1, 1.0, v0, false)
 Random.seed!(23653)
-priors = HyperPrior2(fill(0.5, size(x0)), 0.5, 0.5, 5.0, 0.2, 1.0, 0.0, 1.0)
+priors = HyperPrior2(fill(0.5, size(x0)), 0.5, 1.0, 10.0, 5.0, 1.0, 0.0, 1.0)
 out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 priors = HyperPrior2(fill(0.5, size(x0)), 0.5, 1.0, 10.0, 0.2, 1.0, 0.0, 1.0)
 out2 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
@@ -38,6 +38,7 @@ priors = HyperPrior2(fill(0.5, size(x0)), 0.5, 5.0, 50.0, 0.2, 1.0, 0.0, 1.0)
 out4 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
 plot(out1["Smp_h"])
+histogram(out1["Smp_h"])
 plot(out2["Smp_h"])
 plot(out3["Smp_h"])
 plot(out4["Smp_h"])
@@ -76,7 +77,7 @@ plot!(plot_dat1l[:,1], plot_dat1l[:,2], colour = :red, linestyle = :dot)
 plot!(plot_dat1u[:,1], plot_dat1u[:,2], colour = :red, linestyle = :dot)
 
 smps1 = out1["Smp_trans"]
-plot(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,3))
+plot(vcat(0,breaks), vcat(median(exp.(smps1), dims = 2), median(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,1))
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,3))
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,3))
 
