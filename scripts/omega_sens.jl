@@ -15,7 +15,7 @@ maximum(y)
 n = length(y)
 trunc_ind = findall(y .> 3.0)
 y[trunc_ind] .= 3.0
-breaks = collect(0.1:0.1:3.1)
+breaks = collect(0.5:0.5:3.5)
 p = 1
 cens = df.status
 cens[trunc_ind] .= 0.0
