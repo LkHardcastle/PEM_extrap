@@ -21,20 +21,20 @@ cens = df.status
 cens[trunc_ind] .= 0.0
 covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
-v_abs = vcat(1.0,collect(0.01:0.01:0.30))
+v_abs = vcat(1.0,collect(0.1:0.1:0.60))
 x0, v0, s0 = init_params(p, dat, v_abs)
 t0 = 0.0
 nits = 2_000_000
 nsmp = 100_000
 settings = Settings(nits, nsmp, 0.9, 0.1, 1.0, v0, false)
 Random.seed!(23653)
-priors = HyperPrior2(fill(0.5, size(x0)), 0.5, 1.0, 10.0, 5.0, 1.0, 0.0, 1.0)
+priors = HyperPrior2(fill(0.9, size(x0)), 0.5, 9.0, 10.0, 5.0, 1.0, 0.0, 1.0)
 out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
-priors = HyperPrior2(fill(0.5, size(x0)), 0.5, 1.0, 10.0, 0.2, 1.0, 0.0, 1.0)
+priors = HyperPrior2(fill(0.9, size(x0)), 0.5, 9.0, 10.0, 5.0, 1.0, 0.0, 1.0)
 out2 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
-priors = HyperPrior2(fill(0.5, size(x0)), 0.5, 10.0, 20.0, 0.2, 1.0, 0.0, 1.0)
+priors = HyperPrior2(fill(0.9, size(x0)), 0.5, 9.0, 10.0, 5.0, 1.0, 0.0, 1.0)
 out3 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
-priors = HyperPrior2(fill(0.5, size(x0)), 0.5, 5.0, 50.0, 0.2, 1.0, 0.0, 1.0)
+priors = HyperPrior2(fill(0.9, size(x0)), 0.5, 9.0, 10.0, 5.0, 1.0, 0.0, 1.0)
 out4 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
 plot(out1["Smp_h"])
