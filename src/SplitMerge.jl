@@ -47,12 +47,7 @@ function merge_time(x::Matrix{Float64}, v::Matrix{Float64}, j::CartesianIndex)
     end
 end
 
-function split_rate(s::Matrix{Bool}, dat::PEMData, priors::Union{FixedPrior,HyperPrior2,DepressPrior}, j::CartesianIndex, dyn::Dynamics)
-    #'return 0.375*abs(sum(dot([1,-2],[1,-1])))*priors.p_split*(priors.ω[j]/(1 - priors.ω[j]))*(sqrt(2*pi*priors.σ^2))^-1
-    return abs(dyn.v_abs[j])*priors.p_split*(priors.ω[j]/(1 - priors.ω[j]))*(sqrt(2*pi*priors.σ^2))^-1
-end
-
-function split_rate(s::Matrix{Bool}, dat::PEMData, priors::HyperPrior3, j::CartesianIndex, dyn::Dynamics)
+function split_rate(s::Matrix{Bool}, dat::PEMData, priors::Union{FixedPrior,HyperPrior2}, j::CartesianIndex, dyn::Dynamics)
     #'return 0.375*abs(sum(dot([1,-2],[1,-1])))*priors.p_split*(priors.ω[j]/(1 - priors.ω[j]))*(sqrt(2*pi*priors.σ^2))^-1
     return abs(dyn.v_abs[j])*priors.p_split*(priors.ω[j]/(1 - priors.ω[j]))*(sqrt(2*pi*priors.σ^2))^-1
 end

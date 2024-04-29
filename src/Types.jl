@@ -28,32 +28,6 @@ mutable struct FixedPrior <: Prior
     μ0::Float64
     p_split::Float64
 end
-mutable struct DepressPrior <: Prior
-    ω::Matrix{Float64}
-    ω0::Float64
-    σ::Float64
-    σ0::Float64
-    μ0::Float64
-    p_split::Float64
-end
-
-mutable struct GeomPrior <: Prior
-    ω::Matrix{Float64}
-    ω0::Float64
-    geom_max::Int64
-    σ::Float64
-    σ0::Float64
-    μ0::Float64
-end
-
-mutable struct HyperPrior <: Prior
-    ω::Matrix{Float64}
-    ω0::Float64
-    σω::Float64
-    σ::Float64
-    σ0::Float64
-    μ0::Float64
-end
 
 mutable struct HyperPrior2 <: Prior
     ω::Matrix{Float64}
@@ -63,8 +37,11 @@ mutable struct HyperPrior2 <: Prior
     σ::Float64
     σ0::Float64
     μ0::Float64
+    σa::Float64
+    σb::Float64
     p_split::Float64
 end
+
 # Sampler tracking
 mutable struct SamplerEval
     bounds::Int64
