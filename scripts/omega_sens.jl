@@ -15,26 +15,47 @@ maximum(y)
 n = length(y)
 trunc_ind = findall(y .> 3.0)
 y[trunc_ind] .= 3.0
-breaks = collect(0.1:0.1:3.5)
+breaks = collect(0.25:0.25:3.5)
 p = 1
 cens = df.status
 cens[trunc_ind] .= 0.0
 covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
-v_abs = vcat(1.0,collect(0.02:0.02:0.68))
+v_abs = vcat(1.0,collect(0.05:0.05:0.65))
+#v_abs = vcat(1.0,collect(0.1:0.1:0.6))
 x0, v0, s0 = init_params(p, dat, v_abs)
 t0 = 0.0
-nits = 2_000_000
+nits = 100_000
 nsmp = 100_000
 settings = Settings(nits, nsmp, 0.9, 0.5, 1.0, v0, false)
 Random.seed!(23653)
-priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 4.0, 10.0, 0.5, 1.0, 0.0, 1.0)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 19.0, 1.0, 0.5, 1.0, 0.0, 1.0)
 out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
-priors = HyperPrior2(fill(0.9, size(x0)), 0.5, 9.0, 10.0, 1.0, 1.0, 0.0, 1.0)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 10.0, 10.0, 1.0, 1.0, 0.0, 1.0)
 out2 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
-priors = HyperPrior2(fill(0.9, size(x0)), 0.5, 9.0, 10.0, 5.0, 1.0, 0.0, 1.0)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 5.0, 15.0, 1.0, 1.0, 0.0, 1.0)
 out3 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
-priors = HyperPrior2(fill(0.9, size(x0)), 0.5, 9.0, 10.0, 5.0, 1.0, 0.0, 1.0)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 1.0, 19.0, 1.0, 1.0, 0.0, 1.0)
+out4 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+
+Random.seed!(23653)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 19.0, 1.0, 0.1, 1.0, 0.0, 1.0)
+out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 10.0, 10.0, 0.1, 1.0, 0.0, 1.0)
+out2 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 5.0, 15.0, 0.1, 1.0, 0.0, 1.0)
+out3 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 1.0, 19.0, 0.1, 1.0, 0.0, 1.0)
+out4 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+
+Random.seed!(23653)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 19.0, 1.0, 5.0, 1.0, 0.0, 1.0)
+out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 10.0, 10.0, 5.0, 1.0, 0.0, 1.0)
+out2 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 5.0, 15.0, 5.0, 1.0, 0.0, 1.0)
+out3 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 1.0, 19.0, 5.0, 1.0, 0.0, 1.0)
 out4 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
 plot(out1["Smp_h"])
@@ -82,25 +103,27 @@ plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachr
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
 
 smps1 = out2["Smp_trans"]
-plot(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,5), ylim = (0,3))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,3))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,3))
+plot(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
 
 smps1 = out3["Smp_trans"]
-plot(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,5), ylim = (0,3))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,3))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,3))
+plot(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
 
 smps1 = out4["Smp_trans"]
-plot(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,5), ylim = (0,3))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,3))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3), ylim = (0,3))
+plot(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
 
 plot(breaks, mean(out1["Smp_s"], dims = 2), ylim = (0,1))
 plot!(breaks, mean(out2["Smp_s"], dims = 2), ylim = (0,1))
 plot!(breaks, mean(out3["Smp_s"], dims = 2), ylim = (0,1))
 plot!(breaks, mean(out4["Smp_s"], dims = 2), ylim = (0,1))
 
-plot(vec(smps1[6,:]),vec(smps1[7,:]))
+plot(vec(smps1[13,:]),vec(smps1[14,:]))
+plot(vec(smps1[1,:]))
+plot!(vec(smps1[2,:]))
 plot(vec(smps1[6,1:500]),vec(smps1[7,1:500]))
 plot(vec(smps1[7,:]),vec(smps1[8,:]))

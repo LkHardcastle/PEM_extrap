@@ -28,6 +28,14 @@ mutable struct FixedPrior <: Prior
     μ0::Float64
     p_split::Float64
 end
+mutable struct DepressPrior <: Prior
+    ω::Matrix{Float64}
+    ω0::Float64
+    σ::Float64
+    σ0::Float64
+    μ0::Float64
+    p_split::Float64
+end
 
 mutable struct GeomPrior <: Prior
     ω::Matrix{Float64}
