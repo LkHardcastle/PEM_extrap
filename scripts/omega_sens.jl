@@ -15,23 +15,23 @@ maximum(y)
 n = length(y)
 trunc_ind = findall(y .> 3.0)
 y[trunc_ind] .= 3.0
-breaks = collect(0.125:0.125:3.5)
+breaks = collect(0.15:0.15:3.15)
 p = 1
 cens = df.status
 cens[trunc_ind] .= 0.0
 covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
-v_abs = vcat(1.0,collect(0.025:0.025:0.675))
+v_abs = vcat(1.0,collect(0.05:0.05:1))
 #v_abs = vcat(1.0,collect(0.1:0.1:0.6))
 x0, v0, s0 = init_params(p, dat, v_abs)
 t0 = 0.0
-nits = 1_000_000
+nits = 6_000_000
 nsmp = 100_000
 settings = Settings(nits, nsmp, 0.9, 0.5, 1.0, v0, false)
 Random.seed!(23653)
-priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 10.0, 60.0, 0.1, 1.0, 0.0,1.0,1.0, 1.0)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 20.0, 20.0, 0.1, 1.0, 0.0,1.0,1.0, 1.0)
 out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
-priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 1.0, 6.0, 0.1, 1.0, 0.0,1.0,1.0, 1.0)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 20.0, 20.0, 0.1, 1.0, 0.0,0.1,0.1, 1.0)
 out2 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
 
@@ -82,15 +82,24 @@ plot(plot_dat1[:,1], plot_dat1[:,2], colour = :red, ylim = (0,1))
 plot!(plot_dat1l[:,1], plot_dat1l[:,2], colour = :red, linestyle = :dot)
 plot!(plot_dat1u[:,1], plot_dat1u[:,2], colour = :red, linestyle = :dot)
 
-smps1 = out1["Smp_trans"]
-plot(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,1))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,1))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,1))
 
+smps1 = out1["Smp_trans"]
+plot(vcat(0,breaks), vcat(median(exp.(smps1), dims = 2), median(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+
+smps1 = out1["Smp_trans"]
+plot(vcat(0,breaks), vcat(mean(smps1, dims = 2), mean(smps1, dims = 2)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(smps1), 0.025),quantile.(eachrow(smps1), 0.025)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(smps1), 0.975),quantile.(eachrow(smps1), 0.975)[end]),linetype=:steppost)
+
+histogram!(y[findall(dat.cens == 1.0)], bins = 0:0.15:3.0)
 smps1 = out2["Smp_trans"]
-plot!(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,1))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,1))
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,1))
+plot(vcat(0,breaks), vcat(median(exp.(smps1), dims = 2), median(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
 
 smps1 = out3["Smp_trans"]
 plot(vcat(0,breaks), vcat(mean(exp.(smps1), dims = 2), mean(exp.(smps1), dims = 2)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,3))
@@ -109,6 +118,24 @@ plot!(breaks, mean(out4["Smp_s"], dims = 2), ylim = (0,1))
 
 plot(vec(smps1[13,:]),vec(smps1[14,:]))
 plot(vec(smps1[1,:]))
-plot!(vec(smps1[2,:]))
-plot(vec(smps1[6,1:500]),vec(smps1[7,1:500]))
-plot(vec(smps1[7,:]),vec(smps1[8,:]))
+plot(vec(smps1[2,:]))
+plot(vec(smps1[3,:]))
+
+smps1 = out1["Smp_trans"]
+plot(breaks .- 0.15, eachcol(smps1[:,100:10_000]), legend = false, color = :black, alpha = 0.01)
+plot!(breaks .- 0.15, mean(smps1, dims = 2), colour = :red)
+plot!(breaks .- 0.15, median(smps1, dims = 2), colour = :green)
+
+plot(breaks .- 0.15, eachcol(smps1[:,50_000:60_000]), legend = false, color = :black, alpha = 0.01)
+plot!(breaks .- 0.15, mean(smps1, dims = 2), colour = :red)
+plot!(breaks .- 0.15, median(smps1, dims = 2), colour = :green)
+
+smps1 = out1["Smp_x"]
+plot(breaks .- 0.15, eachrow(smps1[100:10_000,:]), legend = false, color = :black, alpha = 0.01)
+plot!(breaks .- 0.15, vec(mean(smps1, dims = 1)), colour = :red, ylim = (-7,7))
+plot!(breaks .- 0.15, vec(median(smps1, dims = 1)), colour = :green, ylim = (-7,7))
+
+smps1 = out2["Smp_x"]
+plot(breaks .- 0.15, eachrow(smps1[100:10_000,:]), legend = false, color = :black, alpha = 0.01)
+plot!(breaks .- 0.15, vec(mean(smps1, dims = 1)), colour = :red, ylim = (-7,7))
+plot!(breaks .- 0.15, vec(median(smps1, dims = 1)), colour = :green, ylim = (-7,7))

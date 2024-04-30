@@ -42,6 +42,18 @@ mutable struct HyperPrior2 <: Prior
     p_split::Float64
 end
 
+# Horseshoe like estimator
+mutable struct HyperPrior3 <: Prior
+    ω::Matrix{Float64}
+    ω0::Float64
+    a::Float64
+    b::Float64
+    σ::Float64
+    σ0::Float64
+    μ0::Float64
+    p_split::Float64
+end
+
 # Sampler tracking
 mutable struct SamplerEval
     bounds::Int64
