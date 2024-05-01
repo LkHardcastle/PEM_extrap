@@ -28,6 +28,16 @@ function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Union{FixedPrior
     end
 end
 
+function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Union{HyperPrior3}, j::CartesianIndex)
+    last_ind = findlast(s[j[1],1:(j[2]-1)])
+    if isnothing(last_ind)
+        # First evaluation - draw from initial prior
+        return (1/priors.σ0^2)*(x[j] - priors.μ0)
+    else
+        return (1/priors.σ[j]^2)*x[j]
+    end
+end
+
 function ∇U_bound(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, priors::Prior, j::CartesianIndex, dyn::Dynamics)
     a, b = 0.0, 0.0
     if v[j] > 0.0
