@@ -22,13 +22,13 @@ dat = init_data(y, cens, covar, breaks)
 v_abs = vcat(1.0,collect(0.1:0.1:0.6))
 x0, v0, s0 = init_params(p, dat, v_abs)
 t0 = 0.0
-nits = 10_000_000
-nsmp = 100_000
+nits = 10_000
+nsmp = 100
 settings = Settings(nits, nsmp, 0.9, 0.5, 1.0, v0, false)
 
 Random.seed!(23653)
 priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 20.0, 20.0, 0.1, 1.0, 0.0,1.0,1.0, 0.0)
-out11 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 
 Random.seed!(23653)
 priors = HyperPrior3(fill(0.4, size(x0)), 0.5, 20.0, 20.0, 

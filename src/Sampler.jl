@@ -254,22 +254,26 @@ function neighbourhood(j::CartesianIndex, s::Matrix{Bool})
 end
 
 function new_bound!(Q_f::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, dat::PEMData, dyn::Dynamics, j::CartesianIndex, new::Bool)
-    if !new
-        delete!(Q_f,j)
+    ∇U_bound!(x, v, s, dat, priors, j, dyn)
+    for k ∈ j:CartesianIndex(j[1],size(s,2))
+        if s[k]
+            if !new && k != j
+                delete!(Q_f,k)
+            end
+            dyn.sampler_eval.bounds += 1
+            τ = poisson_time(dyn.a[k], dyn.b[k], rand())
+            if τ > dyn.t_bound[k]
+                # If greater than bounding interval
+                # set to bounding interval 
+                τ = dyn.t_bound[k]
+                dyn.new_t[k] = true
+            else
+                dyn.new_t[k] = false
+            end
+            dyn.t_set[k] = copy(t)
+            enqueue!(Q_f, k, t + τ)
+        end
     end
-    dyn.a[j], dyn.b[j] = ∇U_bound(x, v, s, dat, priors, j, dyn)
-    dyn.sampler_eval.bounds += 1
-    τ = poisson_time(dyn.a[j], dyn.b[j], rand())
-    if τ > dyn.t_bound[j]
-        # If greater than bounding interval
-        # set to bounding interval 
-        τ = dyn.t_bound[j]
-        dyn.new_t[j] = true
-    else
-        dyn.new_t[j] = false
-    end
-    dyn.t_set[j] = copy(t)
-    enqueue!(Q_f, j, t + τ)
 end
 
 function sampler_update(dyn::Dynamics, settings::Settings, t::Float64)
