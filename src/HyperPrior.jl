@@ -2,7 +2,7 @@ function h_track_init(priors::Union{HyperPrior2,HyperPrior3}, settings::Settings
     return zeros(2,settings.max_ind)
 end
 
-function h_smp_init(priors::Union{HyperPrior2}, settings::Settings)
+function h_smp_init(priors::Union{HyperPrior2,HyperPrior3}, settings::Settings)
     return zeros(2,settings.max_smp)
 end
 
@@ -64,10 +64,10 @@ function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
     priors.ω = fill(priors.ω0, size(x0))
     # Update horseshoe
     for j in eachindex(priors.ψ)
-        priors.ψ[j] = rand(InverseGamma(1, 1/priors.ν[j] + (x[2:end]^2)/(2*priors.τ)))
+        priors.ψ[j] = rand(InverseGamma(1, 1/priors.ν[j] + (x[j]^2)/(2*priors.τ)))
         priors.ν[j] = rand(InverseGamma(1, 1 + 1/priors.ψ[j]))
     end
-    priors.tau = rand(InverseGamma(length(x)/2, 1/priors.ϕ + 0.5*sum((x[2:end].^2)./priors.ψ)))
+    priors.τ = rand(InverseGamma(length(x)/2, 1/priors.ϕ + 0.5*sum((x[:,2:end].^2)./priors.ψ[:,2:end])))
     priors.ϕ = rand(InverseGamma(1, 1+ 1/priors.τ))
     priors.σ = sqrt.(priors.ψ.*priors.τ)
     for l in findall(s .== false)

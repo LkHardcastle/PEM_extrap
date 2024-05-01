@@ -1,11 +1,15 @@
 function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianIndex)
     ∇Uλ = 0.0
     Uλ = 0.0
-    int_start = findlast(s[j[1],begin:(j[2])])
-    d = findall(dat.d .∈ int_start:j[2])
+    int_start = findlast(s[j[1],begin:(j[2] - 1)])
+    if isnothing(int_start)
+        int_start = 0
+    end
+    #println(int_start);println(j);println(dat.d)
+    d = findall(dat.d .∈ (int_start+1):j[2])
     c = findall(dat.d .> j[2])
     if j[2] > 1
-        sj_1 = dat.s[j[2] - 1]
+        sj_1 = dat.s[int_start]
     else
         sj_1 = 0.0
     end
@@ -23,7 +27,6 @@ function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Union{FixedPrior
         # First evaluation - draw from initial prior
         return (1/priors.σ0^2)*(x[j] - priors.μ0)
     else
-        #return (1/priors.σ^2)*(x[j] - x[j[1], last_ind])
         return (1/priors.σ^2)*x[j]
     end
 end

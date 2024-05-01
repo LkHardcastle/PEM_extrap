@@ -31,9 +31,10 @@ settings = Settings(nits, nsmp, 0.9, 0.5, 1.0, v0, false)
 Random.seed!(23653)
 priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 20.0, 20.0, 0.1, 1.0, 0.0,1.0,1.0, 1.0)
 out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
+priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 20.0, 20.0, 0.1, 1.0, 0.0,1.0,1.0, 1.0)
+out11 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
 priors = HyperPrior2(fill(0.4, size(x0)), 0.5, 20.0, 20.0, 0.1, 1.0, 0.0,0.1,0.1, 1.0)
 out2 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings)
-
 
 histogram(vec(out1["Smp_h"][1,:]))
 histogram!(vec(out2["Smp_h"][1,:]))
