@@ -48,9 +48,13 @@ mutable struct HyperPrior3 <: Prior
     ω0::Float64
     a::Float64
     b::Float64
-    σ::Float64
+    σ::Vector{Float64}
+    τ::Float64
     σ0::Float64
     μ0::Float64
+    ϕ::Float64
+    ψ::Vector{Float64}
+    ν::Vector{Float64}
     p_split::Float64
 end
 
