@@ -1,4 +1,4 @@
-function split_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
+function split_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
     s[j] = true
     delete!(Q_s, j)
     v[j] = (2*rand(Bernoulli(0.5)) - 1.0)*dyn.v_abs[j]
@@ -12,7 +12,7 @@ function split_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::
     new_merge!(Q_m, t, x, v, s, j, true)
 end
 
-function merge_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
+function merge_int!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
     s[j] = false
     v[j] = 0.0
     x[j] = 0.0

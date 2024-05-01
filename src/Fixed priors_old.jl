@@ -15,7 +15,7 @@ end
 function h_post(h_smp, priors::Union{FixedPrior}, dyn::Dynamics)
     return 0.0
 end
-function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Union{FixedPrior}, dyn::Dynamics)
+function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Union{FixedPrior}, dyn::Dynamics)
     error("Fixed prior structure - hyper update rate ")
 end
 

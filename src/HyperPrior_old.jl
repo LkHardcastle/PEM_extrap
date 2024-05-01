@@ -34,7 +34,7 @@ function w_order_int(s::Matrix{Bool}, priors::Union{HyperPrior2,HyperPrior3})
     return zeros(size(s,1),size(s,2)), priors
 end
 
-function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::HyperPrior2, dyn::Dynamics)
+function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::HyperPrior2, dyn::Dynamics)
     # Update ω
     dyn.sampler_eval.h_updates += 1
     Σs = sum(s)
@@ -55,7 +55,7 @@ function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
     end
 end
 
-function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::HyperPrior3, dyn::Dynamics)
+function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::HyperPrior3, dyn::Dynamics)
     # Update ω
     dyn.sampler_eval.h_updates += 1
     Σs = sum(s)

@@ -6,11 +6,11 @@ include("HyperPrior.jl")
 include("SplitMerge.jl")
 function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, t0::Float64, dat::PEMData, priors::Prior, settings::Settings)
     x, s, v, t = copy(x0), copy(s0), copy(v0), copy(t0)
-    Q_f = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
+    Q_f = 0.0
     Q_s = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     Q_m = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     #w_order = w_order_init(s, priors)
-    dyn = Dynamics(1, 1, settings.tb_init.*ones(size(x)) .+ rand(Normal(0.0,0.0001),size(x)), zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), "Start", settings.v_abs, 0.1,
+    dyn = Dynamics(1, 1, settings.tb_init, zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), "Start", settings.v_abs, 0.1,
                     SamplerEval(0,0,0,0,0,0,0))
     start_queue!(Q_f, Q_s, Q_m, x, s, v, dat, dyn)  
     x_track = zeros(dat.p, size(dat.s,1), settings.max_ind)
@@ -81,23 +81,19 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
 end
 
 
-function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, x::Matrix{Float64}, s::Matrix{Bool}, v::Matrix{Float64}, dat::PEMData,  dyn::Dynamics)
+function start_queue!(Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, x::Matrix{Float64}, s::Matrix{Bool}, v::Matrix{Float64}, dat::PEMData,  dyn::Dynamics)
+    ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
+    Q_f = poisson_time(sum(dyn.a), sum(dyn.b), rand())
+    dyn.t_set = 0.0
+    if Q_f > dyn.t_bound
+        # If greater than bounding interval
+        # set to bounding interval 
+        Q_f = dyn.t_bound
+        dyn.new_t = true
+    else
+        dyn.new_t = false
+    end
     for j in findall(s)
-        # Getting bounding parameters and store final rate eval
-        dyn.a[j], dyn.b[j] = ∇U_bound(x, v, s, dat, priors, j, dyn)
-        dyn.sampler_eval.bounds += 1
-        # Generate next event time (from upper bound pre-thinned)
-        τ = poisson_time(dyn.a[j], dyn.b[j], rand())
-        if τ > dyn.t_bound[j]
-            # If greater than bounding interval
-            # set to bounding interval 
-            τ = dyn.t_bound[j]
-            dyn.new_t[j] = true
-        else
-            dyn.new_t[j] = false
-        end
-        dyn.t_set[j] = 0.0
-        enqueue!(Q_f, j, τ)
         ## Merge queue
         if j[2] > 1
             enqueue!(Q_m, j, merge_time(x, v, j))
@@ -109,7 +105,7 @@ function start_queue!(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue
     end
 end
 
-function sampler_inner!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, priors::Prior, dat::PEMData, dyn::Dynamics)
+function sampler_inner!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, priors::Prior, dat::PEMData, dyn::Dynamics)
     inner_stop = false
     while !inner_stop
         τ = copy(t)
@@ -118,7 +114,7 @@ function sampler_inner!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool},
         t_ = t - τ
         x .+= v.*t_
         if type == 1
-            if dyn.new_t[j]
+            if dyn.new_t
                 new_bound!(Q_f, t, x, v, s, priors, dat, dyn, j, false)
             else
                 dyn.sampler_eval.flip_attempts += 1
@@ -155,8 +151,8 @@ function sampler_inner!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool},
     return x, v, s, t
 end
 
-function event_find(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, τ::Float64, settings::Settings)
-    j1, t1 = peek(Q_f)
+function event_find(Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, τ::Float64, settings::Settings)
+    j1, t1 = CartesianIndex(0,0), Q_f
     if !isempty(Q_s)
         j2, t2 = peek(Q_s)
     else
@@ -192,16 +188,16 @@ function event_find(Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, 
     return t, j, type
 end
 
-function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::PriorityQueue, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
+function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Prior, dyn::Dynamics)
+    ∇U(x, s, dat, CartesianIndex(1,1))
     # True rate
-    λ = max(v[j]*(∇U(x, s, dat, j) + ∇U_p(x, s, j, priors)) , 0.0)
+    λ = max(v[j]*(∇U(x, s, dat, j)[1] + ∇U_p(x, s, j, priors)) , 0.0)
     # Upper bound
     Λ = dyn.a[j] + (t - dyn.t_set[j])*dyn.b[j]
     if  λ/Λ > 1 + 1e-5
         print("At iteration: ");print(dyn.ind);print("\n")
         println(λ);println(Λ); println(t)
         println(x);println(v)
-        println(x[s]);println(v[s]);
         println(s);
         println(j);
         println(dyn.t_set[j]);
@@ -211,16 +207,12 @@ function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
     if λ/Λ > rand()
         dyn.sampler_eval.flips += 1
         v[j] = - v[j]
-        for l in j[2]:size(x0,2)
-            if s[l]
-                new_bound!(Q_f, t, x, v, s, priors, dat, dyn, CartesianIndex(j[1],l), false)
-            end
-        end
+        new_bound!(Q_f, t, x, v, s, priors, dat, dyn)
         new_merge!(Q_m, t, x, v, s, j, false)
         dyn.last_type = "Flip"
         return true
     else
-        new_bound!(Q_f, t, x, v, s, priors, dat, dyn, j, false)
+        new_bound!(Q_f, t, x, v, s, priors, dat, dyn)
         return false
     end
 end
@@ -253,27 +245,19 @@ function neighbourhood(j::CartesianIndex, s::Matrix{Bool})
     return unique(nhood)
 end
 
-function new_bound!(Q_f::PriorityQueue, t::Float64, x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, dat::PEMData, dyn::Dynamics, j::CartesianIndex, new::Bool)
-    ∇U_bound!(x, v, s, dat, priors, j, dyn)
-    for k ∈ j:CartesianIndex(j[1],size(s,2))
-        if s[k]
-            if !new && k != j
-                delete!(Q_f,k)
-            end
-            dyn.sampler_eval.bounds += 1
-            τ = poisson_time(dyn.a[k], dyn.b[k], rand())
-            if τ > dyn.t_bound[k]
-                # If greater than bounding interval
-                # set to bounding interval 
-                τ = dyn.t_bound[k]
-                dyn.new_t[k] = true
-            else
-                dyn.new_t[k] = false
-            end
-            dyn.t_set[k] = copy(t)
-            enqueue!(Q_f, k, t + τ)
-        end
-    end
+function new_bound!(Q_f::Float64, t::Float64, x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, priors::Prior, dat::PEMData, dyn::Dynamics)
+    ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
+    dyn.sampler_eval.bounds += 1
+    τ = poisson_time(sum(dyn.a), sum(dyn.b), rand())
+    if τ > dyn.t_bound
+        # If greater than bounding interval
+        # set to bounding interval 
+        τ = dyn.t_bound
+        dyn.new_t = true
+    else
+        dyn.new_t = false
+    end 
+    Q_f = τ + t
 end
 
 function sampler_update(dyn::Dynamics, settings::Settings, t::Float64)

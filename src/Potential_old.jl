@@ -50,11 +50,10 @@ function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Union{HyperPrior
 end
 
 function ∇U_bound!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, priors::Prior, j::CartesianIndex, dyn::Dynamics)
-    ∇U1 = ∇U(x, s, dat, j)
-    ∇U2 = ∇U(x .+ v.*dyn.t_bound[j], s, dat, j)
-    k = copy(j)
+    ∇U1 = ∇U(x, s, dat, CartesianIndex(1,1))
+    ∇U2 = ∇U(x .+ v.*dyn.t_bound, s, dat, CartesianIndex(1,1))
     m = 1
-    for k ∈ j:CartesianIndex(j[1],size(s,2))
+    for k ∈ CartesianIndex(1,1):CartesianIndex(1,size(s,2))
         if s[k]
             a_, b_ = 0.0, 0.0
             if v[k] > 0.0
@@ -69,9 +68,9 @@ function ∇U_bound!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, da
                 b = 0.0
             end
             ΛU1p = max(v[k]*∇U_p(x, s, k, priors), 0.0)
-            ΛU2p = max(v[k]*∇U_p(x .+ v.*dyn.t_bound[k], s, k, priors), 0.0)
+            ΛU2p = max(v[k]*∇U_p(x .+ v.*dyn.t_bound, s, k, priors), 0.0)
             a_ += ΛU1p #+ 0.01 
-            b_ += (ΛU2p - ΛU1p)/dyn.t_bound[k]
+            b_ += (ΛU2p - ΛU1p)/dyn.t_bound
             dyn.a[k] = a_
             dyn.b[k] = b_
             m += 1

@@ -17,6 +17,7 @@ y[trunc_ind] .= 3.0
 breaks = collect(0.5:0.5:3.5)
 p = 1
 covar = fill(1.0, 1, n)
+cens = df.status
 dat = init_data(y, cens, covar, breaks)
 #v_abs = vcat(1.0,collect(0.01:0.01:0.6))
 v_abs = vcat(1.0,collect(0.1:0.1:0.6))

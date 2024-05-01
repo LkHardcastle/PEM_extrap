@@ -72,11 +72,13 @@ end
 mutable struct Dynamics
     ind::Int64
     smp_ind::Int64
-    t_bound::Matrix{Float64}
+    t_bound::Float64
     a::Matrix{Float64}
+    ap::Matrix{Float64}
     b::Matrix{Float64}
-    t_set::Matrix{Float64}
-    new_t::Matrix{Bool}
+    bp::Matrix{Float64}
+    t_set::Float64
+    new_t::Bool
     last_type::String
     v_abs::Matrix{Float64}
     adapt_h::Float64
