@@ -22,8 +22,13 @@ t0 = 0.0
 priors = BasicPrior( 1.0, 0.0, 1.0)
 nits = 1_000
 nsmp = 1_000
-settings = Settings(nits, nsmp, 10.0, 0.9, 0.5, 0.0, 0.0, v0, true)
-dyn0 = ZigZag(1, 1, settings.tb_init, 0.0, 0.0, 0.0, 0.0, false, 0, 0.0, "Start", settings.v_abs,
+settings = Settings(nits, nsmp, 10.0, 0.1, 0.5, 0.0, 0.0, v0, true)
+dyn0 = ZigZag(1, 1, settings.tb_init, 0.0, 0.0, 0.0, 0.0, false, 0, CartesianIndex(0,0),0.0, "Start", settings.v_abs,
                     SamplerEval(0,0,0,0,0,0,0))
+
+
+∇U_bound!(x0, v0, s0, dat, priors, CartesianIndex(1,1), dyn0)
+println(dyn0.a);println(dyn0.b)
+
 Random.seed!(23653)
 out1 = @time pem_sample(x0, s0, v0, t0, dat, priors, settings, dyn0)

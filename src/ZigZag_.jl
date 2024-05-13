@@ -1,6 +1,7 @@
 function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, dat::PEMData, times::Times, dyn::ZigZag, priors::Prior)
-    λ = max.(0.0, v.*∇U(x, s, dat, CartesianIndex(1,1)))
+    λ = max.(0.0, v.*∇U(x, s, dat, CartesianIndex(1,1), priors))
     Σλ = sum(λ)
+    println("Bounds");println(λ);println(Σλ)
     Λ = dyn.a + (t- dyn.t_set)*dyn.b
     out = false
     if  Σλ/Λ > 1 + 1e-5
