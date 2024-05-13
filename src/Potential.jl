@@ -1,4 +1,4 @@
-function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianIndex)
+function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianIndex, priors::Prior)
     ∇Uλ = 0.0
     Uλ = 0.0
     ∇U_out = []
@@ -24,7 +24,7 @@ function ∇U(x::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, j::CartesianInd
     return ∇U_out
 end
 
-function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Union{FixedPrior,HyperPrior2}, j::CartesianIndex)
+function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Union{BasicPrior,HyperPrior}, j::CartesianIndex)
     last_ind = findlast(s[j[1],1:(j[2]-1)])
     if isnothing(last_ind)
         # First evaluation - draw from initial prior
@@ -34,19 +34,9 @@ function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Union{FixedPrior
     end
 end
 
-function prior_add(x::Matrix{Float64}, s::Matrix{Bool}, priors::Union{HyperPrior3}, j::CartesianIndex)
-    last_ind = findlast(s[j[1],1:(j[2]-1)])
-    if isnothing(last_ind)
-        # First evaluation - draw from initial prior
-        return (1/priors.σ0^2)*(x[j] - priors.μ0)
-    else
-        return (1/priors.σ[j]^2)*x[j]
-    end
-end
-
 function ∇U_bound!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, dat::PEMData, priors::Prior, j::CartesianIndex, dyn::Dynamics)
-    ∇U1 = ∇U(x, s, dat, CartesianIndex(1,1))
-    ∇U2 = ∇U(x .+ v.*dyn.next_event_int, s, dat, CartesianIndex(1,1))
+    ∇U1 = ∇U(x, s, dat, CartesianIndex(1,1), prior)
+    ∇U2 = ∇U(x .+ v.*dyn.next_event_int, s, dat, CartesianIndex(1,1), prior)
     m = 1
     dyn.a = 0.0
     dyn.b = 0.0

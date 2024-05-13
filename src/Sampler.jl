@@ -3,10 +3,8 @@ include("Helper.jl")
 include("Potential.jl")
 include("ZigZag.jl")
 
-function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, t0::Float64, dat::PEMData, priors::Prior, settings::Settings)
+function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, t0::Float64, dat::PEMData, priors::Prior, settings::Settings, dyn::Dynamics)
     x, s, v, t = copy(x0), copy(s0), copy(v0), copy(t0)
-    dyn = Dynamics(1, 1, settings.tb_init, zeros(size(x)), zeros(size(x)), zeros(size(x)), fill(false, size(x)), "Start", settings.v_abs, 0.1,
-                    SamplerEval(0,0,0,0,0,0,0))
     times = time_build(x, v, s, settings, priors)
     track = track_init!(x, v, s, t, dat, priors, settings, dyn)
     next_event!(t, times, dyn)

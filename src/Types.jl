@@ -84,6 +84,7 @@ mutable struct ZigZag <: Dynamics
     next_event_int::Float64
     new_bound::Bool
     next_event_type::Int64
+    next_event_coord::CartesianIndex
     t_set::Float64
     last_type::String
     v_abs::Matrix{Float64}

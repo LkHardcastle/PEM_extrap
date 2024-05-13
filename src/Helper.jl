@@ -2,13 +2,13 @@ function time_build(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, set
     Q_m = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     Q_s = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     for j in CartesianIndex(1,1):CartesianIndex(size(s,1),size(s,2))
-        if s[j]
-            if j[2] > 1
-                enqueue!(Q_m, j, merge_time(x, v, j))
-            end
-        else
-            new_split!(Q_s, s, 0.0, priors, j, dyn)
-        end
+        #if s[j]
+        #    if j[2] > 1
+        #        enqueue!(Q_m, j, merge_time(x, v, j))
+        #    end
+        #else
+        #    new_split!(Q_s, s, 0.0, priors, j, dyn)
+        #end
     end
     enqueue!(Q_m, CartesianIndex(0,0), Inf)
     enqueue!(Q_s, CartesianIndex(0,0), Inf)
@@ -99,8 +99,8 @@ function next_event!(t::Float64, times::Times, dyn::Dynamics)
     #j2, t2 = peek(times.Q_s)
     #j3, t3 = peek(times.Q_m)
     #j4, t4 = CartesianIndex(0,0), times.T_h
-    j5, t5 = CartesianIndex(0,0), times.T_ref
-    j6, t6 = CartesianIndex(0,0), times.T_smp
+    j5, t5 = CartesianIndex(0,0), times.T_ref[1]
+    j6, t6 = CartesianIndex(0,0), times.T_smp[1]
     #type = findmin([t1,t2,t3,t4,t5,t6])[2]
     #τ = [t1,t2,t3,t4,t5,t6][type]
     #j = [j1,j2,j3,j4,j5,j6][type]
@@ -164,23 +164,13 @@ function h_store_smp!(h_track, priors::Union{BasicPrior}, dyn::Dynamics)
 end
 
 function h_track_init(priors::Union{BasicPrior}, settings::Settings)
+    return zeros(2,settings.max_ind)
+end
+
+function h_post(h_smp, priors::Union{BasicPrior}, dyn::Dynamics)
     return 0.0
 end
-
-function h_smp_init(priors::Union{FixedPrior}, settings::Settings)
-    return 0.0
-end
-
-
-function h_store!(h_track, priors::Union{FixedPrior}, dyn::Dynamics)
-end
-
-function h_store_smp!(h_track, priors::Union{FixedPrior}, dyn::Dynamics)
-end
-function h_post(h_smp, priors::Union{FixedPrior}, dyn::Dynamics)
-    return 0.0
-end
-function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Union{FixedPrior}, dyn::Dynamics)
+function hyper_update!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, t::Float64, Q_f::Float64, Q_s::PriorityQueue, Q_m::PriorityQueue, dat::PEMData, j::CartesianIndex, priors::Union{BasicPrior}, dyn::Dynamics)
     error("Fixed prior structure - hyper update rate ")
 end
 

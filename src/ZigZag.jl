@@ -49,7 +49,7 @@ function new_merge!(times::Times, t::Float64, x::Matrix{Float64}, v::Matrix{Floa
     end
 end
 
-function split_rate(s::Matrix{Bool}, dat::PEMData, priors::Union{FixedPrior,HyperPrior2}, j::CartesianIndex, dyn::ZigZag)
+function split_rate(s::Matrix{Bool}, dat::PEMData, priors::Prior, j::CartesianIndex, dyn::ZigZag)
     #'return 0.375*abs(sum(dot([1,-2],[1,-1])))*priors.p_split*(priors.ω[j]/(1 - priors.ω[j]))*(sqrt(2*pi*priors.σ^2))^-1
     return abs(dyn.v_abs[j])*priors.p_split*(priors.ω[j]/(1 - priors.ω[j]))*(sqrt(2*pi*priors.σ^2))^-1
 end
