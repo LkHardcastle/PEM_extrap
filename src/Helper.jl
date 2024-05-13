@@ -96,14 +96,17 @@ end
 
 function next_event!(t::Float64, times::Times, dyn::Dynamics)
     j1, t1 = CartesianIndex(0,0), Inf
-    j2, t2 = peek(times.Q_s)
-    j3, t3 = peek(times.Q_m)
-    j4, t4 = CartesianIndex(0,0), times.T_h
+    #j2, t2 = peek(times.Q_s)
+    #j3, t3 = peek(times.Q_m)
+    #j4, t4 = CartesianIndex(0,0), times.T_h
     j5, t5 = CartesianIndex(0,0), times.T_ref
     j6, t6 = CartesianIndex(0,0), times.T_smp
-    type = findmin([t1,t2,t3,t4,t5,t6])[2]
-    τ = [t1,t2,t3,t4,t5,t6][type]
-    j = [j1,j2,j3,j4,j5,j6][type]
+    #type = findmin([t1,t2,t3,t4,t5,t6])[2]
+    #τ = [t1,t2,t3,t4,t5,t6][type]
+    #j = [j1,j2,j3,j4,j5,j6][type]
+    type = findmin([t1,Inf,Inf,Inf,t5,t6])[2]
+    τ = [t1,Inf,Inf,Inf,t5,t6][type]
+    j = CartesianIndex(0,0)
     dyn.next_event_type = type
     dyn.next_event_coord = j
     if τ <= t
@@ -118,7 +121,8 @@ function next_event!(t::Float64, times::Times, dyn::Dynamics)
             dyn.next_bound_int = τ - t
         end
     else
-        τ_ = [t1,t2,t3,t4,t5][findmin([t1,t2,t3,t4,t5])[2]]
+        #τ_ = [t1,t2,t3,t4,t5][findmin([t1,t2,t3,t4,t5])[2]]
+        τ_ = [t1,Inf,Inf,Inf,t5][findmin([t1,Inf,Inf,Inf,t5])[2]]
         if τ_ <= t
             error("Sure, unless time is linear")
         end
@@ -133,35 +137,33 @@ function next_event!(t::Float64, times::Times, dyn::Dynamics)
     dyn.t_set = copy(t)
 end
 
-function h_track_init(priors::Union{HyperPrior2,HyperPrior3}, settings::Settings)
+function h_track_init(priors::Union{BasicPrior,HyperPrior}, settings::Settings)
     return zeros(2,settings.max_ind)
 end
 
-function h_smp_init(priors::Union{HyperPrior2,HyperPrior3}, settings::Settings)
+function h_smp_init(priors::Union{BasicPrior,HyperPrior}, settings::Settings)
     return zeros(2,settings.max_smp)
 end
 
-function h_store!(h_track, priors::Union{HyperPrior2}, dyn::Dynamics)
+function h_store!(h_track, priors::Union{HyperPrior}, dyn::Dynamics)
     h_track[1,dyn.ind] = priors.ω0
     h_track[2,dyn.ind] = priors.σ
 end
 
-function h_store!(h_track, priors::Union{HyperPrior3}, dyn::Dynamics)
-    h_track[1,dyn.ind] = priors.ω0
-    h_track[2,dyn.ind] = priors.τ
+function h_store!(h_track, priors::Union{BasicPrior}, dyn::Dynamics)
+
 end
 
-function h_store_smp!(h_track, priors::Union{HyperPrior2}, dyn::Dynamics)
+function h_store_smp!(h_track, priors::Union{HyperPrior}, dyn::Dynamics)
     h_track[1,dyn.smp_ind] = priors.ω0
     h_track[2,dyn.smp_ind] = priors.σ
 end
 
-function h_store_smp!(h_track, priors::Union{HyperPrior3}, dyn::Dynamics)
-    h_track[1,dyn.smp_ind] = priors.ω0
-    h_track[2,dyn.smp_ind] = priors.τ
+function h_store_smp!(h_track, priors::Union{BasicPrior}, dyn::Dynamics)
+
 end
 
-function h_track_init(priors::Union{FixedPrior}, settings::Settings)
+function h_track_init(priors::Union{BasicPrior}, settings::Settings)
     return 0.0
 end
 

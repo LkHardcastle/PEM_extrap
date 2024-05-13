@@ -11,7 +11,7 @@ function flip_attempt!(x::Matrix{Float64}, v::Matrix{Float64}, s::Matrix{Bool}, 
         dyn.sampler_eval.flips += 1
         j = rand(Categorical(λ./Σλ))
         v[j] = -v[j]
-        new_merge!(times, t, x, v, j, false)
+        #new_merge!(times, t, x, v, j, false)
         dyn.last_type = "Flip"
         out = true
     end

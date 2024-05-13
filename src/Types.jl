@@ -26,7 +26,6 @@ mutable struct Times
     T_smp::Vector{Float64}
     T_h::Vector{Float64}
     T_ref::Vector{Float64}
-    T_flip::Float64
 end
 
 mutable struct Track
@@ -40,4 +39,61 @@ mutable struct Track
     s_smp::Array{Float64}
     t_smp::Vector{Float64}
     h_smp::Array{Float64}
+end
+
+mutable struct SamplerEval
+    bounds::Int64
+    flip_attempts::Int64
+    flips::Int64
+    splits::Int64
+    merges::Int64
+    h_updates::Int64
+    h_acc::Int64
+end
+
+abstract type Prior end
+
+mutable struct BasicPrior <: Prior
+    σ::Float64
+    σ0::Float64
+    μ0::Float64
+end
+
+mutable struct HyperPrior <: Prior
+    ω::Matrix{Float64}
+    ω0::Float64
+    a::Float64
+    b::Float64
+    σ::Float64
+    σ0::Float64
+    μ0::Float64
+    σa::Float64
+    σb::Float64
+    p_split::Float64
+end
+
+abstract type Dynamics end
+
+mutable struct ZigZag <: Dynamics
+    ind::Int64
+    smp_ind::Int64
+    t_bound::Float64
+    a::Float64
+    b::Float64
+    next_bound_int::Float64
+    next_event_int::Float64
+    new_bound::Bool
+    next_event_type::Int64
+    t_set::Float64
+    last_type::String
+    v_abs::Matrix{Float64}
+    sampler_eval::SamplerEval
+end
+
+mutable struct BPS <: Dynamics
+
+end
+
+mutable struct ECMC <: Dynamics
+
 end

@@ -1,5 +1,7 @@
-
-
+include("Types.jl")
+include("Helper.jl")
+include("Potential.jl")
+include("ZigZag.jl")
 
 function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, t0::Float64, dat::PEMData, priors::Prior, settings::Settings)
     x, s, v, t = copy(x0), copy(s0), copy(v0), copy(t0)
@@ -15,7 +17,7 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
         if settings.verbose
             verbose_talk(x, v, s, t, dyn)
         end
-        x, v, s, t = sampler_inner!()
+        x, v, s, t = sampler_inner!(x, s, v, t, dat, priors, dyn)
         if dyn.last_type != "Sample"        
             track_store!(x, v, s, t, dyn, priors, settings)
         else
@@ -31,7 +33,7 @@ function pem_sample(x0::Matrix{Float64}, s0::Matrix{Bool}, v0::Matrix{Float64}, 
     return out
 end
 
-function sampler_inner!()
+function sampler_inner!(x::Matrix{Float64}, s::Matrix{Bool}, v::Matrix{Float64}, t::Float64, dat::PEMData, priors::Prior, dyn::Dynamics)
     inner_stop = false
     while !inner_stop
         τ = copy(t)
@@ -54,33 +56,35 @@ function sampler_inner!()
                 dyn.sampler_eval.flip_attempts += 1
                 inner_stop = flip_attempt!()
             end
-        elseif dyn.next_event_type == 2
-            dyn.sampler_eval.splits += 1
-            dyn.last_type = "Split"
-            split_int!()
-            inner_stop = true
-            next_event!(t, times, dyn)
-            ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
-        elseif dyn.next_event_type == 3
-            if rand() < priors.p_split
-                dyn.sampler_eval.merges += 1
-                merge_int!()
-                dyn.last_type = "Merge"
-                inner_stop = true
-                next_event!(t, times, dyn)
-                ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
-            else
-                delete!(Q_m, j)
-                enqueue!(Q_m, j, Inf)
-                next_event!(t, times, dyn)
-                ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
-            end
-        elseif dyn.next_event_type == 4
-            hyper_update!()
-            dyn.last_type = "Hyper"
-            inner_stop = true
-            next_event!(t, times, dyn)
-            ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
+        elseif dyn.next_event_type ∈ [2,3,4]
+            error("Not yet")
+        #elseif dyn.next_event_type == 2
+        #    dyn.sampler_eval.splits += 1
+        #    dyn.last_type = "Split"
+        #    split_int!()
+        #    inner_stop = true
+        #    next_event!(t, times, dyn)
+        #    ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
+        #elseif dyn.next_event_type == 3
+        #    if rand() < priors.p_split
+        #        dyn.sampler_eval.merges += 1
+        #        merge_int!()
+        #        dyn.last_type = "Merge"
+        #        inner_stop = true
+        #        next_event!(t, times, dyn)
+        #        ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
+        #    else
+        #        delete!(Q_m, j)
+        #        enqueue!(Q_m, j, Inf)
+        #        next_event!(t, times, dyn)
+        #        ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
+        #    end
+        #elseif dyn.next_event_type == 4
+        #    hyper_update!()
+        #    dyn.last_type = "Hyper"
+        #    inner_stop = true
+        #    next_event!(t, times, dyn)
+        #    ∇U_bound!(x, v, s, dat, priors, CartesianIndex(1,1), dyn)
         elseif dyn.next_event_type == 5
             dyn.last_type = "Refresh"
             inner_stop = true
