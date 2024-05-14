@@ -1,11 +1,15 @@
 abstract type State end
 
-mutable struct BPS
+mutable struct BPS <: State
     x::Matrix{Float64}
     v::Matrix{Float64}
     s::Matrix{Bool}
     t::Float64
-    active::Vector{CartesianIndex}
+    active::Array{CartesianIndex{2}}
+end
+mutable struct SamplerEval
+    newton::Vector{Float64}
+    gradient::Int64
 end
 
 mutable struct Dynamics
@@ -13,11 +17,11 @@ mutable struct Dynamics
     smp_ind::Int64
     t_det::Float64
     next_event::Int64
-    c0::Vector{Float64}
-    δ::Vector{Float64}
-    d0::Vector{Float64}
-    ∑v::Vector{Float64}
-    δ∑v::Vector{Float64}
+    c0::Matrix{Float64}
+    δ::Matrix{Float64}
+    d0::Matrix{Float64}
+    ∑v::Matrix{Float64}
+    δ∑v::Matrix{Float64}
     sampler_eval::SamplerEval
 end
 
@@ -40,12 +44,15 @@ mutable struct Storage
     t_smp::Vector{Float64}
 end
 
-mutable struct SamplerEval
-    newton::Vector{Float64}
-    gradient::Int64
+
+
+abstract type Prior end
+
+mutable struct BasicPrior <: Prior
+    σ0::Float64
+    σ::Float64
 end
 
-abstract type Priors end
 
 struct PEMData
     y::Vector{Float64}
@@ -65,4 +72,5 @@ struct Settings
     h_rate::Float64
     r_rate::Float64
     verbose::Bool
+    skel::Bool
 end

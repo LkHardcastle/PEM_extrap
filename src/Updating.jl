@@ -20,7 +20,12 @@ function flip!(state::BPS, dat::PEMData, priors::Prior)
     ### Calculate gradient
     U_grad = ∇U(state, dat, priors)
     ### Flip
+    #println(state.v[state.active] .- 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2)
+    #println(dot(state.v[state.active], U_grad))
+    #println(U_grad)
+    #println(norm(U_grad))
     state.v[state.active] = state.v[state.active] - 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2
+    
 end
 
 function refresh!(state::BPS)
@@ -41,7 +46,7 @@ function update!(state::State, t::Float64)
     state.t += t
 end
 
-function event!(state::State, dyn::Dynamics, priors::Prior)
+function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
     if dyn.next_event == 1
         # Split
         error("Shouldn't be here yet")
@@ -52,11 +57,15 @@ function event!(state::State, dyn::Dynamics, priors::Prior)
     end
     if dyn.next_event == 3
         # Refresh
+        println("Refresh")
         refresh!(state)
+        deleteat!(times.refresh, 1)
+        dyn.next_event = 0
     end
     if dyn.next_event == 4
         # Hyperparameter update
         hyper_update!(priors)
+        deleteat!(times.hyper, 1)
     end
 end
 
@@ -68,7 +77,7 @@ function merge!()
 
 end
 
-function hyper_update!(priors::Priors)
+function hyper_update!(priors::Prior)
 
 end
 

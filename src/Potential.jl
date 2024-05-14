@@ -19,16 +19,16 @@ function U_new!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData)
     end
     dyn.∑v = cumsum(state.v, dims = 2)
     dyn.δ∑v = dyn.δ.*dyn.∑v
-    U, ∂U, ∂2U = U(state, 0.0, dyn, priors)
-    return U, ∂U, ∂2U
+    U_, ∂U_, ∂2U_ = U_eval(state, 0.0, dyn, priors)
+    return U_, ∂U_, ∂2U_
 end
 
-function U(state::State, t::Float64, dyn::Dynamics, priors::Prior)
+function U_eval(state::State, t::Float64, dyn::Dynamics, priors::Prior)
     # Use known constants to calculate potential and rate of change of potential
     vec1 = exp.(t*dyn.∑v[state.active]).*dyn.c0[state.active]
     U_ = sum(vec1 .- dyn.d0[state.active] .- t*dyn.δ∑v[state.active]) + (1/(2*priors.σ^2))*sum((state.x[state.active][2:end] + state.v[state.active][2:end].*t).^2) + (1/(2*priors.σ0^2))*(state.x[state.active][1] + state.v[state.active][1].*t).^2
-    ∂U_ = sum(dyn.∑v[state.active].*(vec1 .- dyn.δ[instate.activeds])) + (1/priors.σ)*sum((state.x[state.active][2:end] .+ state.v[state.active][2:end])) + (1/priors.σ0)*(state.x[state.active][1] + state.v[state.active][1].*t)
-    ∂2U_ = sum(dyn.∑v[state.active]^2 .*vec1) + v[state.active][1]/priors.σ0^2 + sum(v[state.active][2:end])/priors.σ^2
+    ∂U_ = sum(dyn.∑v[state.active].*(vec1 .- dyn.δ[state.active])) + (1/priors.σ)*sum(state.v[state.active][2:end].*(state.x[state.active][2:end] .+ state.v[state.active][2:end].*t)) + state.v[state.active][1]*(1/priors.σ0)*(state.x[state.active][1] + state.v[state.active][1].*t)
+    ∂2U_ = sum(dyn.∑v[state.active].^2 .*vec1) + (state.v[state.active][1]^2)/priors.σ0^2 + sum(state.v[state.active][2:end].^2)/priors.σ^2
     return U_, ∂U_, ∂2U_
 end
 
@@ -38,24 +38,35 @@ function grad_optim(∂U::Float64, ∂2U::Float64, state::State, dyn::Dynamics, 
     f = copy(∂U)
     f1 = copy(∂2U)
     while abs(f) > 1e-10
+        println("Grad optim");println(t0);println(f);println(f1)
         t0 = t0 - f/f1
-        blank, f, f1 = U(state, t0, dyn, priors)
+        blank, f, f1 = U_eval(state, t0, dyn, priors)
         dyn.sampler_eval.newton[1] += 1
+    end
+    if isnan(t0)
+        verbose(dyn, state)
+        error("Grad optim error")
     end
     return t0
 end
 
-function potential_optim(V::Float64, U::Float64, ∂U::Float64, state::State, dyn::Dynamics, priors::Prior)
+function potential_optim(V::Float64, U_::Float64, ∂U::Float64, state::State, dyn::Dynamics, priors::Prior)
     # Conduct a line search along U(θ + vτ) - U(θ) = -log(V) to find τ
     t0 = 0.0
-    Uθ = copy(U)
+    Uθ = Base.copy(U_)
     f = log(V)
-    f1 = copy(∂U)
-    while abs(f) > 1e-10
+    f1 = Base.copy(∂U)
+    while abs(f) > 1e-5
+        println("Potential optim");println(t0);println(f);println(f1)
         t0 = t0 - f/f1
-        f_, f1, blank = U(state, t0, dyn, priors)
+        f_, f1, blank = U_eval(state, t0, dyn, priors)
         f = f_ - Uθ + log(V)
         dyn.sampler_eval.newton[2] += 1
+    end
+    println("Potential optim fin");println(t0);println(f);println(f1)
+    if isnan(t0) || isinf(t0)
+        verbose(dyn, state)
+        error("Potential optim error")
     end
     return t0
 end
@@ -63,7 +74,7 @@ end
 function ∇U(state::State, dat::PEMData, priors::Prior)
     ∇Uλ = 0.0
     ∇U_out = []
-    for j in size(state.active):1
+    for j in size(state.active,1):-1:1
         if j == 1
             range = CartesianIndex(state.active[1][1],1):state.active[1]
         else
@@ -76,13 +87,16 @@ function ∇U(state::State, dat::PEMData, priors::Prior)
         else
             sj_1 = 0.0
         end
+        println(exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d] .- sj_1) + length(c)*(dat.s[state.active[j][2]] - sj_1)) - sum(dat.cens[d]))
         ∇Uλ += exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d] .- sj_1) + length(c)*(dat.s[state.active[j][2]] - sj_1)) - sum(dat.cens[d])
-        pushfirst!(∇U_out, ∇Uλ + prior_add(state, priors, state.active[j][2]))
+        println(prior_add(state, priors, state.active[j]))
+        println(j);println(state.active[j]);println(state.x)
+        pushfirst!(∇U_out, ∇Uλ + prior_add(state, priors, state.active[j]))
     end
     return ∇U_out
 end
 
-function prior_add(state::State, priors::Prior, k::CartesianIndex)
+function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
     if k[2] == 1
         return state.x[k]/priors.σ0^2
     else
