@@ -18,7 +18,7 @@ function U_new!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData)
         dyn.d0[state.active[j]] = dyn.δ[state.active[j]]*sum(state.x[1:state.active[j][2]])
     end
     dyn.∑v = cumsum(state.v, dims = 2)
-    dyn.δ∑v = dyn.δ*dyn.∑v
+    dyn.δ∑v = dyn.δ.*dyn.∑v
     U, ∂U, ∂2U = U(state, 0.0, dyn, priors)
     return U, ∂U, ∂2U
 end

@@ -1,6 +1,6 @@
 abstract type State end
 
-mutable struct ZZS
+mutable struct BPS
     x::Matrix{Float64}
     v::Matrix{Float64}
     s::Matrix{Bool}
@@ -9,7 +9,16 @@ mutable struct ZZS
 end
 
 mutable struct Dynamics
-
+    ind::Int64
+    smp_ind::Int64
+    t_det::Float64
+    next_event::Int64
+    c0::Vector{Float64}
+    δ::Vector{Float64}
+    d0::Vector{Float64}
+    ∑v::Vector{Float64}
+    δ∑v::Vector{Float64}
+    sampler_eval::SamplerEval
 end
 
 mutable struct Times 
@@ -21,14 +30,14 @@ mutable struct Times
 end
 
 mutable struct Storage
-    x::Matrix{Float64}
-    v::Matrix{Float64}
-    s::Matrix{Bool}
-    t::Float64
-    x_smp::Matrix{Float64}
-    v_smp::Matrix{Float64}
-    s_smp::Matrix{Bool}
-    t_smp::Float64
+    x::Array{Float64}
+    v::Array{Float64}
+    s::Array{Bool}
+    t::Vector{Float64}
+    x_smp::Array{Float64}
+    v_smp::Array{Float64}
+    s_smp::Array{Bool}
+    t_smp::Vector{Float64}
 end
 
 mutable struct SamplerEval
@@ -49,6 +58,11 @@ struct PEMData
 end
 
 struct Settings
-
-
+    max_ind::Int64
+    max_smp::Int64
+    max_time::Int64
+    smp_rate::Float64
+    h_rate::Float64
+    r_rate::Float64
+    verbose::Bool
 end

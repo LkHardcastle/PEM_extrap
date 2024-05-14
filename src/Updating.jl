@@ -1,35 +1,40 @@
-function flip!(state::ZZS, dat::PEMData, priors::Prior)
+#function flip!(state::ZZS, dat::PEMData, priors::Prior)
     ### Calculate gradient
     ### Select component to flip
     ### Flip
-    λ = max.(0.0, ∇U(state, dat, priors))
-    Λ = sum(λ)
-    j = rand(Categorical(λ./Λ))
-    if j == 1
-        state.v[CartesianIndex(1,1):state.active[j]] = -state.v[CartesianIndex(1,1):state.active[j]]
-    else
-        state.v[(state.active[j-1] + CartesianIndex(0,1)):state.active[j]] = -state.v[(state.active[j-1] + CartesianIndex(0,1)):state.active[j]]
-    end
-end
+#    λ = max.(0.0, ∇U(state, dat, priors))
+#    Λ = sum(λ)
+#    j = rand(Categorical(λ./Λ))
+#    if j == 1
+#        state.v[CartesianIndex(1,1):state.active[j]] = -state.v[CartesianIndex(1,1):state.active[j]]
+#    else
+#        state.v[(state.active[j-1] + CartesianIndex(0,1)):state.active[j]] = -state.v[(state.active[j-1] + CartesianIndex(0,1)):state.active[j]]
+#    end
+#end
 
-function refresh!(state::ZZS)
-    println("No ZZS refresh mechanism")
-end
+#function refresh!(state::ZZS)
+#    println("No ZZS refresh mechanism")
+#end
 
-function flip!(state::BPS)
+function flip!(state::BPS, dat::PEMData, priors::Prior)
     ### Calculate gradient
-
+    U_grad = ∇U(state, dat, priors)
     ### Flip
+    state.v[state.active] = state.v[state.active] - 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2
 end
 
-function flip!(state::ECMC)
+function refresh!(state::BPS)
+    state.v[state.active] = rand(Normal(0,1),size(state.active))
+end
+
+#function flip!(state::ECMC)
     ### Calculate gradient
 
     ### Gradient update
 
 
     ### Orthogonal update
-end
+#end
 
 function update!(state::State, t::Float64)
     state.x += state.v*t

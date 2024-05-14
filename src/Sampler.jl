@@ -1,6 +1,14 @@
-function pem_sample()
+include("Types.jl")
+include("Potential.jl")
+include("Updating.jl")
+
+function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settings)
     ### Setup
+    state = copy(state0)
     times = time_setup(state, settings)
+    dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.x), copy(state.x), copy(state.x), SamplerEval(zeros(2),0))
+    # Set up storage 
+    storage = storage_start!(state, settings, dyn)
     while dyn.ind < settings.max_ind
         if settings.verbose
             verbose(state)
@@ -9,8 +17,25 @@ function pem_sample()
         store_state!(state, storage, dyn; skel = settings.skel)
         store_smps!(state, storage, dyn, times)
     end
-    out = sampler_end(state, dynamics)
+    out = sampler_end(state, dynamics, settings)
     return out  
+end
+
+function storage_start!(state::State, settings::Settings, dyn::Dynamics)
+    storage = Storage(fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_ind),
+                        fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_ind) 
+                        fill(false,size(state.s, 1),size(state.s, 2), settings.max_ind),
+                        zeros(settings.max_ind),
+                        fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_smp),
+                        fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_smp) 
+                        fill(false,size(state.s, 1),size(state.s, 2), settings.max_smp),
+                        zeros(settings.max_ind))
+    store_state!(state, storage, dyn; skel = settings.skel)
+    return storage
+end
+
+function copy(state::BPS)
+    return BPS(state.x, state.v, state.s, state.t, state.active)
 end
 
 function time_setup(state::State, settings::Settings)
@@ -20,6 +45,20 @@ function time_setup(state::State, settings::Settings)
     T_h = exp_vector(settings, settings.h_rate)
     T_ref = exp_vector(settings, settings.r_rate)
     return Times(Q_m, Q_s, T_ref, T_h, T_smp)
+end
+
+function exp_vector(settings::Settings, rate::Float64)
+    if rate > 0.0
+        out = cumsum(rand(Exponential(1/rate), trunc(Int, rate*settings.max_time)))
+        if out[end] < settings.max_time
+            while out[end] < settings.max_time
+                push!(out, out[end] + rand(Exponential(1/rate)))
+            end
+        end
+    else
+        out = [Inf]
+    end
+    return out
 end
 
 function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
@@ -86,9 +125,24 @@ function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times
     end
 end
 
-function sampler_end!(state::State, dynamics::Dynamics)
-
+function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
+    if settings.skel
+        out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)],
+                    "Smp_x" => storage.x_smp[:,:,1:(dyn.ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.ind-1)], "Smp_t" => storage.t_smp[1:(dyn.ind-1)],
+                    "Eval" => dyn.sampler_eval) 
+    else
+        out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.ind-1)], "Smp_t" => storage.t_smp[1:(dyn.ind-1)],
+                    "Eval" => dyn.sampler_eval) 
+    end
+    return out
 end
 
 function verbose(state::State)
+    println("----------------------")
+    println(vec(state.t[state.active]))
+    println(state.active)
+    println(vec(state.x[state.active]))
+    println(vec(state.v[state.active]))
+    println(vec(state.t[state.active]))
+    println("----------------------")
 end
