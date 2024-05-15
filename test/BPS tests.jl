@@ -11,7 +11,7 @@ include(srcdir("PostProcessing.jl"))
 Random.seed!(123)
 n = 0
 y = rand(Exponential(1.0),n)
-breaks = collect(1:1)
+breaks = collect(0.5:0.5:1)
 p = 1
 cens = fill(1.0,n)
 covar = fill(1.0, 1, n)
@@ -22,7 +22,7 @@ state0 = BPS(x0, v0, s0, t0, findall(s0))
 priors = BasicPrior(1.0, 1.0)
 nits = 1000
 nsmp = 1000
-settings = Settings(nits, nsmp, 150, 1.0,0.0, 0.1, true, true)
+settings = Settings(nits, nsmp, 100000, 1.0,0.0, 0.0, false, true)
 Random.seed!(123)
 @time out = pem_sample(state0, dat, priors, settings)
 
@@ -42,6 +42,20 @@ V = 0.5
 f = copy()
 out["Sk_v"][:,:,5]
 
-x_plot = out["Sk_x"][:,:,1:9]
+x_plot = out["Sk_x"][:,:,1:500]
 
-plot(out["Sk_t"][1:9],x_plot[1,1,:])
+plot(x_plot[1,1,:], x_plot[1,2,:])
+plot!(scatter!(out["Smp_t"],vec(out["Smp_x"])))
+out["Smp_t"]
+
+x_smp = vec(out["Smp_x"][1,1,:])
+mean(x_smp)
+quantile(x_smp, 0.025)
+quantile(x_smp, 0.975)
+
+x_smp = vec(out["Smp_x"][1,2,:])
+mean(x_smp)
+quantile(x_smp, 0.025)
+quantile(x_smp, 0.975)
+
+out["Eval"]

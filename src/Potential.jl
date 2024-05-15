@@ -38,7 +38,7 @@ function grad_optim(∂U::Float64, ∂2U::Float64, state::State, dyn::Dynamics, 
     f = copy(∂U)
     f1 = copy(∂2U)
     while abs(f) > 1e-10
-        println("Grad optim");println(t0);println(f);println(f1)
+        #println("Grad optim");println(t0);println(f);println(f1);
         t0 = t0 - f/f1
         blank, f, f1 = U_eval(state, t0, dyn, priors)
         dyn.sampler_eval.newton[1] += 1
@@ -50,20 +50,31 @@ function grad_optim(∂U::Float64, ∂2U::Float64, state::State, dyn::Dynamics, 
     return t0
 end
 
-function potential_optim(V::Float64, U_::Float64, ∂U::Float64, state::State, dyn::Dynamics, priors::Prior)
+function potential_optim(t_switch::Float64, V::Float64, U_::Float64, ∂U::Float64, state::State, dyn::Dynamics, priors::Prior)
     # Conduct a line search along U(θ + vτ) - U(θ) = -log(V) to find τ
     t0 = 0.0
     Uθ = Base.copy(U_)
+    #print("Uθ ");println(Uθ)
+    #print("log(V) ");println(log(V))
+    #println("v")
+    #println(state.v)
     f = log(V)
     f1 = Base.copy(∂U)
-    while abs(f) > 1e-5
-        println("Potential optim");println(t0);println(f);println(f1)
-        t0 = t0 - f/f1
-        f_, f1, blank = U_eval(state, t0, dyn, priors)
+    if abs(f1) < 1e-10
+        #println("Jumping")
+        t0 = 0.5
+        f_, f1, blank = U_eval(state, t0 + t_switch, dyn, priors)
         f = f_ - Uθ + log(V)
         dyn.sampler_eval.newton[2] += 1
     end
-    println("Potential optim fin");println(t0);println(f);println(f1)
+    while abs(f) > 1e-5
+       # println("Potential optim");println(t0);println(f);println(f1)
+        t0 = t0 - f/f1
+        f_, f1, blank = U_eval(state, t0 + t_switch, dyn, priors)
+        f = f_ - Uθ + log(V)
+        dyn.sampler_eval.newton[2] += 1
+    end
+   # println("Potential optim fin");println(t0);println(f);println(f1)
     if isnan(t0) || isinf(t0)
         verbose(dyn, state)
         error("Potential optim error")
@@ -87,10 +98,7 @@ function ∇U(state::State, dat::PEMData, priors::Prior)
         else
             sj_1 = 0.0
         end
-        println(exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d] .- sj_1) + length(c)*(dat.s[state.active[j][2]] - sj_1)) - sum(dat.cens[d]))
         ∇Uλ += exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d] .- sj_1) + length(c)*(dat.s[state.active[j][2]] - sj_1)) - sum(dat.cens[d])
-        println(prior_add(state, priors, state.active[j]))
-        println(j);println(state.active[j]);println(state.x)
         pushfirst!(∇U_out, ∇Uλ + prior_add(state, priors, state.active[j]))
     end
     return ∇U_out

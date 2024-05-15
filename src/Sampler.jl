@@ -5,11 +5,11 @@ include("Updating.jl")
 function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settings)
     ### Setup
     state = copy(state0)
-    println(state)
     times = time_setup(state, settings)
     dyn = Dynamics(1, 1, 0.0, 0, Base.copy(state.x), Base.copy(state.x), Base.copy(state.x), Base.copy(state.x), Base.copy(state.x), SamplerEval(zeros(2),0))
     # Set up storage 
     storage = storage_start!(state, settings, dyn)
+    k = 1
     while dyn.ind < settings.max_ind
         if settings.verbose
             verbose(dyn, state)
@@ -17,7 +17,8 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
         sampler_inner!(state, dyn, priors, dat, times)
         store_state!(state, storage, dyn; skel = settings.skel)
         store_smps!(state, storage, dyn, times)
-        if sampler_stop(state, dyn, settings)
+        stop = sampler_stop(state, dyn, settings)
+        if stop
             break
         end
         if dyn.ind % 10_000 == 0
@@ -33,26 +34,29 @@ function Base.copy(state::BPS)
 end
 
 function storage_start!(state::State, settings::Settings, dyn::Dynamics)
-    storage = Storage(fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_ind),
-                        fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_ind), 
-                        fill(false,size(state.s, 1),size(state.s, 2), settings.max_ind),
-                        zeros(settings.max_ind),
-                        fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_smp),
-                        fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_smp), 
-                        fill(false,size(state.s, 1),size(state.s, 2), settings.max_smp),
-                        zeros(settings.max_ind))
+    storage = Storage(fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_ind + 1),
+                        fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_ind + 1), 
+                        fill(false,size(state.s, 1),size(state.s, 2), settings.max_ind + 1),
+                        zeros(settings.max_ind+ 1),
+                        fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_smp + 1),
+                        fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_smp + 1), 
+                        fill(false,size(state.s, 1),size(state.s, 2), settings.max_smp + 1),
+                        zeros(settings.max_smp + 1))
     store_state!(state, storage, dyn; skel = settings.skel)
     return storage
 end
 
 function sampler_stop(state::State, dyn::Dynamics, settings::Settings)
     if dyn.ind >= settings.max_ind
+        println("Stopping for max_iter")
         return true
     end
     if dyn.smp_ind >= settings.max_smp
+        println("Stopping for max_smp")
         return true
     end
     if state.t >= settings.max_time
+        println("Stopping for max_time")
         return true
     end
     return false
@@ -69,7 +73,7 @@ end
 
 function exp_vector(settings::Settings, rate::Float64)
     if rate > 0.0
-        out = cumsum(rand(Exponential(1/rate), trunc(Int, rate*settings.max_time)))
+        out = cumsum(rand(Exponential(1/rate), trunc(Int, rate*settings.max_time + 100)))
         if out[end] < settings.max_time
             while out[end] < settings.max_time
                 push!(out, out[end] + rand(Exponential(1/rate)))
@@ -86,7 +90,11 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
     Uθt, ∂U, ∂2U = U_new!(state, dyn, priors, dat)
     ## Get next deterministic event and evaluate at that point
     get_time!(dyn, times)
-    U_det, ∂U_det = U_eval(state, dyn.t_det, dyn, priors)
+    if !isinf(dyn.t_det)
+        U_det, ∂U_det = U_eval(state, dyn.t_det - state.t, dyn, priors)
+    else
+        U_det, ∂U_det = Inf, Inf
+    end
     #println([U_det, ∂U_det])
     ## If potential decreasing at that point jump to it and break
     if ∂U_det < 0.0
@@ -107,7 +115,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
         else
             ## Generate next time via time-scale transformation
             ## Need to be careful
-            t_event = potential_optim(V, Uθt, ∂U, state, dyn, priors)
+            t_event = potential_optim(t_switch, V, Uθt, ∂U, state, dyn, priors)
             update!(state, t_switch + t_event)
             flip!(state, dat, priors)
         end
@@ -122,10 +130,10 @@ function store_state!(state::State, storage::Storage, dyn::Dynamics; skel = true
     if !skel
         dyn_ind -= 1
     end
-    storage.x[:,:,dyn.ind] = state.x
-    storage.v[:,:,dyn.ind] = state.v
-    storage.s[:,:,dyn.ind] = state.s
-    storage.t[dyn.ind] = state.t
+    storage.x[:,:,dyn.ind] = copy(state.x)
+    storage.v[:,:,dyn.ind] = copy(state.v)
+    storage.s[:,:,dyn.ind] = copy(state.s)
+    storage.t[dyn.ind] = copy(state.t)
     dyn.ind += 1
 end
 
@@ -135,10 +143,10 @@ function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times
         ind_end = size(times.smps,1)
     end
     ind_end -= 1
-    t_old = storage.t[dyn.ind - 1]
-    x_old = storage.x[:,:,dyn.ind - 1]
-    v_old = storage.v[:,:,dyn.ind - 1]
-    s_old = storage.s[:,:,dyn.ind - 1]
+    t_old = storage.t[dyn.ind - 2]
+    x_old = storage.x[:,:,dyn.ind - 2]
+    v_old = storage.v[:,:,dyn.ind - 2]
+    s_old = storage.s[:,:,dyn.ind - 2]
     for i in 1:ind_end
         storage.t_smp[dyn.smp_ind] = times.smps[i]
         storage.x_smp[:,:,dyn.smp_ind] = x_old + v_old*(times.smps[i] - t_old)
@@ -152,10 +160,10 @@ end
 function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
     if settings.skel
         out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)],
-                    "Smp_x" => storage.x_smp[:,:,1:(dyn.ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.ind-1)], "Smp_t" => storage.t_smp[1:(dyn.ind-1)],
+                    "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)],
                     "Eval" => dyn.sampler_eval) 
     else
-        out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.ind-1)], "Smp_t" => storage.t_smp[1:(dyn.ind-1)],
+        out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)],
                     "Eval" => dyn.sampler_eval) 
     end
     return out

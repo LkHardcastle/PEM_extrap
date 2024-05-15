@@ -40,8 +40,10 @@ end
 
     ### Orthogonal update
 #end
-
 function update!(state::State, t::Float64)
+    if t < 0.0
+        error("Time travel")
+    end
     state.x += state.v*t
     state.t += t
 end
@@ -57,7 +59,6 @@ function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
     end
     if dyn.next_event == 3
         # Refresh
-        println("Refresh")
         refresh!(state)
         deleteat!(times.refresh, 1)
         dyn.next_event = 0
