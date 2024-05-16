@@ -7,6 +7,15 @@ mutable struct BPS <: State
     t::Float64
     active::Array{CartesianIndex{2}}
 end
+
+mutable struct ECMC <: State
+    x::Matrix{Float64}
+    v::Matrix{Float64}
+    s::Matrix{Bool}
+    t::Float64
+    active::Array{CartesianIndex{2}}
+end
+
 mutable struct SamplerEval
     newton::Vector{Float64}
     gradient::Int64

@@ -33,6 +33,10 @@ function Base.copy(state::BPS)
     return BPS(state.x, state.v, state.s, state.t, state.active)
 end
 
+function Base.copy(state::ECMC)
+    return ECMC(state.x, state.v, state.s, state.t, state.active)
+end
+
 function storage_start!(state::State, settings::Settings, dyn::Dynamics)
     storage = Storage(fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_ind + 1),
                         fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_ind + 1), 

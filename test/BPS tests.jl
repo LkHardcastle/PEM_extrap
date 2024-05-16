@@ -17,15 +17,38 @@ cens = fill(1.0,n)
 covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
+v0 = v0./norm(v0)
 t0 = 0.0
 state0 = BPS(x0, v0, s0, t0, findall(s0))
 priors = BasicPrior(1.0, 1.0)
 nits = 1000
-nsmp = 1000
+nsmp = 5000
 settings = Settings(nits, nsmp, 100000, 1.0,0.0, 0.0, false, true)
 Random.seed!(123)
-@time out = pem_sample(state0, dat, priors, settings)
+@time out1 = pem_sample(state0, dat, priors, settings)
 
+Random.seed!(123)
+dat = init_data(y, cens, covar, breaks)
+x0, v0, s0 = init_params(p, dat)
+v0 = v0./norm(v0)
+state0 = ECMC(x0, v0, s0, t0, findall(s0))
+settings = Settings(nits, nsmp, 100000, 1.0,0.0, 0.0, false, true)
+@time out2 = pem_sample(state0, dat, priors, settings)
+
+x_plot = out1["Sk_x"][:,:,1:50]
+v_plot = out1["Sk_v"][:,:,1:50]
+plot(x_plot[1,1,:], x_plot[1,2,:])
+plot(out1["Sk_t"][1:50],x_plot[1,1,:])
+plot!(out1["Sk_t"][1:50],v_plot[1,1,:], linetype=:steppost)
+plot!(out1["Sk_t"][1:50],x_plot[1,2,:])
+x_plot = out2["Sk_x"][:,:,1:50]
+plot!(x_plot[1,1,:], x_plot[1,2,:])
+plot(out2["Sk_t"][1:50],x_plot[1,1,:])
+plot!(out2["Sk_t"][1:50],x_plot[1,2,:])
+out1["Sk_t"]
+out2["Sk_t"]
+
+norm([0.721191,0.385616])
 a = [CartesianIndex(1,1),CartesianIndex(1,3)]
 b = [1 1 5]
 b[a]

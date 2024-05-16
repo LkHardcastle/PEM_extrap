@@ -84,7 +84,7 @@ end
 
 function ∇U(state::State, dat::PEMData, priors::Prior)
     ∇Uλ = 0.0
-    ∇U_out = []
+    ∇U_out = Float64[]
     for j in size(state.active,1):-1:1
         if j == 1
             range = CartesianIndex(state.active[1][1],1):state.active[1]
