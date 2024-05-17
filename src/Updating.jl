@@ -35,8 +35,8 @@ end
 
 function flip!(state::ECMC, dat::PEMData, priors::Prior)
     ### Calculate gradient
-    #U_grad = ∇U(state, dat, priors)
-    #U_grad = U_grad/norm(U_grad)
+    U_grad = ∇U(state, dat, priors)
+    U_grad = U_grad/norm(U_grad)
     ### Gradient update
     #v_0_new = -gradient_update(state)
     #v_0_old = dot(U_grad, state.v[state.active])
@@ -54,6 +54,20 @@ function flip!(state::ECMC, dat::PEMData, priors::Prior)
     #println(v_perp)
     #v_perp_new = ((1-v_grad^2)^0.5)*sign(dot(v_perp, O*v_perp))*(O*(v_perp/norm(v_perp)))
     #state.v[state.active] = v_grad*U_grad + v_perp_new
+    v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
+    e_vec = gram_schmidt(state, U_grad)
+end
+
+function gram_schmidt(state::State, U_grad::Vector{Float64})
+    g1 = rand(Normal(0,1),size(state.active,1))
+    g2 = rand(Normal(0,1),size(state.active,1))
+    g1 = g1/norm(g1)
+    g2 = g2/norm(g2)
+    g1 = g1 - dot(g1,U_grad)*U_grad
+    g2 = g2 - dot(g2,U_grad)*U_grad
+    g1 = g1/norm(g1)
+    g2 = g2 - dot(g1,g2)*g1
+    g2 = g2/norm(g2)
 end
 
 function refresh!(state::ECMC)
