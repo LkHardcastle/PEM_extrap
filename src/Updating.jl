@@ -55,7 +55,8 @@ function flip!(state::ECMC, dat::PEMData, priors::Prior)
     #v_perp_new = ((1-v_grad^2)^0.5)*sign(dot(v_perp, O*v_perp))*(O*(v_perp/norm(v_perp)))
     #state.v[state.active] = v_grad*U_grad + v_perp_new
     v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
-    e_vec = gram_schmidt(state, U_grad)
+    g1, g2 = gram_schmidt(state, U_grad)
+    g1_, g2_ = 
 end
 
 function gram_schmidt(state::State, U_grad::Vector{Float64})
@@ -68,6 +69,7 @@ function gram_schmidt(state::State, U_grad::Vector{Float64})
     g1 = g1/norm(g1)
     g2 = g2 - dot(g1,g2)*g1
     g2 = g2/norm(g2)
+    return g1, g2
 end
 
 function refresh!(state::ECMC)
