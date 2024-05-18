@@ -54,19 +54,12 @@ function potential_optim(t_switch::Float64, V::Float64, U_::Float64, ∂U::Float
     # Conduct a line search along U(θ + vτ) - U(θ) = -log(V) to find τ
     t0 = 0.0
     Uθ = Base.copy(U_)
-    #print("Uθ ");println(Uθ)
-    #print("log(V) ");println(log(V))
-    #println("v")
-    #println(state.v)
     f = log(V)
     f1 = Base.copy(∂U)
-    if abs(f1) < 1e-10
-        #println("Jumping")
-        t0 = 0.5
-        f_, f1, blank = U_eval(state, t0 + t_switch, dyn, priors)
-        f = f_ - Uθ + log(V)
-        dyn.sampler_eval.newton[2] += 1
-    end
+    t0 = 0.5
+    f_, f1, blank = U_eval(state, t0 + t_switch, dyn, priors)
+    f = f_ - Uθ + log(V)        
+    dyn.sampler_eval.newton[2] += 1
     while abs(f) > 1e-5
        # println("Potential optim");println(t0);println(f);println(f1)
         t0 = t0 - f/f1
@@ -74,7 +67,6 @@ function potential_optim(t_switch::Float64, V::Float64, U_::Float64, ∂U::Float
         f = f_ - Uθ + log(V)
         dyn.sampler_eval.newton[2] += 1
     end
-   # println("Potential optim fin");println(t0);println(f);println(f1)
     if isnan(t0) || isinf(t0)
         verbose(dyn, state)
         error("Potential optim error")

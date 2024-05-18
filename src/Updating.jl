@@ -1,29 +1,8 @@
-#function flip!(state::ZZS, dat::PEMData, priors::Prior)
-    ### Calculate gradient
-    ### Select component to flip
-    ### Flip
-#    λ = max.(0.0, ∇U(state, dat, priors))
-#    Λ = sum(λ)
-#    j = rand(Categorical(λ./Λ))
-#    if j == 1
-#        state.v[CartesianIndex(1,1):state.active[j]] = -state.v[CartesianIndex(1,1):state.active[j]]
-#    else
-#        state.v[(state.active[j-1] + CartesianIndex(0,1)):state.active[j]] = -state.v[(state.active[j-1] + CartesianIndex(0,1)):state.active[j]]
-#    end
-#end
-
-#function refresh!(state::ZZS)
-#    println("No ZZS refresh mechanism")
-#end
 
 function flip!(state::BPS, dat::PEMData, priors::Prior)
     ### Calculate gradient
     U_grad = ∇U(state, dat, priors)
     ### Flip
-    #println(state.v[state.active] .- 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2)
-    #println(dot(state.v[state.active], U_grad))
-    #println(U_grad)
-    #println(norm(U_grad))
     state.v[state.active] = state.v[state.active] - 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2
     
 end
@@ -35,51 +14,45 @@ end
 
 function flip!(state::ECMC, dat::PEMData, priors::Prior)
     ### Calculate gradient
+    #println("-----")
+    #println(state.v[state.active])
     U_grad = ∇U(state, dat, priors)
+    state.v[state.active] = state.v[state.active] - 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2
     U_grad = U_grad/norm(U_grad)
     ### Gradient update
-    #v_0_new = -gradient_update(state)
-    #v_0_old = dot(U_grad, state.v[state.active])
-    #state.v[state.active] -= v_0_old*U_grad
-    #state.v[state.active] = state.v[state.active]/norm(state.v[state.active])
-    #state.v[state.active] = ((1-v_0_new^2)^0.5)*state.v[state.active] .+ v_0_new*U_grad
-
+    v_0_new = -gradient_update(state)
+    v_0_old = dot(U_grad, state.v[state.active])
+    state.v[state.active] -= v_0_old*U_grad
+    state.v[state.active] = state.v[state.active]/norm(state.v[state.active])
+    state.v[state.active] = ((1-v_0_new^2)^0.5)*state.v[state.active] .+ v_0_new*U_grad
     ### Orthogonal update
-    #println(U_grad)
-    #O = orthogonal_update(state, U_grad)
-    #println(O)
-    #v_grad = dot(state.v[state.active], U_grad)/norm(U_grad)^2
-    #println(v_grad)
-    #v_perp = (state.v[state.active] .- dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2)
-    #println(v_perp)
-    #v_perp_new = ((1-v_grad^2)^0.5)*sign(dot(v_perp, O*v_perp))*(O*(v_perp/norm(v_perp)))
-    #state.v[state.active] = v_grad*U_grad + v_perp_new
-    v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
-    g1, g2 = gram_schmidt(state, U_grad)
-    g1_, g2_ = dot(g1, v_perp), dot(g2, v_perp)
-    #vector_ortho += numpy.dot(G_vector_scalar, G_vec_norm[::-1] -  G_vec_norm)
-    v_perp = v_perp + dot()
-    # vector_ortho *= numpy.dot(self.update_vector - numpy.dot(self.update_vector, vec_ref)* vec_ref, vector_ortho) 
-
-    #vector_ortho /= sum(vector_ortho ** 2.0) ** 0.5
+    #refresh!(state)
 end
 
 function gram_schmidt(state::State, U_grad::Vector{Float64})
     g1 = rand(Normal(0,1),size(state.active,1))
     g2 = rand(Normal(0,1),size(state.active,1))
-    g1 = g1/norm(g1)
-    g2 = g2/norm(g2)
-    g1 = g1 - dot(g1,U_grad)*U_grad
-    g2 = g2 - dot(g2,U_grad)*U_grad
-    g1 = g1/norm(g1)
-    g2 = g2 - dot(g1,g2)*g1
-    g2 = g2/norm(g2)
-    return g1, g2
+    g1 = (I - U_grad*transpose(U_grad))*g1
+    g2 = (I - U_grad*transpose(U_grad))*g2
+    e1 = g1/norm(g1)
+    e2 = (g2 - dot(g1,g2)*g1)/norm((g2 - dot(g1,g2)*g1))
+    return e1, e2
 end
 
 function refresh!(state::ECMC)
-    state.v[state.active] = rand(Normal(0,1),size(state.active))
-    state.v[state.active] = state.v[state.active]/norm(state.v[state.active])
+    #state.v[state.active] = rand(Normal(0,1),size(state.active))
+    #state.v[state.active] = state.v[state.active]/norm(state.v[state.active])
+    U_grad = ∇U(state, dat, priors)
+    U_grad = U_grad/norm(U_grad)
+    v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
+    g1, g2 = gram_schmidt(state, U_grad)
+    g1_, g2_ = dot(g1, v_perp), dot(g2, v_perp)
+    v_perp = v_perp + g1_*(g2 - g1) + g2_*(g1 - g2)
+    v_perp = v_perp*dot(state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad, v_perp)
+    v_perp = v_perp/norm(v_perp)
+    b = dot(state.v[state.active], U_grad)
+    a = (1 - b^2)^0.5
+    state.v[state.active] = a*v_perp + b*U_grad
 end
 
 function gradient_update(state::ECMC)

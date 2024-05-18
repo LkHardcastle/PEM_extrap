@@ -10,6 +10,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     # Set up storage 
     storage = storage_start!(state, settings, dyn)
     k = 1
+    println("Starting sampling")
     while dyn.ind < settings.max_ind
         if settings.verbose
             verbose(dyn, state)
