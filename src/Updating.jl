@@ -56,7 +56,12 @@ function flip!(state::ECMC, dat::PEMData, priors::Prior)
     #state.v[state.active] = v_grad*U_grad + v_perp_new
     v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
     g1, g2 = gram_schmidt(state, U_grad)
-    g1_, g2_ = 
+    g1_, g2_ = dot(g1, v_perp), dot(g2, v_perp)
+    #vector_ortho += numpy.dot(G_vector_scalar, G_vec_norm[::-1] -  G_vec_norm)
+    v_perp = v_perp + dot()
+    # vector_ortho *= numpy.dot(self.update_vector - numpy.dot(self.update_vector, vec_ref)* vec_ref, vector_ortho) 
+
+    #vector_ortho /= sum(vector_ortho ** 2.0) ** 0.5
 end
 
 function gram_schmidt(state::State, U_grad::Vector{Float64})
