@@ -9,7 +9,6 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.x), copy(state.x), copy(state.x), SamplerEval(zeros(2),0, 0))
     # Set up storage 
     storage = storage_start!(state, settings, dyn)
-    k = 1
     println("Starting sampling")
     while dyn.ind < settings.max_ind
         if settings.verbose
@@ -123,18 +122,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             event!(state, dyn, priors, times)
         else
             ## Generate next time via time-scale transformation
-            ## Need to be careful
-            #t_event = potential_optim(t_switch, V, Uθt, ∂U, state, dyn, priors)
-            #if t_event < 0.0
-                #println("Impossible time - Brent's method")
-                #opt = optimize(x -> (U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V))^2, 0.0, min(1000, dyn.t_det))
-                #t_event = Optim.minimum(opt)
-                #println(t_event)
-                #println(dyn.t_det - state.t)
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t))
-                #println(t_event)
-                #dyn.sampler_eval.Brent_iter += Optim.iterations(opt)
-            #end
+            t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
             update!(state, t_switch + t_event)
             flip!(state, dat, priors)
         end

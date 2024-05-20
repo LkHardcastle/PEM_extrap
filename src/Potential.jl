@@ -68,7 +68,7 @@ function potential_optim(t_switch::Float64, V::Float64, U_::Float64, ∂U::Float
         f = f_ - Uθ + log(V)
         dyn.sampler_eval.newton[2] += 1
         k += 1
-        if k > 10000
+        if k > 1000
             return -100.0
         end
     end
