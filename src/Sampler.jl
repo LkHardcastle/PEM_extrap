@@ -1,11 +1,12 @@
 include("Types.jl")
 include("Potential.jl")
 include("Updating.jl")
+include("SplitMerge.jl")
 
 function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settings)
     ### Setup
     state = copy(state0)
-    times = time_setup(state, settings)
+    times = time_setup(state, settings, priors)
     dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.x), copy(state.x), copy(state.x), SamplerEval(zeros(2),0, 0))
     # Set up storage 
     storage = storage_start!(state, settings, dyn)
@@ -70,14 +71,26 @@ function sampler_stop(state::State, dyn::Dynamics, settings::Settings)
     return false
 end
 
-function time_setup(state::State, settings::Settings)
+function time_setup(state::State, settings::Settings, priors::Prior)
     Q_m = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
     Q_s = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
+    enqueue!(Q_m, CartesianIndex(0,0), Inf)
+    enqueue!(Q_s, CartesianIndex(0,0), Inf)
+    for j in CartesianIndex(1,1):CartesianIndex(size(s,1),size(s,2))
+        if j[2] > 1
+            if state.s[j]
+                enqueue!(Q_m, j, merge_time(state,j))
+            else
+                enqueue!(Q_s, j, split_rate(state, priors))
+            end
+        end
+    end
     T_smp = exp_vector(settings, settings.smp_rate)
     T_h = exp_vector(settings, settings.h_rate)
     T_ref = exp_vector(settings, settings.r_rate)
     return Times(Q_s, Q_m, T_ref, T_h, T_smp)
 end
+
 
 function exp_vector(settings::Settings, rate::Float64)
     if rate > 0.0

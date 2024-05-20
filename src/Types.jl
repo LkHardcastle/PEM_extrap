@@ -70,6 +70,7 @@ abstract type Prior end
 mutable struct BasicPrior <: Prior
     σ0::Float64
     σ::Float64
+    ω::Float64
 end
 
 
