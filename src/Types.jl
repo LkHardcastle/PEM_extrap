@@ -16,6 +16,15 @@ mutable struct ECMC <: State
     active::Array{CartesianIndex{2}}
 end
 
+mutable struct ECMC2 <: State
+    x::Matrix{Float64}
+    v::Matrix{Float64}
+    s::Matrix{Bool}
+    t::Float64
+    b::Bool
+    active::Array{CartesianIndex{2}}
+end
+
 mutable struct SamplerEval
     newton::Vector{Float64}
     gradient::Int64

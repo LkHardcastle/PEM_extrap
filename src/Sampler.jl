@@ -22,9 +22,9 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
         if stop
             break
         end
-        if dyn.ind % 10_000 == 0
-            verbose(dyn, state)
-        end
+        #if dyn.ind % 10_000 == 0
+        #    verbose(dyn, state)
+        #end
     end
     out = sampler_end(storage, dyn, settings)
     return out  
@@ -36,6 +36,10 @@ end
 
 function Base.copy(state::ECMC)
     return ECMC(state.x, state.v, state.s, state.t, state.active)
+end
+
+function Base.copy(state::ECMC2)
+    return ECMC2(state.x, state.v, state.s, state.t, state.b, state.active)
 end
 
 function storage_start!(state::State, settings::Settings, dyn::Dynamics)

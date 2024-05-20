@@ -90,7 +90,7 @@ function ∇U(state::State, dat::PEMData, priors::Prior)
         else
             sj_1 = 0.0
         end
-        ∇Uλ += exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d] .- sj_1) + length(c)*(dat.s[state.active[j][2]] - sj_1)) - sum(dat.cens[d])
+        ∇Uλ += exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d]) - length(d)*sj_1 + length(c)*(dat.s[state.active[j][2]] - sj_1)) - sum(dat.cens[d])
         pushfirst!(∇U_out, ∇Uλ + prior_add(state, priors, state.active[j]))
     end
     return ∇U_out
