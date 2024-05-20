@@ -1,7 +1,7 @@
 using DrWatson
 @quickactivate "PEM_extrap"
 # For src
-using DataStructures, LinearAlgebra, Distributions, Random
+using DataStructures, LinearAlgebra, Distributions, Random, Optim
 using Plots, CSV, DataFrames
 
 include(srcdir("Sampler.jl"))
@@ -52,21 +52,23 @@ plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost)
 
-
+Random.seed!(123)
 df = CSV.read(datadir("colon.csv"), DataFrame)
 y = df.years
 maximum(y)
 n = length(y)
-breaks = collect(0.1:0.1:3.1)
+breaks = collect(0.5:0.5:3.5)
 p = 1
 cens = df.status
 covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
-v0 = v0./norm(v0)
 t0 = 0.0
-state0 = BPS(x0, v0, s0, t0, findall(s0))
 priors = BasicPrior(1.0, 0.1)
+state0 = BPS(x0, v0, s0, t0, findall(s0))
+U_grad = ∇U(state0, dat, priors)
+### Flip
+state0.v[state0.active] -= 2*dot(state0.v[state0.active], U_grad)*U_grad/norm(U_grad)^2
 nits = 10000
 nsmp = 10000
 settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.2, false, true)

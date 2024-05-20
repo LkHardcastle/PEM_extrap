@@ -1,7 +1,7 @@
 using DrWatson
 @quickactivate "PEM_extrap"
 # For src
-using DataStructures, LinearAlgebra, Distributions, Random
+using DataStructures, LinearAlgebra, Distributions, Random, Roots
 using Plots
 
 include(srcdir("Sampler.jl"))

@@ -28,6 +28,7 @@ end
 mutable struct SamplerEval
     newton::Vector{Float64}
     gradient::Int64
+    Brent_iter::Int64
 end
 
 mutable struct Dynamics

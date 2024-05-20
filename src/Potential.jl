@@ -60,14 +60,20 @@ function potential_optim(t_switch::Float64, V::Float64, U_::Float64, ∂U::Float
     f_, f1, blank = U_eval(state, t0 + t_switch, dyn, priors)
     f = f_ - Uθ + log(V)        
     dyn.sampler_eval.newton[2] += 1
+    k = 1
     while abs(f) > 1e-5
-       # println("Potential optim");println(t0);println(f);println(f1)
+        #println("Potential optim");println(t0);println(f);println(f1)
         t0 = t0 - f/f1
         f_, f1, blank = U_eval(state, t0 + t_switch, dyn, priors)
         f = f_ - Uθ + log(V)
         dyn.sampler_eval.newton[2] += 1
+        k += 1
+        if k > 10000
+            return -100.0
+        end
     end
     if isnan(t0) || isinf(t0)
+        println(t0)
         verbose(dyn, state)
         error("Potential optim error")
     end
