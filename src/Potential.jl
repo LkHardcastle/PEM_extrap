@@ -2,9 +2,9 @@ function U_new!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData)
     ## Calculate the potential, rate of change of potential and constants for updating
     for j in 1:size(state.active,1)
         if j == 1
-            range = CartesianIndex(state.active[1][1],1):state.active[1]
+            range = 1:state.active[1][2]
         else
-            range = (state.active[j-1] + CartesianIndex(0,1)):state.active[j]
+            range = (state.active[j-1][2] + 1):state.active[j][2]
         end
         d = findall(dat.d .∈ range)
         c = findall(dat.d .> state.active[j][2])
@@ -79,9 +79,9 @@ function ∇U(state::State, dat::PEMData, priors::Prior)
     ∇U_out = Float64[]
     for j in size(state.active,1):-1:1
         if j == 1
-            range = CartesianIndex(state.active[1][1],1):state.active[1]
+            range = 1:state.active[1][2]
         else
-            range = (state.active[j-1] + CartesianIndex(0,1)):state.active[j]
+            range = (state.active[j-1][2] + 1):state.active[j][2]
         end
         d = findall(dat.d .∈ range)
         c = findall(dat.d .> state.active[j][2])

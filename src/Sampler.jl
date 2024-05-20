@@ -6,7 +6,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     ### Setup
     state = copy(state0)
     times = time_setup(state, settings)
-    dyn = Dynamics(1, 1, 0.0, 0, Base.copy(state.x), Base.copy(state.x), Base.copy(state.x), Base.copy(state.x), Base.copy(state.x), SamplerEval(zeros(2),0))
+    dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.x), copy(state.x), copy(state.x), SamplerEval(zeros(2),0))
     # Set up storage 
     storage = storage_start!(state, settings, dyn)
     k = 1
@@ -170,10 +170,10 @@ function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
     if settings.skel
         out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)],
                     "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)],
-                    "Eval" => dyn.sampler_eval) 
+                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
     else
         out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)],
-                    "Eval" => dyn.sampler_eval) 
+                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
     end
     return out
 end
