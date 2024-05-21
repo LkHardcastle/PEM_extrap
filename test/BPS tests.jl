@@ -37,7 +37,7 @@ settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.1, false, false)
 @time out2 = pem_sample(state0, dat, priors, settings)
 @time out21 = pem_sample(state0, dat, priors, settings)
 
-Random.seed!(123)
+Random.seed!(34734)
 dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
@@ -64,7 +64,7 @@ plot(out2["Sk_t"][1:50],x_plot[1,1,1:50])
 plot!(out2["Sk_t"][1:50],x_plot[1,2,1:50])
 plot(out2["Sk_t"][1:50],x_plot[1,3,1:50])
 
-x_plot = out3["Sk_x"][:,1:2,1:100]
+x_plot = out3["Sk_x"][:,1:2,1:10_000]
 plot(x_plot[1,1,:], x_plot[1,2,:])
 plot(out3["Sk_t"][1:50],x_plot[1,1,1:50])
 plot!(out3["Sk_t"][1:50],x_plot[1,2,1:50])
@@ -89,7 +89,7 @@ mean(x_smp)
 quantile(x_smp, 0.025)
 quantile(x_smp, 0.975)
 
-x_smp = vec(out3["Smp_x"][1,5,:])
+x_smp = vec(out31["Smp_x"][1,4,:])
 mean(x_smp)
 mean(x_smp .== 0.0)
 quantile(x_smp[findall(x_smp .!= 0.0)], 0.025)
