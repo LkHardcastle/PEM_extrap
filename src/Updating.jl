@@ -4,7 +4,6 @@ function flip!(state::BPS, dat::PEMData, priors::Prior)
     U_grad = ∇U(state, dat, priors)
     ### Flip
     state.v[state.active] -= 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2
-    
 end
 
 function refresh!(state::BPS)
@@ -59,26 +58,28 @@ function refresh!(state::ECMC)
     U_grad = ∇U(state, dat, priors)
     state.v[state.active] -= 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2
     U_grad = U_grad/norm(U_grad)
-    ### Gradient update
-    v_0_new = -(1 - rand()^(2/(size(state.active,1)-1)))^0.5
-    v_0_old = dot(U_grad, state.v[state.active])
-    state.v[state.active] -= v_0_old*U_grad
-    state.v[state.active] /= norm(state.v[state.active])
-    state.v[state.active] = ((1-v_0_new^2)^0.5)*state.v[state.active] .+ v_0_new*U_grad
-    ### Orthogonal update
-    if state.b
-        U_grad = ∇U(state, dat, priors)
-        U_grad = U_grad/norm(U_grad)
-        v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
-        g1, g2 = gram_schmidt(state, U_grad)
-        g1_, g2_ = dot(g1, v_perp), dot(g2, v_perp)
-        v_perp += g1_*(g2 - g1) + g2_*(g1 - g2)
-        v_perp *= dot(state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad, v_perp)
-        v_perp /= norm(v_perp)
-        b = dot(state.v[state.active], U_grad)
-        a = (1 - b^2)^0.5
-        state.v[state.active] = a*v_perp + b*U_grad
-        state.b = false
+    if size(state.active,1) > 1.0
+        ### Gradient update
+        v_0_new = -(1 - rand()^(2/(size(state.active,1)-1)))^0.5
+        v_0_old = dot(U_grad, state.v[state.active])
+        state.v[state.active] -= v_0_old*U_grad
+        state.v[state.active] /= norm(state.v[state.active])
+        state.v[state.active] = ((1-v_0_new^2)^0.5)*state.v[state.active] .+ v_0_new*U_grad
+        ### Orthogonal update
+        if state.b
+            U_grad = ∇U(state, dat, priors)
+            U_grad = U_grad/norm(U_grad)
+            v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
+            g1, g2 = gram_schmidt(state, U_grad)
+            g1_, g2_ = dot(g1, v_perp), dot(g2, v_perp)
+            v_perp += g1_*(g2 - g1) + g2_*(g1 - g2)
+            v_perp *= dot(state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad, v_perp)
+            v_perp /= norm(v_perp)
+            b = dot(state.v[state.active], U_grad)
+            a = (1 - b^2)^0.5
+            state.v[state.active] = a*v_perp + b*U_grad
+            state.b = false
+        end
     end
 end
 
@@ -101,14 +102,14 @@ function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
         split!(state)
         split_time!(state, times, priors)
         merge_time!(state, times, priors)
-        error("Shouldn't be here yet")
     end
     if dyn.next_event == 2
         # Merge 
-        merge!(state, times.next_merge_index)
-        split_time!()
-        merge_time!()
-        error("Shouldn't be here yet")
+        if priors.p_split > rand()
+            merge!(state, times.next_merge_index)
+            split_time!(state, times, priors)
+            merge_time!(state, times, priors)
+        end
     end
     if dyn.next_event == 3
         # Refresh

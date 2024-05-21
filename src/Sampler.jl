@@ -9,6 +9,9 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     times = time_setup(state, settings, priors)
     dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.x), copy(state.x), copy(state.x), SamplerEval(zeros(2),0, 0))
     # Set up storage 
+    if settings.skel == false
+        dyn.ind = 2
+    end
     storage = storage_start!(state, settings, dyn)
     println("Starting sampling")
     while dyn.ind < settings.max_ind
@@ -80,13 +83,13 @@ function time_setup(state::State, settings::Settings, priors::Prior)
                 merge_cand = merge_time(state, j, priors)
                 if merge_cand < merge_curr
                     merge_curr = copy(merge_cand)
-                    j_curr = copy(j)
+                    j_curr = CartesianIndex(j[1],j[2])
                 end
             end
         end
     end
     if priors.p_split > 0.0
-        T_split = size(state.active,1)*split_rate(state, priors)
+        T_split = rand(Exponential(1/(size(findall(state.s .== false),1)*split_rate(state, priors))))
     else 
         T_split = Inf
     end
@@ -148,12 +151,12 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
 end
 
 function get_time!(dyn::Dynamics, times::Times)
-    dyn.t_det, dyn.next_event = findmin([times.next_split, peek(times.Q_m), times.refresh[1], times.hyper[1]])
+    dyn.t_det, dyn.next_event = findmin([times.next_split, times.next_merge, times.refresh[1], times.hyper[1]])
 end
 
 function store_state!(state::State, storage::Storage, dyn::Dynamics; skel = true)
     if !skel
-        dyn_ind -= 1
+        dyn.ind -= 1
     end
     storage.x[:,:,dyn.ind] = copy(state.x)
     storage.v[:,:,dyn.ind] = copy(state.v)
@@ -196,10 +199,11 @@ end
 
 function verbose(dyn::Dynamics, state::State)
     println("----------------------")
-    print("Iteration: ");print(dyn.ind);print("\n")
+    print("Iteration: ");print(dyn.ind);print("\n");
+    println(dyn.next_event)
     println(state.t)
     println(state.active)
-    println(vec(state.x[state.active]))
-    println(vec(state.v[state.active]))
+    println(vec(state.x))
+    println(vec(state.v))
     println("----------------------")
 end

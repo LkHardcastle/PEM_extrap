@@ -6,7 +6,7 @@ function U_new!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData)
         else
             range = (state.active[j-1][2] + 1):state.active[j][2]
         end
-        d = findall(dat.d .∈ range)
+        d = findall(dat.d .∈ [range])
         c = findall(dat.d .> state.active[j][2])
         if j > 1
             sj_1 = dat.s[state.active[j-1][2]]
@@ -89,7 +89,7 @@ function ∇U(state::State, dat::PEMData, priors::Prior)
         else
             range = (state.active[j-1][2] + 1):state.active[j][2]
         end
-        d = findall(dat.d .∈ range)
+        d = findall(dat.d .∈ [range])
         c = findall(dat.d .> state.active[j][2])
         if j > 1
             sj_1 = dat.s[state.active[j-1][2]]
