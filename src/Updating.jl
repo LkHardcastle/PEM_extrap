@@ -98,31 +98,31 @@ end
 function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
     if dyn.next_event == 1
         # Split
+        split!(state)
+        split_time!(state, times, priors)
+        merge_time!(state, times, priors)
         error("Shouldn't be here yet")
     end
     if dyn.next_event == 2
         # Merge 
+        merge!(state, times.next_merge_index)
+        split_time!()
+        merge_time!()
         error("Shouldn't be here yet")
     end
     if dyn.next_event == 3
         # Refresh
         refresh!(state)
+        merge_time_ref!(state, times, priors)
         deleteat!(times.refresh, 1)
         dyn.next_event = 0
     end
     if dyn.next_event == 4
         # Hyperparameter update
         hyper_update!(priors)
+        split_time!(state, times, priors)
         deleteat!(times.hyper, 1)
     end
-end
-
-function split!()
-
-end
-
-function merge!()
-
 end
 
 function hyper_update!(priors::Prior)

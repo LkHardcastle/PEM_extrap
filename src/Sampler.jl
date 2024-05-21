@@ -72,23 +72,28 @@ function sampler_stop(state::State, dyn::Dynamics, settings::Settings)
 end
 
 function time_setup(state::State, settings::Settings, priors::Prior)
-    Q_m = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
-    Q_s = PriorityQueue{CartesianIndex, Float64}(Base.Order.Forward)
-    enqueue!(Q_m, CartesianIndex(0,0), Inf)
-    enqueue!(Q_s, CartesianIndex(0,0), Inf)
-    for j in CartesianIndex(1,1):CartesianIndex(size(s,1),size(s,2))
+    merge_curr = Inf
+    j_curr = CartesianIndex(0,0)
+    for j in state.active
         if j[2] > 1
-            if state.s[j]
-                enqueue!(Q_m, j, merge_time(state,j))
-            else
-                enqueue!(Q_s, j, split_rate(state, priors))
+            if rand() < priors.p_split
+                merge_cand = merge_time(state, j, priors)
+                if merge_cand < merge_curr
+                    merge_curr = copy(merge_cand)
+                    j_curr = copy(j)
+                end
             end
         end
+    end
+    if priors.p_split > 0.0
+        T_split = size(state.active,1)*split_rate(state, priors)
+    else 
+        T_split = Inf
     end
     T_smp = exp_vector(settings, settings.smp_rate)
     T_h = exp_vector(settings, settings.h_rate)
     T_ref = exp_vector(settings, settings.r_rate)
-    return Times(Q_s, Q_m, T_ref, T_h, T_smp)
+    return Times(T_split, merge_curr, j_curr, T_ref, T_h, T_smp)
 end
 
 
@@ -143,7 +148,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
 end
 
 function get_time!(dyn::Dynamics, times::Times)
-    dyn.t_det, dyn.next_event = findmin([Inf, Inf, times.refresh[1], times.hyper[1]])
+    dyn.t_det, dyn.next_event = findmin([times.next_split, peek(times.Q_m), times.refresh[1], times.hyper[1]])
 end
 
 function store_state!(state::State, storage::Storage, dyn::Dynamics; skel = true)

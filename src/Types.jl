@@ -45,8 +45,9 @@ mutable struct Dynamics
 end
 
 mutable struct Times 
-    splits::PriorityQueue
-    merges::PriorityQueue
+    next_split::Float64
+    next_merge::Float64
+    next_merge_index::CartesianIndex
     refresh::Vector{Float64}
     hyper::Vector{Float64}
     smps::Vector{Float64}
@@ -71,6 +72,7 @@ mutable struct BasicPrior <: Prior
     σ0::Float64
     σ::Float64
     ω::Float64
+    p_split::Float64
 end
 
 
