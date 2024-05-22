@@ -33,7 +33,7 @@ dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 state0 = ECMC(x0, v0, s0, t0, findall(s0))
-settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.1, false, false)
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.1, false, true)
 @time out2 = pem_sample(state0, dat, priors, settings)
 @time out21 = pem_sample(state0, dat, priors, settings)
 
@@ -42,11 +42,21 @@ dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 state0 = ECMC2(x0, v0, s0, t0, true, findall(s0))
-settings = Settings(50_000, nsmp, 1_000_000, 0.5,0.0, 0.2, false, true)
+settings = Settings(nits, nsmp, 1_000_000, 0.5,0.0, 0.2, false, true)
 priors = BasicPrior(1.0, 1.0, 0.5, 1.0)
 @time out3 = pem_sample(state0, dat, priors, settings)
 Random.seed!(123)
 @time out31 = pem_sample(state0, dat, priors, settings)
+
+
+x_smp = view(out1["Smp_x"], 1, 2:10, :)
+x_ss = mean.(eachrow(x_smp .== 0.0))
+x_smp = view(out11["Smp_x"], 1, 2:10, :)
+x_ss = mean.(eachrow(x_smp .== 0.0))
+x_smp = view(out3["Smp_x"], 1, 2:10, :)
+x_ss = mean.(eachrow(x_smp .== 0.0))
+x_smp = view(out31["Smp_x"], 1, 2:10, :)
+x_ss = mean.(eachrow(x_smp .== 0.0))
 
 norm([0.4258813188821129, 0.3079213709060054])
 x_plot = out1["Sk_x"][:,2:3,1:100]
@@ -70,6 +80,8 @@ plot!(out31["Sk_t"][1:50],x_plot[1,3,1:50])
 plot!(out31["Sk_t"][1:50],x_plot[1,4,1:50])
 plot(out3["Sk_t"][1:50],x_plot[1,3,1:50])
 out31["Sk_x"][1,1:4,10]
+
+
 x_smp = vec(out1["Smp_x"][1,2,:])
 mean(x_smp .== 0.0)
 mean(x_smp)
@@ -89,7 +101,6 @@ mean(x_smp)
 quantile(x_smp, 0.025)
 quantile(x_smp, 0.975)
 
-x_smp = vec(out3["Smp_x"][1,3,:])
 mean(x_smp)
 mean(x_smp .== 0.0)
 quantile(x_smp[findall(x_smp .!= 0.0)], 0.025)
@@ -99,7 +110,10 @@ mean(x_smp)
 quantile(x_smp, 0.025)
 quantile(x_smp, 0.975)
 
+s_out = vec(sum(out3["Smp_s"], dims = 2)) .- 1
+histogram(s_out, normalize=:probability)
 
+pdf(Binomial(3,0.42))
 
 out["Eval"]
 0.371158^2 +  0.62572^2

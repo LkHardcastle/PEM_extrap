@@ -13,12 +13,12 @@ end
 function split_rate(state::State, priors::BasicPrior)
     # Need to update this to account for σ_0
     rate = priors.p_split*(priors.ω/(1 - priors.ω))*(sqrt(2*pi*priors.σ^2))^-1
-    J = 2*sphere_area(size(state.active,1))/(sphere_area(size(state.active,1) + 1)*(size(state.active,1)))
+    J = 2*sphere_area(size(state.active,1) - 1)/(sphere_area(size(state.active,1))*(size(state.active,1)))
     return rate*J
 end
 
 function sphere_area(d::Int64)
-    # Area of sphere embedded in R^d
+    # Area of sphere embedded in R^(d+1)
     return (2*π^(0.5*d+0.5))/gamma(0.5*d+0.5)
 end
 

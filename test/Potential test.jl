@@ -64,48 +64,103 @@ covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 t0 = 0.0
-priors = BasicPrior(1.0, 0.1)
+priors = BasicPrior(1.0, 1.0, 0.5, 1.0)
 state0 = BPS(x0, v0, s0, t0, findall(s0))
-#U_grad = ∇U(state0, dat, priors)
-### Flip
-#state0.v[state0.active] -= 2*dot(state0.v[state0.active], U_grad)*U_grad/norm(U_grad)^2
-nits = 10000
-nsmp = 10000
-settings = Settings(nits, nsmp, 100000, 0.5,0.0, 1.0, false, true)
+
+nits = 50000
+nsmp = 100000
 Random.seed!(123)
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 1.0, false, true)
 @time out1 = pem_sample(state0, dat, priors, settings)
 settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.2, false, true)
 @time out2 = pem_sample(state0, dat, priors, settings)
-state0 = ECMC2(x0, v0, s0, t0, true, findall(s0))
-settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.2, false, true)
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.01, false, true)
 @time out3 = pem_sample(state0, dat, priors, settings)
+state0 = ECMC2(x0, v0, s0, t0, true, findall(s0))
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 1.0, false, true)
 @time out4 = pem_sample(state0, dat, priors, settings)
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.2, false, true)
+@time out5 = pem_sample(state0, dat, priors, settings)
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.01, false, true)
+@time out6 = pem_sample(state0, dat, priors, settings)
 
 smps1 = out1["Smp_trans"]
 s1 = view(smps1, 1, :, :)
 plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,2))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
+
 smps1 = out2["Smp_trans"]
 s1 = view(smps1, 1, :, :)
 plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,2))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
+
 smps1 = out3["Smp_trans"]
 s1 = view(smps1, 1, :, :)
 plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,2))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
+
 smps1 = out4["Smp_trans"]
 s1 = view(smps1, 1, :, :)
 plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
-plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,2))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
 
-s1 = view(smps1, 1, 1, :)
-s2 = view(smps1, 1, 2, :)
-plot(scatter(s1,s2))
+smps1 = out5["Smp_trans"]
+s1 = view(smps1, 1, :, :)
+plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
 
-s1 = view(smps1, 1, 6, :)
-s2 = view(smps1, 1, 7, :)
-plot(scatter(s1,s2))
+smps1 = out6["Smp_trans"]
+s1 = view(smps1, 1, :, :)
+plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
+
+
+Random.seed!(123)
+df = CSV.read(datadir("colon.csv"), DataFrame)
+y = df.years
+maximum(y)
+n = length(y)
+breaks = collect(0.1:0.1:3.5)
+p = 1
+cens = df.status
+covar = fill(1.0, 1, n)
+dat = init_data(y, cens, covar, breaks)
+x0, v0, s0 = init_params(p, dat)
+t0 = 0.0
+priors = BasicPrior(1.0, 1.0, 0.5, 1.0)
+state0 = ECMC2(x0, v0, s0, t0, true, findall(s0))
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.2, false, true)
+nits = 50000
+nsmp = 100000
+Random.seed!(123)
+priors = BasicPrior(1.0, 0.1, 0.5, 1.0)
+@time out1 = pem_sample(state0, dat, priors, settings)
+priors = BasicPrior(1.0, 0.5, 0.5, 1.0)
+@time out2 = pem_sample(state0, dat, priors, settings)
+priors = BasicPrior(1.0, 1.0, 0.5, 1.0)
+@time out3 = pem_sample(state0, dat, priors, settings)
+
+
+smps1 = out1["Smp_trans"]
+s1 = view(smps1, 1, :, :)
+plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
+
+smps1 = out2["Smp_trans"]
+s1 = view(smps1, 1, :, :)
+plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
+
+smps1 = out3["Smp_trans"]
+s1 = view(smps1, 1, :, :)
+plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
