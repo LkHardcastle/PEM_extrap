@@ -11,13 +11,15 @@ function merge_time(state::State, j::CartesianIndex, priors::Prior)
 end
 
 function split_rate(state::State, priors::BasicPrior)
+    # Need to update this to account for σ_0
     rate = priors.p_split*(priors.ω/(1 - priors.ω))*(sqrt(2*pi*priors.σ^2))^-1
     J = 2*sphere_area(size(state.active,1))/(sphere_area(size(state.active,1) + 1)*(size(state.active,1)))
     return rate*J
 end
 
 function sphere_area(d::Int64)
-    return 2*π^(0.5*d+0.5)/gamma(0.5*d+0.5)
+    # Area of sphere embedded in R^d
+    return (2*π^(0.5*d+0.5))/gamma(0.5*d+0.5)
 end
 
 function split!(state::State)
@@ -25,6 +27,9 @@ function split!(state::State)
     state.s[j] = true
     # Add to state.active
     a = split_velocity(state)
+    if a == 0.0
+        error("Bad split velocity")
+    end
     state.active = findall(state.s)
     # New velocities
     state.v[state.active] *= sqrt(1-a^2)
@@ -49,7 +54,7 @@ end
 function split_time!(state::State, times::Times, priors::Prior)
     # Update split time
     if priors.p_split > 0.0
-        rate = (size(findall(state.s .== false),1) - 1)*split_rate(state, priors)
+        rate = (size(findall(state.s .== false),1))*split_rate(state, priors)
         times.next_split = rand(Exponential(1/rate)) + state.t
     else 
         times.next_split = Inf
@@ -78,5 +83,5 @@ function merge_time_ref!(state::Union{BPS,ECMC}, times::Times, priors::Prior)
 end
 
 function merge_time_ref!(state::ECMC2, times::Times, priors::Prior)
-    merge_time!(state, times, priors)
+    #merge_time!(state, times, priors)
 end

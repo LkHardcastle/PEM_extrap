@@ -34,15 +34,15 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
 end
 
 function Base.copy(state::BPS)
-    return BPS(state.x, state.v, state.s, state.t, state.active)
+    return BPS(copy(state.x), copy(state.v), copy(state.s), copy(state.t), copy(state.active))
 end
 
 function Base.copy(state::ECMC)
-    return ECMC(state.x, state.v, state.s, state.t, state.active)
+    return ECMC(copy(state.x), copy(state.v), copy(state.s), copy(state.t), copy(state.active))
 end
 
 function Base.copy(state::ECMC2)
-    return ECMC2(state.x, state.v, state.s, state.t, state.b, state.active)
+    return ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.t), copy(state.b), copy(state.active))
 end
 
 function storage_start!(state::State, settings::Settings, dyn::Dynamics)
@@ -146,6 +146,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
             update!(state, t_switch + t_event)
             flip!(state, dat, priors)
+            merge_time!(state, times, priors)
         end
     end
 end
