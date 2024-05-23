@@ -12,7 +12,7 @@ end
 
 function split_rate(state::State, priors::BasicPrior)
     # Need to update this to account for σ_0
-    rate = priors.p_split*(priors.ω/(1 - priors.ω))*(sqrt(2*pi*priors.σ^2))^-1
+    rate = priors.p_split*(priors.ω.ω/(1 - priors.ω.ω))*(sqrt(2*pi*priors.σ.σ^2))^-1
     J = 2*sphere_area(size(state.active,1) - 1)/(sphere_area(size(state.active,1))*(size(state.active,1)))
     return rate*J
 end

@@ -1,7 +1,7 @@
 using DrWatson
 @quickactivate "PEM_extrap"
 # For src
-using DataStructures, LinearAlgebra, Distributions, Random, Optim
+using DataStructures, LinearAlgebra, Distributions, Random, Optim, Roots, SpecialFunctions
 using Plots, CSV, DataFrames
 
 include(srcdir("Sampler.jl"))
@@ -133,17 +133,16 @@ covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 t0 = 0.0
-priors = BasicPrior(1.0, 1.0, 0.5, 1.0)
 state0 = ECMC2(x0, v0, s0, t0, true, findall(s0))
-settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.2, false, true)
 nits = 50000
 nsmp = 100000
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.2, false, true)
 Random.seed!(123)
-priors = BasicPrior(1.0, 0.1, 0.5, 1.0)
+priors = BasicPrior(1.0, Cauchy(0.1), Beta(0.5), 1.0)
 @time out1 = pem_sample(state0, dat, priors, settings)
-priors = BasicPrior(1.0, 0.5, 0.5, 1.0)
+priors = BasicPrior(1.0, Cauchy(0.5), Beta(0.5), 1.0)
 @time out2 = pem_sample(state0, dat, priors, settings)
-priors = BasicPrior(1.0, 1.0, 0.5, 1.0)
+priors = BasicPrior(1.0, Cauchy(1.0), Beta(0.5), 1.0)
 @time out3 = pem_sample(state0, dat, priors, settings)
 
 
@@ -156,6 +155,7 @@ plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(
 smps1 = out2["Smp_trans"]
 s1 = view(smps1, 1, :, :)
 plot(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), mean(exp.(s1), dims = 2)[end]),linetype=:steppost)
+plot!(vcat(0,breaks), vcat(mean(exp.(s1), dims = 2), median(exp.(s1), dims = 2)[end]),linetype=:steppost)
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.025),quantile.(eachrow(exp.(s1)), 0.025)[end]),linetype=:steppost)
 plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(s1)), 0.975),quantile.(eachrow(exp.(s1)), 0.975)[end]),linetype=:steppost, ylim = (0,1))
 

@@ -64,16 +64,47 @@ mutable struct Storage
     t_smp::Vector{Float64}
 end
 
+abstract type Variance end
 
+mutable struct FixedV <: Variance
+    σ::Float64
+end
+
+mutable struct Cauchy <: Variance
+    σ::Float64
+    a::Float64
+    b::Float64
+end
+
+abstract type Weight end
+
+mutable struct FixedW <: Weight
+    ω::Float64
+end
+
+mutable struct Beta <: Weight
+    ω::Float64
+    a::Float64
+    b::Float64
+end
 
 abstract type Prior end
 
+#mutable struct BasicPrior <: Prior
+#    σ0::Float64
+#    σ::Float64
+#    ω::Float64
+#    p_split::Float64
+#end
+
 mutable struct BasicPrior <: Prior
     σ0::Float64
-    σ::Float64
-    ω::Float64
+    σ::Variance
+    ω::Weight
     p_split::Float64
 end
+
+
 
 
 struct PEMData

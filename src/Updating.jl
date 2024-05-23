@@ -125,8 +125,3 @@ function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
         deleteat!(times.hyper, 1)
     end
 end
-
-function hyper_update!(priors::Prior)
-
-end
-

@@ -26,9 +26,9 @@ end
 function U_eval(state::State, t::Float64, dyn::Dynamics, priors::Prior)
     # Use known constants to calculate potential and rate of change of potential
     vec1 = exp.(t*dyn.∑v[state.active]).*dyn.c0[state.active]
-    U_ = sum(vec1 .- dyn.d0[state.active] .- t*dyn.δ∑v[state.active]) + (1/(2*priors.σ^2))*sum((state.x[state.active][2:end] + state.v[state.active][2:end].*t).^2) + (1/(2*priors.σ0^2))*(state.x[state.active][1] + state.v[state.active][1].*t).^2
-    ∂U_ = sum(dyn.∑v[state.active].*(vec1 .- dyn.δ[state.active])) + (1/priors.σ)*sum(state.v[state.active][2:end].*(state.x[state.active][2:end] .+ state.v[state.active][2:end].*t)) + state.v[state.active][1]*(1/priors.σ0)*(state.x[state.active][1] + state.v[state.active][1].*t)
-    ∂2U_ = sum(dyn.∑v[state.active].^2 .*vec1) + (state.v[state.active][1]^2)/priors.σ0^2 + sum(state.v[state.active][2:end].^2)/priors.σ^2
+    U_ = sum(vec1 .- dyn.d0[state.active] .- t*dyn.δ∑v[state.active]) + (1/(2*priors.σ.σ^2))*sum((state.x[state.active][2:end] + state.v[state.active][2:end].*t).^2) + (1/(2*priors.σ0^2))*(state.x[state.active][1] + state.v[state.active][1].*t).^2
+    ∂U_ = sum(dyn.∑v[state.active].*(vec1 .- dyn.δ[state.active])) + (1/priors.σ.σ)*sum(state.v[state.active][2:end].*(state.x[state.active][2:end] .+ state.v[state.active][2:end].*t)) + state.v[state.active][1]*(1/priors.σ0)*(state.x[state.active][1] + state.v[state.active][1].*t)
+    ∂2U_ = sum(dyn.∑v[state.active].^2 .*vec1) + (state.v[state.active][1]^2)/priors.σ0^2 + sum(state.v[state.active][2:end].^2)/priors.σ.σ^2
     return U_, ∂U_, ∂2U_
 end
 
@@ -106,6 +106,6 @@ function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
     if k[2] == 1
         return state.x[k]/priors.σ0^2
     else
-        return state.x[k]/priors.σ^2
+        return state.x[k]/priors.σ.σ^2
     end
 end
