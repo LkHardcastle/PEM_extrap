@@ -12,15 +12,15 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     if settings.skel == false
         dyn.ind = 2
     end
-    storage = storage_start!(state, settings, dyn)
+    storage = storage_start!(state, settings, dyn, priors)
     println("Starting sampling")
     while dyn.ind < settings.max_ind
         if settings.verbose
             verbose(dyn, state)
         end
         sampler_inner!(state, dyn, priors, dat, times)
-        store_state!(state, storage, dyn; skel = settings.skel)
-        store_smps!(state, storage, dyn, times)
+        store_state!(state, storage, dyn, priors; skel = settings.skel)
+        store_smps!(state, storage, dyn, times, priors)
         stop = sampler_stop(state, dyn, settings)
         if stop
             break
@@ -45,15 +45,17 @@ function Base.copy(state::ECMC2)
     return ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.t), copy(state.b), copy(state.active))
 end
 
-function storage_start!(state::State, settings::Settings, dyn::Dynamics)
+function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors::Prior)
     storage = Storage(fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_ind + 1),
                         fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_ind + 1), 
                         fill(false,size(state.s, 1),size(state.s, 2), settings.max_ind + 1),
                         zeros(settings.max_ind+ 1),
+                        fill(Inf, 2, settings.max_ind + 1),
                         fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_smp + 1),
                         fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_smp + 1), 
                         fill(false,size(state.s, 1),size(state.s, 2), settings.max_smp + 1),
-                        zeros(settings.max_smp + 1))
+                        zeros(settings.max_smp + 1),
+                        fill(Inf, 2, settings.max_smp + 1))
     store_state!(state, storage, dyn; skel = settings.skel)
     return storage
 end
@@ -155,7 +157,7 @@ function get_time!(dyn::Dynamics, times::Times)
     dyn.t_det, dyn.next_event = findmin([times.next_split, times.next_merge, times.refresh[1], times.hyper[1]])
 end
 
-function store_state!(state::State, storage::Storage, dyn::Dynamics; skel = true)
+function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::Prior; skel = true)
     if !skel
         dyn.ind -= 1
     end
@@ -163,10 +165,12 @@ function store_state!(state::State, storage::Storage, dyn::Dynamics; skel = true
     storage.v[:,:,dyn.ind] = copy(state.v)
     storage.s[:,:,dyn.ind] = copy(state.s)
     storage.t[dyn.ind] = copy(state.t)
+    storage.h[1,dyn.ind] = copy(priors.σ.σ) 
+    storage.h[2,dyn.ind] = copy(priors.ω.ω)
     dyn.ind += 1
 end
 
-function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times)
+function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times, priors::Prior)
     ind_end = findfirst(times.smps .> state.t)
     if isnothing(ind_end)
         ind_end = size(times.smps,1)
@@ -181,6 +185,8 @@ function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times
         storage.x_smp[:,:,dyn.smp_ind] = x_old + v_old*(times.smps[i] - t_old)
         storage.v_smp[:,:,dyn.smp_ind] = copy(v_old)
         storage.s_smp[:,:,dyn.smp_ind] = copy(s_old)
+        storage.h_smp[1,dyn.ind] = copy(priors.σ.σ) 
+        storage.h_smp[2,dyn.ind] = copy(priors.ω.ω)
         dyn.smp_ind += 1
     end
     deleteat!(times.smps, 1:ind_end)

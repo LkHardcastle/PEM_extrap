@@ -58,10 +58,12 @@ mutable struct Storage
     v::Array{Float64}
     s::Array{Bool}
     t::Vector{Float64}
+    h::Array{Float64}
     x_smp::Array{Float64}
     v_smp::Array{Float64}
     s_smp::Array{Bool}
     t_smp::Vector{Float64}
+    h_smp::Array{Float64}
 end
 
 abstract type Variance end
@@ -74,6 +76,14 @@ mutable struct Cauchy <: Variance
     σ::Float64
     a::Float64
     b::Float64
+end
+
+mutable struct PC <: Variance
+    σ::Float64
+    a::Float64
+    h::Float64
+    ind::Float64
+    log_dens::Float64
 end
 
 abstract type Weight end
