@@ -72,12 +72,6 @@ mutable struct FixedV <: Variance
     σ::Float64
 end
 
-mutable struct Cauchy <: Variance
-    σ::Float64
-    a::Float64
-    b::Float64
-end
-
 mutable struct PC <: Variance
     σ::Float64
     a::Float64

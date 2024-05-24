@@ -120,7 +120,7 @@ function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
     end
     if dyn.next_event == 4
         # Hyperparameter update
-        hyper_update!(priors)
+        hyper_update!(state, priors)
         split_time!(state, times, priors)
         deleteat!(times.hyper, 1)
     end

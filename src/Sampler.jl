@@ -2,6 +2,7 @@ include("Types.jl")
 include("Potential.jl")
 include("Updating.jl")
 include("SplitMerge.jl")
+include("HyperUpdates.jl")
 
 function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settings)
     ### Setup
@@ -56,7 +57,7 @@ function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors:
                         fill(false,size(state.s, 1),size(state.s, 2), settings.max_smp + 1),
                         zeros(settings.max_smp + 1),
                         fill(Inf, 2, settings.max_smp + 1))
-    store_state!(state, storage, dyn; skel = settings.skel)
+    store_state!(state, storage, dyn, priors; skel = settings.skel)
     return storage
 end
 
@@ -185,8 +186,8 @@ function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times
         storage.x_smp[:,:,dyn.smp_ind] = x_old + v_old*(times.smps[i] - t_old)
         storage.v_smp[:,:,dyn.smp_ind] = copy(v_old)
         storage.s_smp[:,:,dyn.smp_ind] = copy(s_old)
-        storage.h_smp[1,dyn.ind] = copy(priors.σ.σ) 
-        storage.h_smp[2,dyn.ind] = copy(priors.ω.ω)
+        storage.h_smp[1,dyn.smp_ind] = copy(priors.σ.σ) 
+        storage.h_smp[2,dyn.smp_ind] = copy(priors.ω.ω)
         dyn.smp_ind += 1
     end
     deleteat!(times.smps, 1:ind_end)
@@ -194,11 +195,14 @@ end
 
 function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
     if settings.skel
-        out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)],
-                    "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)],
+        out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)], 
+                    "Sk_h" => storage.h[:,1:(dyn.ind-1)],
+                    "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
+                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_h" => storage.h_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
     else
-        out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)],
+        out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
+                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_h" => storage.h_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
     end
     return out

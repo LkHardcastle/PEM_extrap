@@ -1,4 +1,4 @@
-function hyper_update!(priors::Prior)
+function hyper_update!(state::State, priors::Prior)
     variance_update!(state, priors, priors.σ)
     weight_update!(state, priors, priors.ω)
 end
@@ -10,23 +10,32 @@ end
 function variance_update!(state::State, priors::Prior, σ::PC)
     # Sampling from a Gumbel(1/2,θ) distribution with observations $x$
     τ = 1/priors.σ.σ^2
-    τ_prop = τ + rand(Normal(0,sqrt(priors.σ.h)))
-    log_prop_dens = sum(logpdf.(Normal(0,sqrt(1/τ_prop)), state.x[state.active[2:end]])) + Gumbel2_logpdf(τ_prop, priors.σ.a)
-    α = min(1, exp(log_prop_dens - priors.log_dens))
+    τ_prop = exp(log(τ) + rand(Normal(0,priors.σ.h)))
+    log_prop_dens = sum(logpdf.(Normal(0,sqrt(1/τ_prop)), state.x[state.active[2:end]])) + log_Gumbel2_logpdf(τ_prop, priors.σ.a)
+    if isinf(priors.σ.log_dens)
+        priors.σ.log_dens = sum(logpdf.(Normal(0,sqrt(1/τ)), state.x[state.active[2:end]])) + log_Gumbel2_logpdf(τ, priors.σ.a)
+    end
+    α = min(1, exp(log_prop_dens - priors.σ.log_dens))
     acc = 0
     if rand() < α
         acc = 1
         priors.σ.σ = 1/sqrt(τ_prop)
-        priors.log_dens = copy(log_prop_dens)
+        priors.σ.log_dens = copy(log_prop_dens)
     end
+    priors.σ.ind += 1
     # Adaptation 
-    if inds < 100
-        priors.σ.h = exp(log(priors.σ.h) + (0.6^priors.σ.ind)*(α - 0.234))
+    if priors.σ.ind < 1_000
+        priors.σ.h = exp(log(priors.σ.h) + (priors.σ.ind^(-0.6))*(α - 0.234))
     end
-end
+    #println("------")
+    #println(priors.σ.σ)
+    #println(priors.σ.h)
+    #println(priors.σ.log_dens)
+    #println(log_prop_dens)
+end 
 
-function Gumbel2_logpdf(τ::Float64,a::Float64)
-    return -1.5*log(τ) - a/sqrt(τ)
+function log_Gumbel2_logpdf(τ::Float64,a::Float64)
+    return -0.5*log(τ) - a/sqrt(τ)
 end
 
 function weight_update!(state::State, priors::Prior, ω::FixedW)
@@ -34,5 +43,5 @@ function weight_update!(state::State, priors::Prior, ω::FixedW)
 end
 
 function weight_update!(state::State, priors::Prior, ω::Beta)
-    priors.ω.ω = rand(Beta(priors.ω.a + size(state.active,1) - 1, priors.ω.b + prod(size(state.s)) - size(state.active,1) + 1))
+    priors.ω.ω = rand(Distributions.Beta(priors.ω.a + size(state.active,1) - 1, priors.ω.b + prod(size(state.s)) - size(state.active,1) + 1))
 end
