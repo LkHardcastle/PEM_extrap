@@ -10,14 +10,14 @@ end
 function variance_update!(state::State, priors::Prior, σ::PC)
     σ_prop = exp(log(priors.σ.σ) + rand(Normal(0,priors.σ.h)))
     log_prop_dens = sum(logpdf.(Normal(0,σ_prop), state.x[state.active[2:end]])) + log_exp_logpdf(σ_prop, priors.σ.a)
-    if isinf(priors.σ.log_dens)
-        priors.σ.log_dens = sum(logpdf.(Normal(0,sqrt(1/τ)), state.x[state.active[2:end]])) + log_exp_logpdf(log(priors.σ.σ), priors.σ.a)
-    end
+    #if isinf(priors.σ.log_dens)
+    priors.σ.log_dens = sum(logpdf.(Normal(0,priors.σ.σ), state.x[state.active[2:end]])) + log_exp_logpdf(log(priors.σ.σ), priors.σ.a)
+    #end
     α = min(1, exp(log_prop_dens - priors.σ.log_dens))
     acc = 0
     if rand() < α
         acc = 1
-        priors.σ.σ = 1/sqrt(τ_prop)
+        priors.σ.σ = copy(σ_prop)
         priors.σ.log_dens = copy(log_prop_dens)
     end
     priors.σ.ind += 1

@@ -42,11 +42,18 @@ dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 state0 = ECMC2(x0, v0, s0, t0, true, findall(s0))
-settings = Settings(nits, nsmp, 1_000_000, 0.5,0.0, 0.2, false, true)
-priors = BasicPrior(1.0, PC(0.2, 10, 0.5, 1, Inf), FixedW(0.5), 1.0)
+nits = 10_000
+nsmp = 100000
+settings = Settings(nits, nsmp, 1_000_000, 0.5,0.2, 0.2, false, true)
+priors = BasicPrior(1.0, PC(0.2, 1, 0.01, 1, Inf), FixedW(0.5), 1.0)
 @time out3 = pem_sample(state0, dat, priors, settings)
 Random.seed!(123)
 @time out31 = pem_sample(state0, dat, priors, settings)
+
+out3["Smp_h"]
+out3["Smp_t"]
+histogram(vec(out3["Smp_h"][1,:]))
+plot(out3["Smp_h"][1,:])
 
 Random.seed!(34734)
 dat = init_data(y, cens, covar, breaks)
