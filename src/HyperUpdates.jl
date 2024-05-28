@@ -8,12 +8,10 @@ function variance_update!(state::State, priors::Prior, σ::FixedV)
 end
 
 function variance_update!(state::State, priors::Prior, σ::PC)
-    # Sampling from a Gumbel(1/2,θ) distribution with observations $x$
-    τ = 1/priors.σ.σ^2
-    τ_prop = exp(log(τ) + rand(Normal(0,priors.σ.h)))
-    log_prop_dens = sum(logpdf.(Normal(0,sqrt(1/τ_prop)), state.x[state.active[2:end]])) + log_Gumbel2_logpdf(τ_prop, priors.σ.a)
+    σ_prop = exp(log(priors.σ.σ) + rand(Normal(0,priors.σ.h)))
+    log_prop_dens = sum(logpdf.(Normal(0,σ_prop), state.x[state.active[2:end]])) + log_exp_logpdf(σ_prop, priors.σ.a)
     if isinf(priors.σ.log_dens)
-        priors.σ.log_dens = sum(logpdf.(Normal(0,sqrt(1/τ)), state.x[state.active[2:end]])) + log_Gumbel2_logpdf(τ, priors.σ.a)
+        priors.σ.log_dens = sum(logpdf.(Normal(0,sqrt(1/τ)), state.x[state.active[2:end]])) + log_exp_logpdf(log(priors.σ.σ), priors.σ.a)
     end
     α = min(1, exp(log_prop_dens - priors.σ.log_dens))
     acc = 0
@@ -36,6 +34,11 @@ end
 
 function log_Gumbel2_logpdf(τ::Float64,a::Float64)
     return -0.5*log(τ) - a/sqrt(τ)
+end
+
+
+function log_exp_logpdf(logσ::Float64,a::Float64)
+    return logσ - exp(logσ)*a
 end
 
 function weight_update!(state::State, priors::Prior, ω::FixedW)
