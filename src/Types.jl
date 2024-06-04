@@ -108,7 +108,12 @@ mutable struct BasicPrior <: Prior
     p_split::Float64
 end
 
-
+mutable struct ARPrior <: Prior
+    σ0::Float64
+    μ0::Float64
+    ω::Weight
+    p_split::Float64
+end
 
 
 struct PEMData

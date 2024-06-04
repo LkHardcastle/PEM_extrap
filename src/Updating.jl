@@ -99,7 +99,7 @@ end
 function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
     if dyn.next_event == 1
         # Split
-        split!(state)
+        split!(state, priors)
         split_time!(state, times, priors)
         merge_time!(state, times, priors)
     end

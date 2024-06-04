@@ -23,12 +23,22 @@ function U_new!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData)
     return U_, ∂U_, ∂2U_
 end
 
-function U_eval(state::State, t::Float64, dyn::Dynamics, priors::Prior)
+function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior)
     # Use known constants to calculate potential and rate of change of potential
     vec1 = exp.(t*dyn.∑v[state.active]).*dyn.c0[state.active]
     U_ = sum(vec1 .- dyn.d0[state.active] .- t*dyn.δ∑v[state.active]) + (1/(2*priors.σ.σ^2))*sum((state.x[state.active][2:end] + state.v[state.active][2:end].*t).^2) + (1/(2*priors.σ0^2))*(state.x[state.active][1] + state.v[state.active][1].*t).^2
-    ∂U_ = sum(dyn.∑v[state.active].*(vec1 .- dyn.δ[state.active])) + (1/priors.σ.σ)*sum(state.v[state.active][2:end].*(state.x[state.active][2:end] .+ state.v[state.active][2:end].*t)) + state.v[state.active][1]*(1/priors.σ0)*(state.x[state.active][1] + state.v[state.active][1].*t)
+    ∂U_ = sum(dyn.∑v[state.active].*(vec1 .- dyn.δ[state.active])) + (1/priors.σ.σ^2)*sum(state.v[state.active][2:end].*(state.x[state.active][2:end] .+ state.v[state.active][2:end].*t)) + state.v[state.active][1]*(1/priors.σ0^2)*(state.x[state.active][1] + state.v[state.active][1].*t)
     ∂2U_ = sum(dyn.∑v[state.active].^2 .*vec1) + (state.v[state.active][1]^2)/priors.σ0^2 + sum(state.v[state.active][2:end].^2)/priors.σ.σ^2
+    return U_, ∂U_, ∂2U_
+end
+
+function U_eval(state::State, t::Float64, dyn::Dynamics, priors::ARPrior)
+    # Use known constants to calculate potential and rate of change of potential
+    vec1 = exp.(t*dyn.∑v[state.active]).*dyn.c0[state.active]
+    vec2 = (cumsum(state.x[state.active] .+ state.v[state.active].*t) .- - priors.μ0)
+    U_ = sum(vec1 .- dyn.d0[state.active] .- t*dyn.δ∑v[state.active]) + (1/(2*priors.σ0^2))*sum(vec2.^2)
+    ∂U_ = sum(dyn.∑v[state.active].*(vec1 .- dyn.δ[state.active])) + (1/priors.σ0^2)*sum(dyn.∑v[state.active].*vec2)
+    ∂2U_ = sum(dyn.∑v[state.active].^2 .*vec1) + (state.v[state.active][1]^2)/priors.σ0^2 + sum(dyn.∑v[state.active].^2)/priors.σ0^2
     return U_, ∂U_, ∂2U_
 end
 
@@ -108,4 +118,8 @@ function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
     else
         return state.x[k]/priors.σ.σ^2
     end
+end
+
+function prior_add(state::State, priors::ARPrior, k::CartesianIndex)
+    return sum(cumsum(state.x, dims = 2)[k[2]:end] .- priors.μ0)/priors.σ0^2
 end

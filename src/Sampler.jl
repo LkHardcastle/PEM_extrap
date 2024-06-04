@@ -158,7 +158,7 @@ function get_time!(dyn::Dynamics, times::Times)
     dyn.t_det, dyn.next_event = findmin([times.next_split, times.next_merge, times.refresh[1], times.hyper[1]])
 end
 
-function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::Prior; skel = true)
+function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::BasicPrior; skel = true)
     if !skel
         dyn.ind -= 1
     end
@@ -171,7 +171,20 @@ function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::Pri
     dyn.ind += 1
 end
 
-function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times, priors::Prior)
+function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::ARPrior; skel = true)
+    if !skel
+        dyn.ind -= 1
+    end
+    storage.x[:,:,dyn.ind] = copy(state.x)
+    storage.v[:,:,dyn.ind] = copy(state.v)
+    storage.s[:,:,dyn.ind] = copy(state.s)
+    storage.t[dyn.ind] = copy(state.t)
+    storage.h[1,dyn.ind] = copy(priors.σ0) 
+    storage.h[2,dyn.ind] = copy(priors.ω.ω)
+    dyn.ind += 1
+end
+
+function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times, priors::BasicPrior)
     ind_end = findfirst(times.smps .> state.t)
     if isnothing(ind_end)
         ind_end = size(times.smps,1)
@@ -187,6 +200,28 @@ function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times
         storage.v_smp[:,:,dyn.smp_ind] = copy(v_old)
         storage.s_smp[:,:,dyn.smp_ind] = copy(s_old)
         storage.h_smp[1,dyn.smp_ind] = copy(priors.σ.σ) 
+        storage.h_smp[2,dyn.smp_ind] = copy(priors.ω.ω)
+        dyn.smp_ind += 1
+    end
+    deleteat!(times.smps, 1:ind_end)
+end
+
+function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times, priors::ARPrior)
+    ind_end = findfirst(times.smps .> state.t)
+    if isnothing(ind_end)
+        ind_end = size(times.smps,1)
+    end
+    ind_end -= 1
+    t_old = storage.t[dyn.ind - 2]
+    x_old = storage.x[:,:,dyn.ind - 2]
+    v_old = storage.v[:,:,dyn.ind - 2]
+    s_old = storage.s[:,:,dyn.ind - 2]
+    for i in 1:ind_end
+        storage.t_smp[dyn.smp_ind] = times.smps[i]
+        storage.x_smp[:,:,dyn.smp_ind] = x_old + v_old*(times.smps[i] - t_old)
+        storage.v_smp[:,:,dyn.smp_ind] = copy(v_old)
+        storage.s_smp[:,:,dyn.smp_ind] = copy(s_old)
+        storage.h_smp[1,dyn.smp_ind] = copy(priors.σ0) 
         storage.h_smp[2,dyn.smp_ind] = copy(priors.ω.ω)
         dyn.smp_ind += 1
     end
