@@ -20,12 +20,13 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = BPS(x0, v0, s0, t0, findall(s0))
-#priors = BasicPrior(1.0, 1.0, 0.5, 1.0)
-nits = 100_000
+priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 1.0)
+nits = 10_000
 nsmp = 10000000
 settings = Settings(nits, nsmp, 100000, 0.5,0.0, 1.0, false, true)
 Random.seed!(123)
 @time out1 = pem_sample(state0, dat, priors, settings)
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 0.0, false, true)
 @time out11 = pem_sample(state0, dat, priors, settings)
 
 Random.seed!(123)
@@ -62,10 +63,11 @@ v0 = v0./norm(v0)
 state0 = ECMC2(x0, v0, s0, t0, true, findall(s0))
 nits = 50_000
 nsmp = 100000
-settings = Settings(nits, nsmp, 1_000_000, 0.5,1.0, 0.2, false, true)
-priors = BasicPrior(1.0, PC(0.2, 10, 1.0, 1, Inf), FixedW(0.5), 1.0)
+settings = Settings(nits, nsmp, 1_000_000, 0.5,1.0, 0.0, false, true)
+priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 1.0)
 @time out3 = pem_sample(state0, dat, priors, settings)
 Random.seed!(123)
+settings = Settings(nits, nsmp, 1_000_000, 0.5,1.0, 0.5, false, true)
 @time out31 = pem_sample(state0, dat, priors, settings)
 out3["Smp_h"]
 histogram(vec(out3["Smp_h"][1,:]))
