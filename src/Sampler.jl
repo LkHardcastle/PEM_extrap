@@ -146,7 +146,11 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             event!(state, dyn, priors, times)
         else
             ## Generate next time via time-scale transformation
-            t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
+            if isinf(dyn.t_det)
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, 5), A42())
+            else
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
+            end
             update!(state, t_switch + t_event)
             flip!(state, dat, priors)
             merge_time!(state, times, priors)
