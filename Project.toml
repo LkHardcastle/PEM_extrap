@@ -2,6 +2,7 @@ name = "PEM_extrap"
 
 [deps]
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 RCall = "6f49c342-dc21-5d91-9882-a32aef131414"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
