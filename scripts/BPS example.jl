@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "PEM_extrap"
 # For src
 using DataStructures, LinearAlgebra, Distributions, Random, Optim, Roots, SpecialFunctions
-using Plots, CSV, DataFrames, RCall
+using Plots, CSV, DataFrames, RCall, Pkg
 
 include(srcdir("Sampler.jl"))
 include(srcdir("PreProcessing.jl"))
