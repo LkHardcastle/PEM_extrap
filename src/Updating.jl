@@ -102,6 +102,7 @@ function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
         split!(state, priors)
         split_time!(state, times, priors)
         merge_time!(state, times, priors)
+        W_calc!(state, dyn, dat)
     end
     if dyn.next_event == 2
         # Merge 
@@ -109,6 +110,7 @@ function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
             merge!(state, times.next_merge_index)
             split_time!(state, times, priors)
             merge_time!(state, times, priors)
+            W_calc!(state, dyn, dat)
         end
     end
     if dyn.next_event == 3

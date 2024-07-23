@@ -1,44 +1,83 @@
+#function U_new!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData)
+#    ## Calculate the potential, rate of change of potential and constants for updating
+#    for j in 1:size(state.active,1)
+#        if j == 1
+#            range = 1:state.active[1][2]
+#        else
+#            range = (state.active[j-1][2] + 1):state.active[j][2]
+#        end
+#        d = findall(dat.d .∈ [range])
+#        c = findall(dat.d .> state.active[j][2])
+#        if j > 1
+#            sj_1 = dat.s[state.active[j-1][2]]
+#        else
+#            sj_1 = 0.0
+#        end
+#        dyn.c0[state.active[j]] = exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d] .- sj_1) + length(c)*(dat.s[state.active[j][2]] - sj_1))
+#        dyn.δ[state.active[j]] = sum(dat.cens[d])
+#        dyn.d0[state.active[j]] = dyn.δ[state.active[j]]*sum(state.x[1:state.active[j][2]])
+#    end
+#    dyn.∑v = cumsum(state.v, dims = 2)
+#    dyn.δ∑v = dyn.δ.*dyn.∑v
+#    U_, ∂U_, ∂2U_ = U_eval(state, 0.0, dyn, priors)
+#    return U_, ∂U_, ∂2U_
+#end
+
+function AV_calc!(state::State, dyn::Dynamics)
+    active = findall(sum.(eachcol(state.s) .!= 0.0))
+    A = cumsum(state.x, dims = 2)
+    V = cumsum(state.v, dims = 2)
+    V = transpose(dat.UQ)*V
+    dyn.A = A[:, active]
+    dyn.V = V[:, active]
+end
+
+function W_calc!(state::State, dyn::Dynamics, dat::PEMData)
+    # Faster way of doing this with knowledge of splits but this is fine for now
+    active = findall(sum.(eachcol(state.s) .!= 0.0))
+    W = zeros(size(dat.W,1),size(active,1))
+    δ = zeros(size(dat.δ,1),size(active,1))
+    for i in eachindex(active)
+        if i != length(active)
+            range = active[i]:(active[i+1] - 1)
+        else
+            range = active[i]:(size(active,1))
+        end
+        W[:,i] = rowsum(dat.W[:,range])
+        δ[:,i] = rowsum(dat.δ[:,range])
+    end
+    dyn.W = copy(W)
+    dyn.δ = copy(δ)
+end
+
+
 function U_new!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData)
     ## Calculate the potential, rate of change of potential and constants for updating
-    for j in 1:size(state.active,1)
-        if j == 1
-            range = 1:state.active[1][2]
+    AV_calc!(state, dyn)
+    U_, ∂U_, ∂2U_ = U_eval(0.0, dyn, priors)
+    return U_, ∂U_, ∂2U_
+end
+
+
+
+function U_eval(t::Float64, dyn::Dynamics, priors::BasicPrior)
+    θ = dyn.A .+ t.*dyn.V
+    # How covariates?
+    PRIORSNOTREADY
+    U_ = sum((exp.(θ).*dyn.W - dyn.δ.*θ)) 
+    ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W - dyn.δ)) 
+    ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
+    for j in state.active
+        if j[2] > 1
+            U_ += (1/(2*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2
+            ∂U_ += (state.v[j]*/(priors.σ.σ^2))*(state.x[j] + state.v[j]*t)
+            ∂2U_ += (state.v[j]^2)/(priors.σ.σ^2)
         else
-            range = (state.active[j-1][2] + 1):state.active[j][2]
+            U_ += (1/(2*priors.σ0^2))*(state.x[j] + state.v[j]*t)^2
+            ∂U_ += (state.v[j]*/(priors.σ0^2))*(state.x[j] + state.v[j]*t)
+            ∂2U_ += (state.v[j]^2)/(priors.σ0^2)
         end
-        d = findall(dat.d .∈ [range])
-        c = findall(dat.d .> state.active[j][2])
-        if j > 1
-            sj_1 = dat.s[state.active[j-1][2]]
-        else
-            sj_1 = 0.0
-        end
-        dyn.c0[state.active[j]] = exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d] .- sj_1) + length(c)*(dat.s[state.active[j][2]] - sj_1))
-        dyn.δ[state.active[j]] = sum(dat.cens[d])
-        dyn.d0[state.active[j]] = dyn.δ[state.active[j]]*sum(state.x[1:state.active[j][2]])
     end
-    dyn.∑v = cumsum(state.v, dims = 2)
-    dyn.δ∑v = dyn.δ.*dyn.∑v
-    U_, ∂U_, ∂2U_ = U_eval(state, 0.0, dyn, priors)
-    return U_, ∂U_, ∂2U_
-end
-
-function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior)
-    # Use known constants to calculate potential and rate of change of potential
-    vec1 = exp.(t*dyn.∑v[state.active]).*dyn.c0[state.active]
-    U_ = sum(vec1 .- dyn.d0[state.active] .- t*dyn.δ∑v[state.active]) + (1/(2*priors.σ.σ^2))*sum((state.x[state.active][2:end] + state.v[state.active][2:end].*t).^2) + (1/(2*priors.σ0^2))*(state.x[state.active][1] + state.v[state.active][1].*t).^2
-    ∂U_ = sum(dyn.∑v[state.active].*(vec1 .- dyn.δ[state.active])) + (1/priors.σ.σ^2)*sum(state.v[state.active][2:end].*(state.x[state.active][2:end] .+ state.v[state.active][2:end].*t)) + state.v[state.active][1]*(1/priors.σ0^2)*(state.x[state.active][1] + state.v[state.active][1].*t)
-    ∂2U_ = sum(dyn.∑v[state.active].^2 .*vec1) + (state.v[state.active][1]^2)/priors.σ0^2 + sum(state.v[state.active][2:end].^2)/priors.σ.σ^2
-    return U_, ∂U_, ∂2U_
-end
-
-function U_eval(state::State, t::Float64, dyn::Dynamics, priors::ARPrior)
-    # Use known constants to calculate potential and rate of change of potential
-    vec1 = exp.(t*dyn.∑v[state.active]).*dyn.c0[state.active]
-    vec2 = (cumsum(state.x[state.active] .+ state.v[state.active].*t) .- - priors.μ0)
-    U_ = sum(vec1 .- dyn.d0[state.active] .- t*dyn.δ∑v[state.active]) + (1/(2*priors.σ0^2))*sum(vec2.^2)
-    ∂U_ = sum(dyn.∑v[state.active].*(vec1 .- dyn.δ[state.active])) + (1/priors.σ0^2)*sum(dyn.∑v[state.active].*vec2)
-    ∂2U_ = sum(dyn.∑v[state.active].^2 .*vec1) + (state.v[state.active][1]^2)/priors.σ0^2 + sum(dyn.∑v[state.active].^2)/priors.σ0^2
     return U_, ∂U_, ∂2U_
 end
 
@@ -50,7 +89,7 @@ function grad_optim(∂U::Float64, ∂2U::Float64, state::State, dyn::Dynamics, 
     while abs(f) > 1e-10
         #println("Grad optim");println(t0);println(f);println(f1);
         t0 = t0 - f/f1
-        blank, f, f1 = U_eval(state, t0, dyn, priors)
+        blank, f, f1 = U_eval(t0, dyn, priors)
         dyn.sampler_eval.newton[1] += 1
     end
     if isnan(t0)
@@ -67,14 +106,14 @@ function potential_optim(t_switch::Float64, V::Float64, U_::Float64, ∂U::Float
     f = log(V)
     f1 = Base.copy(∂U)
     t0 = 0.5
-    f_, f1, blank = U_eval(state, t0 + t_switch, dyn, priors)
+    f_, f1, blank = U_eval(t0 + t_switch, dyn, priors)
     f = f_ - Uθ + log(V)        
     dyn.sampler_eval.newton[2] += 1
     k = 1
     while abs(f) > 1e-5
         #println("Potential optim");println(t0);println(f);println(f1)
         t0 = t0 - f/f1
-        f_, f1, blank = U_eval(state, t0 + t_switch, dyn, priors)
+        f_, f1, blank = U_eval(t0 + t_switch, dyn, priors)
         f = f_ - Uθ + log(V)
         dyn.sampler_eval.newton[2] += 1
         k += 1
@@ -91,6 +130,18 @@ function potential_optim(t_switch::Float64, V::Float64, U_::Float64, ∂U::Float
 end
 
 function ∇U(state::State, dat::PEMData, priors::Prior)
+    AV_calc!(state, dyn)
+    ∇Uλ = 0.0
+    ∇U_out = zeros()
+    U_ind = reverse(cumsum(reverse(exp.(dyn.A).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
+    #p x J matrix with correct entries (except for prior terms)
+    U_ind = dat.UQ*U_ind
+
+
+
+
+
+
     ∇Uλ = 0.0
     ∇U_out = Float64[]
     for j in size(state.active,1):-1:1
