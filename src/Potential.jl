@@ -26,6 +26,7 @@
 function AV_calc!(state::State, dyn::Dynamics)
     active = findall(sum.(eachcol(state.s)) .!= 0.0)
     A = cumsum(state.x, dims = 2)
+    A = transpose(dat.UQ)*A
     V = cumsum(state.v, dims = 2)
     V = transpose(dat.UQ)*V
     dyn.A = A[:, active]
@@ -62,6 +63,7 @@ end
 
 
 function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior)
+    #println(state.x);println(state.v);println(dyn.A);println(dyn.V);error("")
     θ = dyn.A .+ t.*dyn.V
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
     #println(dyn.V);println(θ)
@@ -83,24 +85,35 @@ end
 
 function grad_optim(∂U::Float64, ∂2U::Float64, state::State, dyn::Dynamics, priors::Prior)
     # Conduct a line search along the time-gradient of the potential to find ∂_tU(θ + vt) = 0
+    #println("grad optim");println(state.x)
     t0 = 0.0
     f = copy(∂U)
     f1 = copy(∂2U)
+    iter = 1
     while abs(f) > 1e-10
         #println("Grad optim");println(t0);println(f);println(f1);
         t0 = t0 - f/f1
         blank, f, f1 = U_eval(state, t0, dyn, priors)
         dyn.sampler_eval.newton[1] += 1
+        iter += 1
+        if iter > 1_000
+            println(state.x);println(state.v)
+            println(t0);println(blank);println(f);println(f1)
+            println(∂U);println(∂2U)
+            error("Too many its in grad optim")
+        end
     end
     if isnan(t0)
         verbose(dyn, state)
         error("Grad optim error")
     end
+    #println(t0)
     return t0
 end
 
 function potential_optim(t_switch::Float64, V::Float64, U_::Float64, ∂U::Float64, state::State, dyn::Dynamics, priors::Prior)
     # Conduct a line search along U(θ + vτ) - U(θ) = -log(V) to find τ
+    println("potential optim")
     t0 = 0.0
     Uθ = Base.copy(U_)
     f = log(V)
@@ -134,7 +147,9 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     ∇U_out = zeros(size(state.active))
     U_ind = reverse(cumsum(reverse(exp.(dyn.A).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
     #p x J' matrix with correct entries (except for prior terms)
-    U_ind = dat.UQ*U_ind
+    #println(U_ind)
+    #U_ind = dat.UQ*U_ind
+    #println(U_ind);error("")
     j = 1
     for i in eachindex(dyn.A)
         if dyn.S[i]
@@ -142,8 +157,6 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
             j += 1
         end
     end
-    #println(U_ind);println(state.active);println(state.x);println(∇U_out)
-    #error("")
     return ∇U_out
     #∇Uλ = 0.0
     #∇U_out = Float64[]

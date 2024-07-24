@@ -6,9 +6,9 @@ function init_params(p::Int64, dat::PEMData, v_abs::Vector{Float64})
 end
 
 function init_params(p::Int64, dat::PEMData)
-    x0 = rand(Normal(0.0,0.1), p, size(dat.W,2))
+    x0 = rand(Normal(0.0,0.1), dat.p, size(dat.W,2))
     v0 = rand(Normal(0,1),size(x0))
-    s0 = fill(true, p, size(dat.W,2))
+    s0 = fill(true, dat.p, size(dat.W,2))
     return x0, v0, s0
 end
 
@@ -65,7 +65,7 @@ function init_data(y, cens, covar, breaks)
                 sj1 = breaks[j-1]
             end
             W[l,j] = sum(yl[findall(dl .== j)] .- sj1) + length(findall(dl .> j))*(breaks[j] - sj1)
-            δ[l,j] = length(findall(intersect(δl .== 1, dl .== j)))
+            δ[l,j] = length(intersect(findall(δl .== 1), findall(dl .== j)))
         end
     end
     return PEMData(y, cens, covar, p, n, δ, W, UQ)
