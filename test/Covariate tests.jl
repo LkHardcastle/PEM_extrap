@@ -2,10 +2,20 @@ using DrWatson
 @quickactivate "PEM_extrap"
 # For src
 using DataStructures, LinearAlgebra, Distributions, Random, Optim, Roots, SpecialFunctions
+using Plots, CSV, DataFrames, RCall, Interpolations
 
 include(srcdir("Sampler.jl"))
 include(srcdir("PreProcessing.jl"))
 include(srcdir("PostProcessing.jl"))
+
+
+R"""
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(cowplot)
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+"""
 
 Random.seed!(12515)
 n = 1
@@ -28,13 +38,86 @@ nits = 10_000
 nsmp = 100000
 settings = Settings(nits, nsmp, 1_000_000, 0.5,0.0, 0.1, false, true)
 priors = BasicPrior(1.0, FixedV(1.0), FixedW(0.5), 0.0)
-println(state0)
 @time out3 = pem_sample(state0, dat, priors, settings)
 
-x = [0.12657628020322645 -0.11775814209891318 0.1457155415673546 0.04090595202807143 0.04635033818928668 -0.06903190918753911 0.017443218941190844 -0.04591371159060143 0.02729823616640393 -0.028164206160436134]
-a = [0.12657628020322645 0.00881813810431327 0.15453367967166787 0.1954396316997393 0.24178996988902599 0.17275806070148686 0.1902012796426777 0.14428756805207626 0.1715858042184802 0.14342159805804405]
-w = [0.5 0.5 0.5 0.5 0.19927521949915716 0.0 0.0 0.0 0.0 0.0]
-d = [0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0]
+Random.seed!(123)
+df = CSV.read(datadir("colon.csv"), DataFrame)
+y = df.years
+maximum(y)
+n = length(y)
+breaks = collect(0.1:0.1:3.1)
+p = 1
+cens = df.status
+covar = fill(1.0, 1, n)
+dat = init_data(y, cens, covar, breaks)
+x0, v0, s0 = init_params(p, dat)
+t0 = 0.0
+priors = BasicPrior(1.0, FixedV(1.0), FixedW(0.5), 0.0)
+state0 = BPS(x0, v0, s0, t0, findall(s0))
+nits = 100_000
+nsmp = 100000
+Random.seed!(123)
+state0 = ECMC2(x0, v0, s0, t0, true, findall(s0))
+settings = Settings(nits, nsmp, 100000, 0.5,0.0, 1.0, false, true)
+@time out4 = pem_sample(state0, dat, priors, settings)
 
-Ul = exp.(a).*w .- d.*a .+ (x.^2)./priors.σ.σ^2
-sum(Ul)
+smps1 = out4["Smp_trans"]
+plot(vcat(0,breaks), vec(hcat(mean(exp.(smps1), dims = 3), mean(exp.(smps1), dims = 3)[end])),linetype=:steppost, xlims = (0,3.5), ylim = (0,0.5))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1[])), 0.025),quantile.(eachrow(exp.(smps1)), 0.025)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,1))
+plot!(vcat(0,breaks),vcat(quantile.(eachrow(exp.(smps1)), 0.975),quantile.(eachrow(exp.(smps1)), 0.975)[end]),linetype=:steppost, xlims = (0,3.5), ylim = (0,1))
+
+Random.seed!(123)
+df = CSV.read(datadir("colon.csv"), DataFrame)
+y = df.years
+maximum(y)
+n = length(y)
+breaks = collect(0.1:0.1:3.1)
+p = 1
+cens = df.status
+covar = fill(1.0, 1, n)
+dat = init_data(y, cens, covar, breaks)
+x0, v0, s0 = init_params(p, dat)
+t0 = 0.0
+state0 = ECMC2(x0, v0, s0, t0, true, findall(s0))
+nits = 100_000
+nsmp = 100000
+settings = Settings(nits, nsmp, 100000, 0.5,1.0, 0.02, false, true)
+Random.seed!(123)
+priors = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 1.0)
+@time out1 = pem_sample(state0, dat, priors, settings)
+priors = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 0.0)
+@time out2 = pem_sample(state0, dat, priors, settings)
+
+s1 = view(exp.(out1["Smp_trans"]), 1, :, :)
+df1 = DataFrame(hcat(breaks, mean(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+s2 = view(exp.(out2["Smp_trans"]), 1, :, :)
+out2["Smp_x"]
+df2 = DataFrame(hcat(breaks, mean(s2, dims = 2), quantile.(eachrow(s2), 0.025), quantile.(eachrow(s2), 0.25), quantile.(eachrow(s2), 0.75), quantile.(eachrow(s2), 0.975)), :auto)
+R"""
+dat1 = data.frame($df1)
+colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+"""
+R"""
+dat2 = data.frame($df2)
+colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+"""
+
+R"""
+p1 <- dat1 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name, linetype = name)) + geom_step() +
+    theme_classic() + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4,4,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time (years)")
+"""
+R"""    
+p2 <- dat2 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name, linetype = name)) + geom_step() +
+    theme_classic() + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4,4,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time (years)")
+p2
+#plot_grid(p1,p2)
+#ggsave($plotsdir("SnS.pdf"), width = 14, height = 6)
+"""

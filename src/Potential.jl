@@ -86,12 +86,10 @@ function grad_optim(∂U::Float64, ∂2U::Float64, state::State, dyn::Dynamics, 
     t0 = 0.0
     f = copy(∂U)
     f1 = copy(∂2U)
-    println(f);println(f1)
     while abs(f) > 1e-10
         #println("Grad optim");println(t0);println(f);println(f1);
         t0 = t0 - f/f1
         blank, f, f1 = U_eval(state, t0, dyn, priors)
-        println(blank); println(t0);println(f);println(f1)
         dyn.sampler_eval.newton[1] += 1
     end
     if isnan(t0)

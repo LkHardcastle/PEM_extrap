@@ -284,6 +284,8 @@ df2 = DataFrame(hcat(breaks, mean(s2, dims = 2), quantile.(eachrow(s2), 0.025), 
 R"""
 dat1 = data.frame($df1)
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+"""
+R"""
 dat2 = data.frame($df2)
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
 """
@@ -295,12 +297,15 @@ p1 <- dat1 %>%
     theme_classic() + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4,4,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time (years)")
+"""
+R"""    
 p2 <- dat2 %>%
     pivot_longer(Mean:UCI) %>%
     ggplot(aes(x = Time, y = value, col = name, linetype = name)) + geom_step() +
     theme_classic() + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4,4,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time (years)")
-plot_grid(p1,p2)
-ggsave($plotsdir("SnS.pdf"), width = 14, height = 6)
+p2
+#plot_grid(p1,p2)
+#ggsave($plotsdir("SnS.pdf"), width = 14, height = 6)
 """
