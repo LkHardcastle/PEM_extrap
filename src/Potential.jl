@@ -30,6 +30,7 @@ function AV_calc!(state::State, dyn::Dynamics)
     V = transpose(dat.UQ)*V
     dyn.A = A[:, active]
     dyn.V = V[:, active]
+    dyn.S = state.s[:,active]
 end
 
 function W_calc!(state::State, dyn::Dynamics, dat::PEMData)
@@ -62,8 +63,6 @@ end
 
 function U_eval(t::Float64, dyn::Dynamics, priors::BasicPrior)
     θ = dyn.A .+ t.*dyn.V
-    # How covariates?
-    PRIORSNOTREADY
     U_ = sum((exp.(θ).*dyn.W - dyn.δ.*θ)) 
     ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W - dyn.δ)) 
     ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
@@ -134,33 +133,37 @@ function ∇U(state::State, dat::PEMData, priors::Prior)
     ∇Uλ = 0.0
     ∇U_out = zeros()
     U_ind = reverse(cumsum(reverse(exp.(dyn.A).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
-    #p x J matrix with correct entries (except for prior terms)
+    #p x J' matrix with correct entries (except for prior terms)
     U_ind = dat.UQ*U_ind
-
-
-
-
-
-
-    ∇Uλ = 0.0
-    ∇U_out = Float64[]
-    for j in size(state.active,1):-1:1
-        if j == 1
-            range = 1:state.active[1][2]
-        else
-            range = (state.active[j-1][2] + 1):state.active[j][2]
+    j = 1
+    for i in eachindex(dyn.A)
+        if dyn.S[i]
+            push!(∇U_out, U_ind[i])
         end
-        d = findall(dat.d .∈ [range])
-        c = findall(dat.d .> state.active[j][2])
-        if j > 1
-            sj_1 = dat.s[state.active[j-1][2]]
-        else
-            sj_1 = 0.0
-        end
-        ∇Uλ += exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d]) - length(d)*sj_1 + length(c)*(dat.s[state.active[j][2]] - sj_1)) - sum(dat.cens[d])
-        pushfirst!(∇U_out, ∇Uλ + prior_add(state, priors, state.active[j]))
+        j += 1
+    end
+    if j + 1 != length(state.active)
+        error("")
     end
     return ∇U_out
+    #∇Uλ = 0.0
+    #∇U_out = Float64[]
+    #for j in size(state.active,1):-1:1
+    #    if j == 1
+    #        range = 1:state.active[1][2]
+    #    else
+    #        range = (state.active[j-1][2] + 1):state.active[j][2]
+    #    end
+    #    d = findall(dat.d .∈ [range])
+    #    c = findall(dat.d .> state.active[j][2])
+    #    if j > 1
+    #        sj_1 = dat.s[state.active[j-1][2]]
+    #    else
+    #        sj_1 = 0.0
+    #    end
+    #    ∇Uλ += exp(sum(state.x[1:state.active[j][2]]))*(sum(dat.y[d]) - length(d)*sj_1 + length(c)*(dat.s[state.active[j][2]] - sj_1)) - sum(dat.cens[d])
+    #    pushfirst!(∇U_out, ∇Uλ + prior_add(state, priors, state.active[j]))
+    #end
 end
 
 function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)

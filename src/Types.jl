@@ -40,6 +40,7 @@ mutable struct Dynamics
     V::Matrix{Float64}
     W::Matrix{Float64}
     δ::Matrix{Float64}
+    S::Matrix{Bool}
     sampler_eval::SamplerEval
 end
 
