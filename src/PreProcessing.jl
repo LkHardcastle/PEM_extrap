@@ -6,23 +6,23 @@ function init_params(p::Int64, dat::PEMData, v_abs::Vector{Float64})
 end
 
 function init_params(p::Int64, dat::PEMData)
-    x0 = rand(Normal(0.0,0.1), p, length(dat.s))
+    x0 = rand(Normal(0.0,0.1), p, size(dat.W,2))
     v0 = rand(Normal(0,1),size(x0))
-    s0 = fill(true, p, length(dat.s))
+    s0 = fill(true, p, size(dat.W,2))
     return x0, v0, s0
 end
 
-function init_data(y, cens, covar, breaks)
-    ind = sortperm(y)
-    y = y[ind]
-    cens = cens[ind]
-    covar = covar[:,ind]
-    d = zeros(Int, length(y))
-    for i in eachindex(y)
-        d[i] = findfirst(breaks .> y[i])
-    end
-    return PEMData(y, cens, covar, size(covar,1), size(covar, 2), breaks, d)
-end
+#function init_data(y, cens, covar, breaks)
+#    ind = sortperm(y)#
+#    y = y[ind]
+#    cens = cens[ind]
+#    covar = covar[:,ind]
+#    d = zeros(Int, length(y))
+#    for i in eachindex(y)
+#        d[i] = findfirst(breaks .> y[i])
+#    end
+#    return PEMData(y, cens, covar, size(covar,1), size(covar, 2), breaks, d)
+#end
 
 function init_data(y, cens, covar, breaks)
     ind = sortperm(y)
@@ -49,6 +49,7 @@ function init_data(y, cens, covar, breaks)
     end
     # Build W, δ
     W = zeros(L,J)
+    δ = zeros(L,J)
     d = zeros(Int, length(y))
     for i in eachindex(y)
         d[i] = findfirst(breaks .> y[i])

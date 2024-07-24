@@ -8,7 +8,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     ### Setup
     state = copy(state0)
     times = time_setup(state, settings, priors)
-    dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.x), copy(state.x), copy(state.x), SamplerEval(zeros(2),0, 0))
+    dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.x), copy(state.x), copy(state.s), SamplerEval(zeros(2),0, 0))
     # Set up storage 
     if settings.skel == false
         dyn.ind = 2
@@ -131,7 +131,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
     ## If potential decreasing at that point jump to it and break
     if ∂U_det < 0.0
         update!(state, dyn.t_det - state.t)
-        event!(state, dyn, priors, times)
+        event!(state, dat, dyn, priors, times)
     else
         ## Elseif potential decreasing at initialpoint line search for point where gradient begins to increase
         t_switch = 0.0
@@ -143,7 +143,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
         V = rand()
         if U_det - Uθt < -log(V)
             update!(state, dyn.t_det - state.t)
-            event!(state, dyn, priors, times)
+            event!(state, dat, dyn, priors, times)
         else
             ## Generate next time via time-scale transformation
             if isinf(dyn.t_det)
@@ -152,7 +152,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
             end
             update!(state, t_switch + t_event)
-            flip!(state, dat, priors)
+            flip!(state, dat, dyn, priors)
             merge_time!(state, times, priors)
         end
     end
