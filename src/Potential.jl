@@ -63,9 +63,9 @@ end
 
 function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior)
     θ = dyn.A .+ t.*dyn.V
-    U_ = sum((exp.(θ).*dyn.W - dyn.δ.*θ)) 
+    U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
     #println(dyn.V);println(θ)
-    ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W - dyn.δ)) 
+    ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
     ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
     for j in state.active
         if j[2] > 1
@@ -86,10 +86,12 @@ function grad_optim(∂U::Float64, ∂2U::Float64, state::State, dyn::Dynamics, 
     t0 = 0.0
     f = copy(∂U)
     f1 = copy(∂2U)
+    println(f);println(f1)
     while abs(f) > 1e-10
         #println("Grad optim");println(t0);println(f);println(f1);
         t0 = t0 - f/f1
         blank, f, f1 = U_eval(state, t0, dyn, priors)
+        println(blank); println(t0);println(f);println(f1)
         dyn.sampler_eval.newton[1] += 1
     end
     if isnan(t0)
@@ -131,20 +133,19 @@ end
 
 function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     AV_calc!(state, dyn)
-    ∇U_out = zeros()
+    ∇U_out = zeros(size(state.active))
     U_ind = reverse(cumsum(reverse(exp.(dyn.A).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
     #p x J' matrix with correct entries (except for prior terms)
     U_ind = dat.UQ*U_ind
     j = 1
     for i in eachindex(dyn.A)
         if dyn.S[i]
-            push!(∇U_out, U_ind[i] + prior_add(state, priors, state.active[i]))
+            ∇U_out[j] =  U_ind[j] + prior_add(state, priors, state.active[j])
+            j += 1
         end
-        j += 1
     end
-    if j + 1 != length(state.active)
-        error("")
-    end
+    #println(U_ind);println(state.active);println(state.x);println(∇U_out)
+    #error("")
     return ∇U_out
     #∇Uλ = 0.0
     #∇U_out = Float64[]

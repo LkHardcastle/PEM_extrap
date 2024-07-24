@@ -14,6 +14,8 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
         dyn.ind = 2
     end
     storage = storage_start!(state, settings, dyn, priors)
+    println(U_eval(state,0.0,dyn,priors))
+    error("")
     println("Starting sampling")
     while dyn.ind < settings.max_ind
         if settings.verbose
