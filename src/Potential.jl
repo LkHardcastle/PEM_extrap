@@ -35,7 +35,7 @@ end
 
 function W_calc!(state::State, dyn::Dynamics, dat::PEMData)
     # Faster way of doing this with knowledge of splits but this is fine for now
-    active = findall(sum.(eachcol(state.s) .!= 0.0))
+    active = findall(sum.(eachcol(state.s)) .!= 0.0)
     W = zeros(size(dat.W,1),size(active,1))
     δ = zeros(size(dat.δ,1),size(active,1))
     for i in eachindex(active)
@@ -44,8 +44,8 @@ function W_calc!(state::State, dyn::Dynamics, dat::PEMData)
         else
             range = active[i]:(size(active,1))
         end
-        W[:,i] = rowsum(dat.W[:,range])
-        δ[:,i] = rowsum(dat.δ[:,range])
+        W[:,i] = cumsum(dat.W[:,range], dims = 2)
+        δ[:,i] = cumsum(dat.δ[:,range], dims = 2)
     end
     dyn.W = copy(W)
     dyn.δ = copy(δ)
