@@ -28,4 +28,5 @@ nits = 10_000
 nsmp = 100000
 settings = Settings(nits, nsmp, 1_000_000, 0.5,0.0, 0.1, false, true)
 priors = BasicPrior(1.0, FixedV(1.0), FixedW(0.5), 0.0)
+println(state0)
 @time out3 = pem_sample(state0, dat, priors, settings)
