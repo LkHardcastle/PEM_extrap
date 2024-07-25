@@ -1,19 +1,19 @@
 
-function flip!(state::BPS, dat::PEMData, priors::Prior)
+function flip!(state::BPS, dat::PEMData, dyn::Dynamics, priors::Prior)
     ### Calculate gradient
-    U_grad = ∇U(state, dat, priors)
+    U_grad = ∇U(state, dat, dyn, priors)
     ### Flip
     state.v[state.active] -= 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2
 end
 
-function refresh!(state::BPS)
+function refresh!(state::BPS, dat::PEMData, dyn::Dynamics, priors::Prior)
     state.v[state.active] = rand(Normal(0,1),size(state.active))
     state.v[state.active] /= norm(state.v[state.active])
 end
 
-function flip!(state::ECMC, dat::PEMData, priors::Prior)
+function flip!(state::ECMC, dat::PEMData, dyn::Dynamics, priors::Prior)
     ### Calculate gradient
-    U_grad = ∇U(state, dat, priors)
+    U_grad = ∇U(state, dat, dyn, priors)
     state.v[state.active] -= 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2
     U_grad = U_grad/norm(U_grad)
     ### Gradient update
@@ -37,10 +37,10 @@ function gram_schmidt(state::State, U_grad::Vector{Float64})
     return e1, e2
 end
 
-function refresh!(state::ECMC)
+function refresh!(state::ECMC, dat::PEMData, dyn::Dynamics, priors::Prior)
     #state.v[state.active] = rand(Normal(0,1),size(state.active))
     #state.v[state.active] = state.v[state.active]/norm(state.v[state.active])
-    U_grad = ∇U(state, dat, priors)
+    U_grad = ∇U(state, dat, dyn, priors)
     U_grad = U_grad/norm(U_grad)
     v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
     g1, g2 = gram_schmidt(state, U_grad)
@@ -53,9 +53,9 @@ function refresh!(state::ECMC)
     state.v[state.active] = a*v_perp + b*U_grad
  end
 
- function flip!(state::ECMC2, dat::PEMData, priors::Prior)
+ function flip!(state::ECMC2, dat::PEMData, dyn::Dynamics, priors::Prior)
     ### Calculate gradient
-    U_grad = ∇U(state, dat, priors)
+    U_grad = ∇U(state, dat, dyn, priors)
     state.v[state.active] -= 2*dot(state.v[state.active], U_grad)*U_grad/norm(U_grad)^2
     U_grad = U_grad/norm(U_grad)
     if size(state.active,1) > 1.0
@@ -67,7 +67,7 @@ function refresh!(state::ECMC)
         state.v[state.active] = ((1-v_0_new^2)^0.5)*state.v[state.active] .+ v_0_new*U_grad
         ### Orthogonal update
         if state.b
-            U_grad = ∇U(state, dat, priors)
+            U_grad = ∇U(state, dat, dyn, priors)
             U_grad = U_grad/norm(U_grad)
             v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
             g1, g2 = gram_schmidt(state, U_grad)
@@ -83,7 +83,7 @@ function refresh!(state::ECMC)
     end
 end
 
-function refresh!(state::ECMC2)
+function refresh!(state::ECMC2, dat::PEMData, dyn::Dynamics, priors::Prior)
     state.b = true
 end
 
@@ -96,12 +96,13 @@ function update!(state::State, t::Float64)
     state.t += t
 end
 
-function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
+function event!(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, times::Times)
     if dyn.next_event == 1
         # Split
         split!(state, priors)
         split_time!(state, times, priors)
         merge_time!(state, times, priors)
+        W_calc!(state, dyn, dat)
     end
     if dyn.next_event == 2
         # Merge 
@@ -109,11 +110,12 @@ function event!(state::State, dyn::Dynamics, priors::Prior, times::Times)
             merge!(state, times.next_merge_index)
             split_time!(state, times, priors)
             merge_time!(state, times, priors)
+            W_calc!(state, dyn, dat)
         end
     end
     if dyn.next_event == 3
         # Refresh
-        refresh!(state)
+        refresh!(state, dat, dyn, priors)
         merge_time_ref!(state, times, priors)
         deleteat!(times.refresh, 1)
         dyn.next_event = 0

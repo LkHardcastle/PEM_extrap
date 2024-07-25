@@ -8,14 +8,14 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     ### Setup
     state = copy(state0)
     times = time_setup(state, settings, priors)
-    dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.x), copy(state.x), copy(state.x), SamplerEval(zeros(2),0, 0))
+    dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.s), SamplerEval(zeros(2),0, 0))
     # Set up storage 
     if settings.skel == false
         dyn.ind = 2
     end
     storage = storage_start!(state, settings, dyn, priors)
-    println(U_eval(state, 0.0, dyn, priors))
-    error("")
+    AV_calc!(state, dyn)
+    W_calc!(state, dyn, dat)
     println("Starting sampling")
     while dyn.ind < settings.max_ind
         if settings.verbose
@@ -125,7 +125,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
     ## Get next deterministic event and evaluate at that point
     get_time!(dyn, times)
     if !isinf(dyn.t_det)
-        U_det, ∂U_det = U_eval(state, dyn.t_det - state.t, dyn, priors)
+        U_det, ∂U_det = U_eval(state, dyn.t_det - state.t, dyn, priors, dat)
     else
         U_det, ∂U_det = Inf, Inf
     end
@@ -133,28 +133,31 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
     ## If potential decreasing at that point jump to it and break
     if ∂U_det < 0.0
         update!(state, dyn.t_det - state.t)
-        event!(state, dyn, priors, times)
+        event!(state, dat, dyn, priors, times)
     else
         ## Elseif potential decreasing at initialpoint line search for point where gradient begins to increase
         t_switch = 0.0
         if ∂U < 0.0
-            t_switch = grad_optim(∂U, ∂2U, state, dyn, priors)
-            Uθt, ∂U = U_eval(state, t_switch, dyn, priors)
+            t_switch = grad_optim(∂U, ∂2U, state, dyn, priors, dat)
+            Uθt, ∂U = U_eval(state, t_switch, dyn, priors, dat)
         end
         ## Generate uniform r.v and check if deterministic time is close enough - if so break
         V = rand()
         if U_det - Uθt < -log(V)
             update!(state, dyn.t_det - state.t)
-            event!(state, dyn, priors, times)
+            event!(state, dat, dyn, priors, times)
         else
             ## Generate next time via time-scale transformation
             if isinf(dyn.t_det)
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, 5), A42())
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, 5), A42())
             else
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
+                #println(dyn.t_det);println(state.t);println(t_switch)
+                #println("----");#println(state.x);println("----")
+                #println(U_eval(state,t_switch, dyn, priors)[1]);println(U_eval(state,t_switch + dyn.t_det - state.t, dyn, priors)[1])
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
             end
             update!(state, t_switch + t_event)
-            flip!(state, dat, priors)
+            flip!(state, dat, dyn, priors)
             merge_time!(state, times, priors)
         end
     end
@@ -254,8 +257,9 @@ function verbose(dyn::Dynamics, state::State)
     print("Iteration: ");print(dyn.ind);print("\n");
     println(dyn.next_event)
     println(state.t)
-    println(state.active)
-    println(vec(state.x))
-    println(vec(state.v))
+    #println(state.active)
+    #println(vec(state.x))
+    #println(vec(state.v))
+    println(state.x);println(state.v)
     println("----------------------")
 end

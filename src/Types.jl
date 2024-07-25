@@ -36,11 +36,9 @@ mutable struct Dynamics
     smp_ind::Int64
     t_det::Float64
     next_event::Int64
-    c0::Matrix{Float64}
-    δ::Matrix{Float64}
-    d0::Matrix{Float64}
-    ∑v::Matrix{Float64}
-    δ∑v::Matrix{Float64}
+    A::Matrix{Float64}
+    V::Matrix{Float64}
+    S::Matrix{Bool}
     sampler_eval::SamplerEval
 end
 
@@ -122,8 +120,9 @@ struct PEMData
     covar::Matrix{Float64}
     p::Int64
     n::Int64
-    s::Vector{Float64}
-    d::Vector{Int64}
+    δ::Matrix{Int64}
+    W::Matrix{Float64}
+    UQ::Matrix{Float64}
 end
 
 struct Settings
