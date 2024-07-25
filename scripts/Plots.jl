@@ -274,6 +274,7 @@ settings = Settings(nits, nsmp, 100000, 0.5,1.0, 0.02, false, true)
 Random.seed!(123)
 priors = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 1.0)
 @time out1 = pem_sample(state0, dat, priors, settings)
+Random.seed!(123)
 priors = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 0.0)
 @time out2 = pem_sample(state0, dat, priors, settings)
 
