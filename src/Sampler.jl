@@ -15,7 +15,6 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     end
     storage = storage_start!(state, settings, dyn, priors)
     AV_calc!(state, dyn)
-    W_calc!(state, dyn, dat)
     println("Starting sampling")
     while dyn.ind < settings.max_ind
         if settings.verbose
@@ -129,7 +128,6 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
     else
         U_det, ∂U_det = Inf, Inf
     end
-    #println([U_det, ∂U_det])
     ## If potential decreasing at that point jump to it and break
     if ∂U_det < 0.0
         update!(state, dyn.t_det - state.t)
@@ -151,9 +149,6 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             if isinf(dyn.t_det)
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, 5), A42())
             else
-                #println(dyn.t_det);println(state.t);println(t_switch)
-                #println("----");#println(state.x);println("----")
-                #println(U_eval(state,t_switch, dyn, priors)[1]);println(U_eval(state,t_switch + dyn.t_det - state.t, dyn, priors)[1])
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
             end
             update!(state, t_switch + t_event)
@@ -257,9 +252,6 @@ function verbose(dyn::Dynamics, state::State)
     print("Iteration: ");print(dyn.ind);print("\n");
     println(dyn.next_event)
     println(state.t)
-    #println(state.active)
-    #println(vec(state.x))
-    #println(vec(state.v))
     println(state.x);println(state.v)
     println("----------------------")
 end

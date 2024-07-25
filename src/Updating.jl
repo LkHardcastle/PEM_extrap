@@ -27,8 +27,6 @@ function flip!(state::ECMC, dat::PEMData, dyn::Dynamics, priors::Prior)
 end
 
 function gram_schmidt(state::State, U_grad::Vector{Float64})
-    #g1 = rand(Normal(0,1),size(state.active,1))
-    #g2 = rand(Normal(0,1),size(state.active,1))
     g1 = (I - U_grad*transpose(U_grad))*rand(Normal(0,1),size(state.active,1))
     g2 = (I - U_grad*transpose(U_grad))*rand(Normal(0,1),size(state.active,1))
     e1 = g1/norm(g1)
@@ -38,8 +36,6 @@ function gram_schmidt(state::State, U_grad::Vector{Float64})
 end
 
 function refresh!(state::ECMC, dat::PEMData, dyn::Dynamics, priors::Prior)
-    #state.v[state.active] = rand(Normal(0,1),size(state.active))
-    #state.v[state.active] = state.v[state.active]/norm(state.v[state.active])
     U_grad = ∇U(state, dat, dyn, priors)
     U_grad = U_grad/norm(U_grad)
     v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
@@ -102,7 +98,6 @@ function event!(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, times:
         split!(state, priors)
         split_time!(state, times, priors)
         merge_time!(state, times, priors)
-        W_calc!(state, dyn, dat)
     end
     if dyn.next_event == 2
         # Merge 
@@ -110,7 +105,6 @@ function event!(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, times:
             merge!(state, times.next_merge_index)
             split_time!(state, times, priors)
             merge_time!(state, times, priors)
-            W_calc!(state, dyn, dat)
         end
     end
     if dyn.next_event == 3
