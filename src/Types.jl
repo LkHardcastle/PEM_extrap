@@ -38,8 +38,6 @@ mutable struct Dynamics
     next_event::Int64
     A::Matrix{Float64}
     V::Matrix{Float64}
-    W::Matrix{Float64}
-    δ::Matrix{Float64}
     S::Matrix{Bool}
     sampler_eval::SamplerEval
 end
