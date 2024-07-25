@@ -90,10 +90,10 @@ nits = 100000
 nsmp = 100000
 settings = Settings(nits, nsmp, 100000, 0.5,0.5, 0.2, false, true)
 Random.seed!(123)
-priors = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 1.0)
+priors = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.2, 5.0, 15.0), 1.0)
 @time out1 = pem_sample(state0, dat, priors, settings)
 Random.seed!(123)
-priors = BasicPrior(1.0, FixedV(1.0), Beta(0.4, 10.0, 10.0), 0.0)
+priors = BasicPrior(1.0, FixedV(1.0), Beta(0.2, 5.0, 15.0), 1.0)
 @time out2 = pem_sample(state0, dat, priors, settings)
 
 s1 = view(exp.(out1["Smp_trans"]), 1, :, :)
@@ -101,7 +101,7 @@ df1 = DataFrame(hcat(breaks, mean(s1, dims = 2), quantile.(eachrow(s1), 0.025), 
 s2 = view(exp.(out2["Smp_trans"]), 1, :, :)
 s3 = exp.(out2["Smp_trans"][1,:,:] .+ out2["Smp_trans"][2,:,:])
 plot(out2["Smp_t"],out2["Smp_x"][1,1,:])
-plot!(out2["Smp_t"],out2["Smp_x"][2,2,:])
+plot(out2["Smp_t"],out2["Smp_x"][2,2,:])
 plot(out2["Sk_t"],out2["Sk_x"][2,1,:])
 plot(out2["Smp_t"],out2["Smp_x"][1,15,:])
 plot(out2["Smp_t"],out2["Smp_v"][2,1,:])
