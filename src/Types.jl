@@ -6,6 +6,7 @@ mutable struct BPS <: State
     s::Matrix{Bool}
     t::Float64
     active::Array{CartesianIndex{2}}
+    ξ::Matrix{Float64}
 end
 
 mutable struct ECMC <: State
@@ -14,6 +15,7 @@ mutable struct ECMC <: State
     s::Matrix{Bool}
     t::Float64
     active::Array{CartesianIndex{2}}
+    ξ::Matrix{Float64}
 end
 
 mutable struct ECMC2 <: State
@@ -23,6 +25,7 @@ mutable struct ECMC2 <: State
     t::Float64
     b::Bool
     active::Array{CartesianIndex{2}}
+    ξ::Matrix{Float64}
 end
 
 mutable struct SamplerEval
@@ -54,11 +57,13 @@ end
 mutable struct Storage
     x::Array{Float64}
     v::Array{Float64}
+    ξ::Array{Float64}
     s::Array{Bool}
     t::Vector{Float64}
     h::Array{Float64}
     x_smp::Array{Float64}
     v_smp::Array{Float64}
+    ξ_smp::Array{Float64}
     s_smp::Array{Bool}
     t_smp::Vector{Float64}
     h_smp::Array{Float64}
@@ -90,6 +95,20 @@ mutable struct Beta <: Weight
     b::Float64
 end
 
+abstract type Diffusion end
+
+mutable struct RandomWalk <: Diffusion
+end
+
+mutable struct OU <: Diffusion
+    ϕ::Float64
+end
+
+mutable struct Gamma <: Diffusion
+    α::Float64
+    β::Float64
+end
+
 abstract type Prior end
 
 #mutable struct BasicPrior <: Prior
@@ -104,6 +123,7 @@ mutable struct BasicPrior <: Prior
     σ::Variance
     ω::Weight
     p_split::Float64
+    diff::Diffusion
 end
 
 mutable struct ARPrior <: Prior
@@ -111,6 +131,7 @@ mutable struct ARPrior <: Prior
     μ0::Float64
     ω::Weight
     p_split::Float64
+    diff::Diffusion
 end
 
 
