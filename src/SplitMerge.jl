@@ -16,21 +16,15 @@ function split_rate(state::State, priors::BasicPrior)
     return rate*J
 end
 
-function split_rate(state::State, priors::ARPrior)
-    # Need to update this to account for σ_0
-    rate = priors.p_split*(priors.ω.ω/(1 - priors.ω.ω))*(sqrt(2*pi*priors.σ0^2))^-1
-    J = 2*sphere_area(size(state.active,1) - 1)/(sphere_area(size(state.active,1))*(size(state.active,1)))
-    return rate*J
-end
-
 function sphere_area(d::Int64)
     # Area of sphere embedded in R^(d+1)
     return (2*π^(0.5*d+0.5))/gamma(0.5*d+0.5)
 end
 
 function split!(state::State, priors::BasicPrior)
-    j = findall(state.s .== false)[rand(DiscreteUniform(1,size(findall(state.s .== false),1)))]
+    j = findall(state.g)[rand(DiscreteUniform(1,size(findall(state.g),1)))]
     state.s[j] = true
+    state.g[j] = false
     # Add to state.active
     a = split_velocity(state)
     if a == 0.0
@@ -42,26 +36,6 @@ function split!(state::State, priors::BasicPrior)
     state.v[j] = a
 end
 
-function split!(state::State, priors::ARPrior)
-    j = findall(state.s .== false)[rand(DiscreteUniform(1,size(findall(state.s .== false),1)))]
-    split_λ = split_rate(state,priors)*(sqrt(2*pi*priors.σ0^2))*pdf(Normal(priors.μ0, priors.σ0), sum(state.x[CartesianIndex(1,1):j]))
-    #println("+++++");println(sum(state.x[CartesianIndex(1,1):j]));println(split_λ);println(split_rate(state,priors))
-    if split_λ > split_rate(state,priors)
-        error("")
-    end
-    if split_λ/split_rate(state,priors) > rand()
-        state.s[j] = true
-        # Add to state.active
-        a = split_velocity(state)
-        if a == 0.0
-            error("Bad split velocity")
-        end
-        state.active = findall(state.s)
-        # New velocities
-        state.v[state.active] *= sqrt(1-a^2)
-        state.v[j] = a
-    end
-end
 
 function split_velocity(state::State)
     # Draw new velocity 
@@ -71,6 +45,7 @@ end
 
 function merge!(state::State, j::CartesianIndex)
     state.s[j] = false
+    state.g[j] = true
     state.v[j] = 0.0
     state.x[j] = 0.0
     # Remove from state.active
@@ -81,7 +56,7 @@ end
 function split_time!(state::State, times::Times, priors::Prior)
     # Update split time
     if priors.p_split > 0.0
-        rate = (size(findall(state.s .== false),1))*split_rate(state, priors)
+        rate = (size(findall(state.g),1))*split_rate(state, priors)
         times.next_split = rand(Exponential(1/rate)) + state.t
     else 
         times.next_split = Inf

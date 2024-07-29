@@ -4,6 +4,9 @@ mutable struct BPS <: State
     x::Matrix{Float64}
     v::Matrix{Float64}
     s::Matrix{Bool}
+    g::Matrix{Bool}
+    s_loc::Vector{Float64}
+    J::Int64
     t::Float64
     active::Array{CartesianIndex{2}}
     ξ::Matrix{Float64}
@@ -13,6 +16,9 @@ mutable struct ECMC <: State
     x::Matrix{Float64}
     v::Matrix{Float64}
     s::Matrix{Bool}
+    g::Matrix{Bool}
+    s_loc::Vector{Float64}
+    J::Int64
     t::Float64
     active::Array{CartesianIndex{2}}
     ξ::Matrix{Float64}
@@ -22,7 +28,10 @@ mutable struct ECMC2 <: State
     x::Matrix{Float64}
     v::Matrix{Float64}
     s::Matrix{Bool}
+    g::Matrix{Bool}
+    s_loc::Vector{Float64}
     t::Float64
+    J::Int64
     b::Bool
     active::Array{CartesianIndex{2}}
     ξ::Matrix{Float64}
@@ -42,6 +51,8 @@ mutable struct Dynamics
     A::Matrix{Float64}
     V::Matrix{Float64}
     S::Matrix{Bool}
+    δ::Matrix{Int64}
+    W::Matrix{Float64}
     sampler_eval::SamplerEval
 end
 
@@ -59,12 +70,16 @@ mutable struct Storage
     v::Array{Float64}
     ξ::Array{Float64}
     s::Array{Bool}
+    s_loc::Array{Float64}
+    J::Vector{Int64}
     t::Vector{Float64}
     h::Array{Float64}
     x_smp::Array{Float64}
     v_smp::Array{Float64}
     ξ_smp::Array{Float64}
     s_smp::Array{Bool}
+    s_loc_smp::Array{Float64}
+    J_smp::Vector{Int64}
     t_smp::Vector{Float64}
     h_smp::Array{Float64}
 end
@@ -95,6 +110,17 @@ mutable struct Beta <: Weight
     b::Float64
 end
 
+
+abstract type Grid end
+
+mutable struct Fixed <: Grid
+end
+
+mutable struct Cts <: Grid
+    Γ::Float64
+    max_points::Int64
+    max_time::Float64
+end
 abstract type Diffusion end
 
 mutable struct RandomWalk <: Diffusion
@@ -123,6 +149,7 @@ mutable struct BasicPrior <: Prior
     σ::Variance
     ω::Weight
     p_split::Float64
+    grid::Grid
     diff::Diffusion
 end
 
@@ -139,6 +166,7 @@ struct PEMData
     y::Vector{Float64}
     cens::Vector{Float64}
     covar::Matrix{Float64}
+    grp::Vector{Int64}
     p::Int64
     n::Int64
     δ::Matrix{Int64}

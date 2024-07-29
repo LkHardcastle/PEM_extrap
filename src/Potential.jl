@@ -18,9 +18,9 @@ end
 
 function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dat::PEMData)
     θ = dyn.A .+ t.*dyn.V
-    U_ = sum((exp.(θ).*dat.W .- dat.δ.*θ)) 
-    ∂U_ = sum(dyn.V.*(exp.(θ).*dat.W .- dat.δ)) 
-    ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dat.W) 
+    U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
+    ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
+    ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
     for j in state.active
         if j[2] > 1
             U_ += (1/(2*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2
@@ -65,7 +65,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     ∇U_out = zeros(size(state.active))
     AV_calc!(state, dyn)
     # L x J matrix
-    U_ind = reverse(cumsum(reverse(exp.(dyn.A).*dat.W .- dat.δ, dims = 2), dims = 2), dims = 2)
+    U_ind = reverse(cumsum(reverse(exp.(dyn.A).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
     # Convert to p x J matrix
     U_ind = dat.UQ*U_ind
     ∇U_out = U_ind[state.active]
