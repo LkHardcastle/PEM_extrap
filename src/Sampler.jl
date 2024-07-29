@@ -13,7 +13,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     if settings.skel == false
         dyn.ind = 2
     end
-    storage = storage_start!(state, settings, dyn, priors)
+    storage = storage_start!(state, settings, dyn, priors, priors.grid)
     AV_calc!(state, dyn)
     println("Starting sampling")
     while dyn.ind < settings.max_ind
