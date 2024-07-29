@@ -6,6 +6,7 @@ mutable struct BPS <: State
     s::Matrix{Bool}
     g::Matrix{Bool}
     s_loc::Vector{Float64}
+    J::Int64
     t::Float64
     active::Array{CartesianIndex{2}}
 end
@@ -16,6 +17,7 @@ mutable struct ECMC <: State
     s::Matrix{Bool}
     g::Matrix{Bool}
     s_loc::Vector{Float64}
+    J::Int64
     t::Float64
     active::Array{CartesianIndex{2}}
 end
@@ -27,6 +29,7 @@ mutable struct ECMC2 <: State
     g::Matrix{Bool}
     s_loc::Vector{Float64}
     t::Float64
+    J::Int64
     b::Bool
     active::Array{CartesianIndex{2}}
 end
@@ -64,12 +67,14 @@ mutable struct Storage
     v::Array{Float64}
     s::Array{Bool}
     s_loc::Array{Float64}
+    J::Vector{Int64}
     t::Vector{Float64}
     h::Array{Float64}
     x_smp::Array{Float64}
     v_smp::Array{Float64}
     s_smp::Array{Bool}
     s_loc_smp::Array{Float64}
+    J_smp::Vector{Int64}
     t_smp::Vector{Float64}
     h_smp::Array{Float64}
 end
@@ -140,6 +145,7 @@ struct PEMData
     y::Vector{Float64}
     cens::Vector{Float64}
     covar::Matrix{Float64}
+    grp::Vector{Int64}
     p::Int64
     n::Int64
     δ::Matrix{Int64}

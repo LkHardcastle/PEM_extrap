@@ -19,7 +19,7 @@ end
 function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dat::PEMData)
     θ = dyn.A .+ t.*dyn.V
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
-    ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dat.δ)) 
+    ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
     ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
     for j in state.active
         if j[2] > 1

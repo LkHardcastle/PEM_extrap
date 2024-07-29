@@ -68,5 +68,5 @@ function init_data(y, cens, covar, breaks)
             δ[l,j] = length(intersect(findall(δl .== 1), findall(dl .== j)))
         end
     end
-    return PEMData(y, cens, covar, p, n, δ, W, UQ)
+    return PEMData(y, cens, covar, grp, p, n, δ, W, UQ)
 end

@@ -118,6 +118,7 @@ function event!(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, times:
         # Hyperparameter update
         hyper_update!(state, dyn, dat, priors)
         split_time!(state, times, priors)
+        merge_time!(state, times, priors)
         deleteat!(times.hyper, 1)
     end
 end
