@@ -1,6 +1,6 @@
 function AV_calc!(state::State, dyn::Dynamics)
     #active = findall(sum.(eachcol(state.s)) .!= 0.0)
-    A = cumsum(state.x, dims = 2)
+    A = cumsum(state.x.*state.ξ, dims = 2)
     dyn.A = transpose(dat.UQ)*A
     V = cumsum(state.v, dims = 2)
     dyn.V = transpose(dat.UQ)*V

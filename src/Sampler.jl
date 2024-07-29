@@ -17,6 +17,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     AV_calc!(state, dyn)
     println("Starting sampling")
     while dyn.ind < settings.max_ind
+        #println("---------");println(state.ξ)
         if settings.verbose
             verbose(dyn, state)
         end
@@ -36,19 +37,21 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
 end
 
 function Base.copy(state::BPS)
-    return BPS(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active))
+
+    return BPS(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active), copy(state.ξ))
 end
 
 function Base.copy(state::ECMC)
-    return ECMC(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active))
+    return ECMC(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active), copy(state.ξ))
 end
 
 function Base.copy(state::ECMC2)
-    return ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active))
+    return ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.ξ))
 end
 
 function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors::Prior, grid::Fixed)
     storage = Storage(fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_ind + 1),
+                        fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_ind + 1), 
                         fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_ind + 1), 
                         fill(false,size(state.s, 1),size(state.s, 2), settings.max_ind + 1),
                         fill(Inf,size(state.s, 2), settings.max_ind + 1),
@@ -56,6 +59,7 @@ function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors:
                         zeros(settings.max_ind+ 1),
                         fill(Inf, 2, settings.max_ind + 1),
                         fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_smp + 1),
+                        fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_smp + 1), 
                         fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_smp + 1), 
                         fill(false,size(state.s, 1),size(state.s, 2), settings.max_smp + 1),
                         fill(Inf,size(state.s, 2), settings.max_smp + 1),
@@ -189,12 +193,14 @@ function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::Bas
     if !skel
         dyn.ind -= 1
     end
+
     range = 1:size(state.s_loc,1)
     storage.x[:,range,dyn.ind] = copy(state.x)
     storage.v[:,range,dyn.ind] = copy(state.v)
     storage.s[:,range,dyn.ind] = copy(state.s)
     storage.s_loc[range,dyn.ind] = copy(state.s_loc)
     storage.J[dyn.ind] = copy(state.J)
+    storage.ξ[:,range,dyn.ind] = copy(state.ξ)
     storage.t[dyn.ind] = copy(state.t)
     storage.h[1,dyn.ind] = copy(priors.σ.σ) 
     storage.h[2,dyn.ind] = copy(priors.ω.ω)
@@ -214,11 +220,13 @@ function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times
     s_old = storage.s[:,range,dyn.ind - 2]
     s_loc_old = storage.s_loc[range, dyn.ind - 2]
     J_old = storage.J[dyn.ind - 2]
+    ξ_old = storage.ξ[:,range,dyn.ind - 2]
     for i in 1:ind_end
         storage.t_smp[dyn.smp_ind] = times.smps[i]
         storage.x_smp[:,range,dyn.smp_ind] = x_old + v_old*(times.smps[i] - t_old)
         storage.v_smp[:,range,dyn.smp_ind] = copy(v_old)
         storage.s_smp[:,range,dyn.smp_ind] = copy(s_old)
+        storage.ξ_smp[:,range,dyn.smp_ind] = copy(ξ_old)
         storage.h_smp[1,dyn.smp_ind] = copy(priors.σ.σ) 
         storage.h_smp[2,dyn.smp_ind] = copy(priors.ω.ω)
         storage.J_smp[dyn.smp_ind] = J_old
@@ -233,12 +241,15 @@ function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
         out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)], 
                     "Sk_h" => storage.h[:,1:(dyn.ind-1)],
                     "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
+                    "Smp_ξ" => storage.ξ_smp[:,:,1:(dyn.smp_ind-1)],  
                     "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_h" => storage.h_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
     else
         out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
                     "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_h" => storage.h_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
+                    "Smp_ξ" => storage.ξ_smp[:,:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
+
     end
     return out
 end

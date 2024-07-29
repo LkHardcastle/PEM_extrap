@@ -1,7 +1,12 @@
+
 function hyper_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior)
-    variance_update!(state, priors, priors.σ)
-    weight_update!(state, priors, priors.ω)
-    grid_update!(state, dyn, dat, priors, priors.grid)
+    if rand() < 0.1
+        variance_update!(state, priors, priors.σ)
+        weight_update!(state, priors, priors.ω)
+        grid_update!(state, dyn, dat, priors, priors.grid)
+    else
+        barker_update!(state, priors, priors.diff)
+    end
 end
 
 function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, Grid::Fixed)
@@ -61,6 +66,58 @@ function dat_update!(state::State, dyn::Dynamics, dat::PEMData)
     end
     dyn.W = copy(W)
     dyn.δ = copy(δ)
+end
+
+function barker_update!(state::State, priors::Prior, diff::RandomWalk)
+end
+
+function barker_update!(state::State, priors::Prior, diff::OU)
+    # Prior terms cancel via symmetry, could probably reduce computation too but leave for now.
+    # Can do this selection better
+    #j = rand(state.active)
+    #if j[2] != 1
+    #    Σθ = cumsum(state.x.*state.ξ, dims = 2)
+    #    U1 = sum((exp.(transpose(dat.UQ)*Σθ).*dat.W .- dat.δ.*(transpose(dat.UQ)*Σθ))) 
+    #    state_new = copy(state.ξ)
+    #    state_new[j] = -state_new[j]
+    #    U2 = sum((exp.(transpose(dat.UQ)*cumsum(state.x.*state_new, dims = 2)).*dat.W .- dat.δ.*(transpose(dat.UQ)*cumsum(state.x.*state_new, dims = 2))))
+    #    # b = P(ξ = 1)
+    #    b = (1 + exp(0.1*2*diff.ϕ*state.x[j]*Σθ[j[1],j[2]-1]/priors.σ.σ))^-1
+    #    #println("++++");println(state.x[j]);println(Σθ[j[1],j[2]-1]);println(b)
+    #    if state.ξ[j] == 1
+    #        logb = log(1-b) - log(b)
+    #    else
+    #        logb = log(b) - log(1-b)
+    #    end
+    #    A = exp(-U2 + U1 + logb)
+    #    #println("----");println(A)
+    #    if min(1,A) > rand()
+    #        #println("Hello")
+    #        state.ξ[j] = -state.ξ[j]
+    #    end
+    #end
+    for j in state.active
+        if j[2] != 1
+            Σθ = cumsum(state.x.*state.ξ, dims = 2)
+            b = (1 + exp(0.1*2*diff.ϕ*state.x[j]*Σθ[j[1],j[2]-1]/priors.σ.σ))^-1
+            if state.ξ[j] == 1
+                b = 1 - b
+            end
+            if rand() < b
+                U1 = sum((exp.(transpose(dat.UQ)*Σθ).*dat.W .- dat.δ.*(transpose(dat.UQ)*Σθ))) 
+                state_new = copy(state.ξ)
+                state_new[j] = -state_new[j]
+                U2 = sum((exp.(transpose(dat.UQ)*cumsum(state.x.*state_new, dims = 2)).*dat.W .- dat.δ.*(transpose(dat.UQ)*cumsum(state.x.*state_new, dims = 2))))
+                A = exp(-U2 + U1)
+                #println("----");println(A)
+                if min(1,A) > rand()
+                    #println("Hello")
+                    state.ξ[j] = -state.ξ[j]
+                end
+            end
+        end
+    end
+
 end
 
 function variance_update!(state::State, priors::Prior, σ::FixedV)
