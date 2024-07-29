@@ -42,3 +42,24 @@ function survival_plot(t, breaks, h_vec, break_int)
     end
     return hcat(t, S_store)
 end
+
+function cts_transform(x::Array{Float64}, s_loc::Array{Float64}, grid::Vector{Float64})
+    out = zeros(size(x,1), size(grid,1), size(x,3))
+    for k in 1:size(x,3)
+        for i in 1:length(grid)
+            if isnothing(findlast(s_loc[:,k] .< grid[i]))
+                ind = 1
+            else
+                ind = findlast(s_loc[:,k] .< grid[i]) + 1
+            end
+            for j in 1:size(x,1)
+                if isinf(x[j, ind, k])
+                    out[j,i,k] = x[j, ind - 1, k]
+                else
+                    out[j,i,k] = x[j, ind, k]
+                end
+            end
+        end
+    end
+    return out
+end
