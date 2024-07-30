@@ -243,12 +243,12 @@ function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
                     "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
                     "Smp_ξ" => storage.ξ_smp[:,:,1:(dyn.smp_ind-1)],  
                     "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_h" => storage.h_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
-                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
+                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)].*storage.ξ_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
     else
         out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
                     "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_h" => storage.h_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_ξ" => storage.ξ_smp[:,:,1:(dyn.smp_ind-1)],
-                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
+                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)].*storage.ξ_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
 
     end
     return out
