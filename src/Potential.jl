@@ -21,6 +21,7 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dat
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
     ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
     ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
+    Σθ = cumsum(state.x, dims = 2)
     for j in state.active
         if j[2] > 1
             U_ += (1/(2*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2

@@ -75,8 +75,8 @@ function barker_update!(state::State, priors::Prior, diff::GaussLangevin)
     for j in state.active
         if j[2] != 1
             Σθ = cumsum(state.x.*state.ξ, dims = 2)
-            b = (1 + exp(state.x[j]*(Σθ[j[1],j[2]-1] - priors.diff.μ)/priors.diff.σ^2))^-1
-            println(j);println(state.x[j]);println(Σθ[j[1],j[2]-1]);println(b);println("-------")
+            b = (1 + exp(2*state.x[j]*(Σθ[j[1],j[2]-1] - priors.diff.μ)/(priors.diff.σ^2)))^-1
+            #println(j);println(state.x[j]);println(Σθ[j[1],j[2]-1]);println(b);println("-------")
             if state.ξ[j] == 1
                 b = 1 - b
             end
