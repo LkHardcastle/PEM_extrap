@@ -126,8 +126,9 @@ abstract type Diffusion end
 mutable struct RandomWalk <: Diffusion
 end
 
-mutable struct OU <: Diffusion
-    ϕ::Float64
+mutable struct GaussLangevin <: Diffusion
+    μ::Float64
+    σ::Float64
 end
 
 mutable struct Gamma <: Diffusion

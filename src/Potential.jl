@@ -23,9 +23,9 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dat
     ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
     for j in state.active
         if j[2] > 1
-            U_ += (1/(2*0.5*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2
-            ∂U_ += (state.v[j]/(0.5*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)
-            ∂2U_ += (state.v[j]^2)/(0.5*priors.σ.σ^2)
+            U_ += (1/(2*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2
+            ∂U_ += (state.v[j]/(priors.σ.σ^2))*(state.x[j] + state.v[j]*t)
+            ∂2U_ += (state.v[j]^2)/(priors.σ.σ^2)
         else
             U_ += (1/(2*priors.σ0^2))*(state.x[j] + state.v[j]*t)^2
             ∂U_ += (state.v[j]/(priors.σ0^2))*(state.x[j] + state.v[j]*t)
@@ -79,10 +79,6 @@ function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
     if k[2] == 1
         return state.x[k]/priors.σ0^2
     else
-        return state.x[k]/(0.5*priors.σ.σ^2)
+        return state.x[k]/(priors.σ.σ^2)
     end
-end
-
-function prior_add(state::State, priors::ARPrior, k::CartesianIndex)
-    return sum(cumsum(state.x, dims = 2)[k[2]:end] .- priors.μ0)/priors.σ0^2
 end
