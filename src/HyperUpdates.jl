@@ -89,20 +89,16 @@ function barker_update!(state::State, priors::Prior, diff::GaussLangevin)
         if j[2] != 1
             Σθ = cumsum(state.x.*state.ξ, dims = 2)
             b = (1 + exp(state.x[j]*(Σθ[j[1],j[2]-1] - priors.diff.μ)/(priors.diff.σ^2)))^-1
-            #println(j);println(state.x[j]);println(Σθ[j[1],j[2]-1]);println(b);println("-------")
             if state.ξ[j] == 1
                 b = 1 - b
             end
-            #if j == state.active[end]
-            #    println("----");println(j);println(Σθ[end]);println(Σθ[end-1]);println(state.ξ[j]*state.x[j]);println(b)
-            #end
             if rand() < b
                 state_new = copy(state.ξ)
                 state_new[j] = -state_new[j]
                 Σθ_new = cumsum(state.x.*state_new, dims = 2)
                 U1 = sum((exp.(transpose(dat.UQ)*Σθ).*dat.W .- dat.δ.*(transpose(dat.UQ)*Σθ))) 
                 U2 = sum((exp.(transpose(dat.UQ)*Σθ_new).*dat.W .- dat.δ.*(transpose(dat.UQ)*Σθ_new)))
-                A = exp(-U2 + U1 + sum(barker_logistic(state, state_new, priors)) - sum(barker_logistic(state, state.ξ, priors)))
+                A = exp(-U2 + U1 + sum(barker_logistic(state, state_new, priors)) - sum(barker_logistic(state, state.ξ, priors)) + log(1-b) - log(b))
                 if min(1,A) > rand()
                     state.ξ[j] = -state.ξ[j]
                 end
