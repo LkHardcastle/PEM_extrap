@@ -41,6 +41,9 @@ mutable struct SamplerEval
     newton::Vector{Float64}
     gradient::Int64
     Brent_iter::Int64
+    Barker_iter::Vector{Int64}
+    Barker_acc::Vector{Int64}
+    Barker_att::Vector{Int64}
 end
 
 mutable struct Dynamics

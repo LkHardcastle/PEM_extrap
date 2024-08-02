@@ -20,7 +20,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 Random.seed!(12515)
 n = 0
 y = rand(Exponential(1.0),n)
-breaks = collect(1:1:200)
+breaks = collect(1:1:100)
 p = 1
 cens = fill(1.0,n)
 covar = fill(1.0, 1, n)
@@ -33,17 +33,17 @@ nits = 50_000
 nsmp = 500_000
 
 Random.seed!(23462)
-settings = Settings(nits, nsmp, 1_000_000, 1.0,1.0, 0.5, false, true)
-priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0, 1.0))
+settings = Settings(nits, nsmp, 1_000_000, 1.0,10.0, 0.5, false, true)
+priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0, 0.2))
 @time out1 = pem_sample(state0, dat, priors, settings)
-settings = Settings(nits, nsmp, 1_000_000, 1.0,1.0, 0.5, false, true)
+settings = Settings(nits, nsmp, 1_000_000, 50.0,1.0, 0.5, false, true)
 priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0, 1.0))
 @time out2 = pem_sample(state0, dat, priors, settings)
 settings = Settings(nits, nsmp, 1_000_000, 1.0,1.0, 0.5, false, true)
-priors = BasicPrior(1.0, FixedV(0.1), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0, 1.0))
+priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(), GaussLangevin(0.0, 1.0))
 @time out3 = pem_sample(state0, dat, priors, settings)
 settings = Settings(nits, nsmp, 1_000_000, 1.0,1.0, 0.5, false, true)
-priors = BasicPrior(1.0, FixedV(0.05), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0, 1.0))
+priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0, 1.0))
 @time out4 = pem_sample(state0, dat, priors, settings)
 
 s2 = view(out1["Smp_trans"], 1, :, :)
@@ -63,9 +63,15 @@ p2 <- dat2 %>%
     scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time (years)") +
     geom_hline(aes(yintercept = 1 + 1.96), linetype = "dashed", col = cbPalette[6]) +
     geom_hline(aes(yintercept = 1 + -1.96), linetype = "dashed", col = cbPalette[6]) +
-    geom_hline(aes(yintercept = 1 + -0.67), linetype = "dotdash", col = cbPalette[4]) +
+    geom_hline(aes(yintercept = 1 + -0.4), linetype = "dotdash", col = cbPalette[4]) +
     geom_hline(aes(yintercept = 1), linetype = "solid", col = cbPalette[7]) +
-    geom_hline(aes(yintercept = 1 + 0.67), linetype = "dotdash", col = cbPalette[4])
+    geom_hline(aes(yintercept = 1 + 0.4), linetype = "dotdash", col = cbPalette[4])
 p2
 """
 
+v1 = out1["Eval"].Barker_iter
+v2 = out1["Eval"].Barker_att
+v3 = out1["Eval"].Barker_acc
+
+plot(v2./v1)
+plot(v3./v2)

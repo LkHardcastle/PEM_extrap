@@ -8,7 +8,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     ### Setup
     state = copy(state0)
     times = time_setup(state, settings, priors)
-    dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.s), copy(dat.δ), copy(dat.W), SamplerEval(zeros(2),0, 0))
+    dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.s), copy(dat.δ), copy(dat.W), SamplerEval(zeros(2),0, 0 ,zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2))))
     # Set up storage 
     if settings.skel == false
         dyn.ind = 2
