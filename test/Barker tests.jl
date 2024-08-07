@@ -20,7 +20,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 Random.seed!(12515)
 n = 0
 y = rand(Exponential(1.0),n)
-breaks = collect(1:1:100)
+breaks = collect(1:1:200)
 p = 1
 cens = fill(1.0,n)
 covar = fill(1.0, 1, n)
@@ -34,7 +34,7 @@ nsmp = 500_000
 
 Random.seed!(23462)
 settings = Settings(nits, nsmp, 1_000_000, 1.0,10.0, 0.5, false, true)
-priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0, 0.2))
+priors = BasicPrior(1.0, FixedV(0.9), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0, 0.2))
 @time out1 = pem_sample(state0, dat, priors, settings)
 settings = Settings(nits, nsmp, 1_000_000, 50.0,1.0, 0.5, false, true)
 priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0, 1.0))
@@ -54,18 +54,18 @@ dat2 = data.frame($df2)
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
 """
 
-R"""    
+R"""
 p2 <- dat2 %>%
     pivot_longer(Mean:UCI) %>%
     ggplot(aes(x = Time, y = value, col = name, linetype = name)) + geom_step() +
     theme_classic() +
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4,4,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time (years)") +
-    geom_hline(aes(yintercept = 1 + 1.96), linetype = "dashed", col = cbPalette[6]) +
-    geom_hline(aes(yintercept = 1 + -1.96), linetype = "dashed", col = cbPalette[6]) +
-    geom_hline(aes(yintercept = 1 + -0.4), linetype = "dotdash", col = cbPalette[4]) +
+    geom_hline(aes(yintercept = 1 + 0.39), linetype = "dashed", col = cbPalette[6]) +
+    geom_hline(aes(yintercept = 1 + -0.39), linetype = "dashed", col = cbPalette[6]) +
+    geom_hline(aes(yintercept = 1 + -0.13), linetype = "dotdash", col = cbPalette[4]) +
     geom_hline(aes(yintercept = 1), linetype = "solid", col = cbPalette[7]) +
-    geom_hline(aes(yintercept = 1 + 0.4), linetype = "dotdash", col = cbPalette[4])
+    geom_hline(aes(yintercept = 1 + 0.13), linetype = "dotdash", col = cbPalette[4])
 p2
 """
 
