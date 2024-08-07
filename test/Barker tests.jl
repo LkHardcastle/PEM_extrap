@@ -20,7 +20,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 Random.seed!(12515)
 n = 0
 y = rand(Exponential(1.0),n)
-breaks = collect(1:1:200)
+breaks = collect(1:1:50)
 p = 1
 cens = fill(1.0,n)
 covar = fill(1.0, 1, n)
@@ -34,7 +34,7 @@ nsmp = 10_000
 
 Random.seed!(23462)
 settings = Settings(nits, nsmp, 1_000_000, 1.0, 0.0, 1.0, false, true)
-priors = BasicPrior(1.0, FixedV(0.25), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0,1.0))
+priors = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(), GaussLangevin(1.0,1.0))
 @time out1 = pem_sample(state0, dat, priors, settings)
 
 s2 = view(out1["Smp_trans"], 1, :, :)
