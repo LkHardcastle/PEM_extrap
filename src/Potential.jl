@@ -1,6 +1,6 @@
 function AV_calc!(state::State, dyn::Dynamics)
     #active = findall(sum.(eachcol(state.s)) .!= 0.0)
-    A = cumsum(state.x.*state.ξ, dims = 2)
+    A = cumsum(state.x, dims = 2)
     dyn.A = transpose(dat.UQ)*A
     V = cumsum(state.v, dims = 2)
     dyn.V = transpose(dat.UQ)*V
@@ -14,18 +14,25 @@ function U_new!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData)
     return U_, ∂U_, ∂2U_
 end
 
-
+function logistic(x::Float64)
+    return 1/(1 + exp(-x))
+end
 
 function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dat::PEMData)
     θ = dyn.A .+ t.*dyn.V
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
     ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
     ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
-    Σθ = cumsum(state.x, dims = 2)
+    Σθ = cumsum(state.x .+ t.*state.v, dims = 2)
+    μθ = drift(Σθ, priors.diff)
+    ∂μθ = drift_deriv_t(Σθ, priors.diff)
+    ∑v = cumsum(state.v, dims = 2)
     for j in state.active
         if j[2] > 1
             U_ += (1/(2*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2
-            ∂U_ += (state.v[j]/(priors.σ.σ^2))*(state.x[j] + state.v[j]*t)
+            U_ += -log(1 + tanh(μθ[j[1], j[2]-1]*state.x[j]))
+            ∂U_ += (state.v[j]/(priors.σ.σ^2))*(state.x[j] + state.v[j]*t) 
+            ∂U_ += -2*(∑v[j[1],j[2] - 1]*(state.x[j] + state.v[j]*t)*∂μθ[j[1], j[2]-1] + state.v[j]*μθ[j[1], j[2]-1])/(exp(2*(state.x[j] + state.v[j]*t)*μθ[j[1], j[2]-1]) + 1)
             ∂2U_ += (state.v[j]^2)/(priors.σ.σ^2)
         else
             U_ += (1/(2*priors.σ0^2))*(state.x[j] + state.v[j]*t)^2
@@ -70,10 +77,56 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     # Convert to p x J matrix
     U_ind = dat.UQ*U_ind
     ∇U_out = U_ind[state.active]
+    Σθ = cumsum(state.x, dims = 2)
+    μθ = drift(Σθ, priors.diff)
+    ∂μθ = drift_deriv(Σθ, priors.diff)
     for i in eachindex(∇U_out)
         ∇U_out[i] += prior_add(state, priors, state.active[i])
+        ∇U_out[i] += drift_add(state.x, μθ, ∂μθ, priors.diff, state.active[i])
     end
     return ∇U_out
+end
+
+############ Random Walk
+
+function drift(θ, diff::RandomWalk)
+    return zeros(size(θ))
+end
+
+function drift_deriv(θ, diff::RandomWalk)
+    return zeros(size(θ,1), size(θ,2), size(θ,2))
+end
+
+function drift_deriv_t(θ, diff::RandomWalk)
+    return zeros(size(θ))
+end
+
+function drift_add(x, μθ, ∂μθ, diff::RandomWalk, j::CartesianIndex)
+    return 0.0
+end
+
+################ GaussLangevin
+
+function drift(θ, diff::GaussLangevin)
+    return -0.5.*(θ .- diff.μ)./diff.σ^2
+end
+
+function drift_deriv(θ, diff::GaussLangevin)
+    return fill(-1/(2*diff.σ^2), size(θ,1), size(θ,2), size(θ,2))
+end
+
+function drift_deriv_t(θ, diff::GaussLangevin)
+    return fill(-1/(2*diff.σ^2), size(θ))
+end
+
+function drift_add(x, μθ, ∂μθ, diff::GaussLangevin, j::CartesianIndex)
+    out = μθ[j]*(tanh(x[j]*μθ[j]) - 1)
+    if j[2] < size(x,2)
+        for k in (j[2] + 1):size(x,2)
+            out += x[j[1], k]*∂μθ[j[1], j[2], k]*(tanh(x[j[1], k]*μθ[j[1], k]) - 1)
+        end
+    end
+    return  out
 end
 
 function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)

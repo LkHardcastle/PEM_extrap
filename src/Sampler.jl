@@ -163,7 +163,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
         ## Elseif potential decreasing at initialpoint line search for point where gradient begins to increase
         t_switch = 0.0
         if ∂U < 0.0
-            t_switch = grad_optim(∂U, ∂2U, state, dyn, priors, dat)
+            t_switch = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[2], (0.0, dyn.t_det - state.t), A42())
             Uθt, ∂U = U_eval(state, t_switch, dyn, priors, dat)
         end
         ## Generate uniform r.v and check if deterministic time is close enough - if so break
@@ -176,6 +176,9 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             if isinf(dyn.t_det)
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, 5), A42())
             else
+                #println("------")
+                #println(dyn.t_det - state.t)
+                #println(U_eval(state, 0.0, dyn, priors, dat)[1] - Uθt + log(V) );println(U_eval(state, dyn.t_det - state.t, dyn, priors, dat)[1] - Uθt + log(V))
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
             end
             update!(state, t_switch + t_event)

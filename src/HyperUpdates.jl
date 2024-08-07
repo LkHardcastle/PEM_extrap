@@ -1,12 +1,8 @@
 
 function hyper_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior)
-    if rand() < 0.1
-        variance_update!(state, priors, priors.σ)
-        weight_update!(state, priors, priors.ω)
-        grid_update!(state, dyn, dat, priors, priors.grid)
-    else
-        barker_update!(state, priors, priors.diff, dat, dyn)
-    end
+    variance_update!(state, priors, priors.σ)
+    weight_update!(state, priors, priors.ω)
+    grid_update!(state, dyn, dat, priors, priors.grid)
 end
 
 function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, Grid::Fixed)
