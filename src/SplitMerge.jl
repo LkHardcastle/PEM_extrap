@@ -34,6 +34,7 @@ function split!(state::State, priors::BasicPrior)
     # New velocities
     state.v[state.active] *= sqrt(1-a^2)
     state.v[j] = a
+    state.ξ[j] = 1.0
 end
 
 
@@ -48,6 +49,7 @@ function merge!(state::State, j::CartesianIndex)
     state.g[j] = true
     state.v[j] = 0.0
     state.x[j] = 0.0
+    state.ξ[j] = 0.0
     # Remove from state.active
     state.active = findall(state.s)
     state.v[state.active] /= norm(state.v[state.active])

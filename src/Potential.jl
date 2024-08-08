@@ -28,7 +28,7 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dat
     ∂μθ = drift_deriv_t(Σθ, priors.diff)
     ∑v = cumsum(state.v, dims = 2)
     for j in state.active
-        if j[2] > 1
+        if j != state.active[1]
             U_ += (1/(2*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2
             U_ += -log(1 + tanh(μθ[j[1], j[2]-1]*state.x[j]))
             ∂U_ += (state.v[j]/(priors.σ.σ^2))*(state.x[j] + state.v[j]*t) 
@@ -120,7 +120,11 @@ function drift_deriv_t(θ, diff::GaussLangevin)
 end
 
 function drift_add(x, μθ, ∂μθ, diff::GaussLangevin, j::CartesianIndex)
-    out = μθ[j]*(tanh(x[j]*μθ[j]) - 1)
+    if j[2] > 1
+        out = μθ[j]*(tanh(x[j]*μθ[j]) - 1)
+    else
+        out = 0.0
+    end
     if j[2] < size(x,2)
         for k in (j[2] + 1):size(x,2)
             out += x[j[1], k]*∂μθ[j[1], j[2], k]*(tanh(x[j[1], k]*μθ[j[1], k]) - 1)

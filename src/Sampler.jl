@@ -73,12 +73,14 @@ end
 function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors::Prior, grid::Cts)
     storage = Storage(fill(Inf,size(state.x, 1), grid.max_points, settings.max_ind + 1),
                         fill(Inf,size(state.v, 1),grid.max_points, settings.max_ind + 1), 
+                        fill(Inf,size(state.v, 1),grid.max_points, settings.max_ind + 1), 
                         fill(false,size(state.s, 1),grid.max_points, settings.max_ind + 1),
                         fill(Inf,grid.max_points, settings.max_ind + 1),
                         zeros(settings.max_ind + 1),
                         zeros(settings.max_ind + 1),
                         fill(Inf, 2, settings.max_ind + 1),
                         fill(Inf,size(state.x, 1),grid.max_points, settings.max_smp + 1),
+                        fill(Inf,size(state.v, 1),grid.max_points, settings.max_smp + 1), 
                         fill(Inf,size(state.v, 1),grid.max_points, settings.max_smp + 1), 
                         fill(false,size(state.s, 1),grid.max_points, settings.max_smp + 1),
                         fill(Inf,grid.max_points, settings.max_ind + 1),
@@ -176,9 +178,10 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             if isinf(dyn.t_det)
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, 5), A42())
             else
-                #println("------")
-                #println(dyn.t_det - state.t)
-                #println(U_eval(state, 0.0, dyn, priors, dat)[1] - Uθt + log(V) );println(U_eval(state, dyn.t_det - state.t, dyn, priors, dat)[1] - Uθt + log(V))
+                println("------")
+                println(dyn.t_det - state.t)
+                println(Uθt)
+                println(U_eval(state, 0.0, dyn, priors, dat)[1] - Uθt + log(V) );println(U_eval(state, dyn.t_det - state.t, dyn, priors, dat)[1] - Uθt + log(V))
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
             end
             update!(state, t_switch + t_event)
@@ -196,14 +199,13 @@ function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::Bas
     if !skel
         dyn.ind -= 1
     end
-
     range = 1:size(state.s_loc,1)
     storage.x[:,range,dyn.ind] = copy(state.x)
     storage.v[:,range,dyn.ind] = copy(state.v)
     storage.s[:,range,dyn.ind] = copy(state.s)
     storage.s_loc[range,dyn.ind] = copy(state.s_loc)
     storage.J[dyn.ind] = copy(state.J)
-    storage.ξ[:,range,dyn.ind] = copy(state.ξ)
+    storage.ξ[:,range, dyn.ind] = copy(state.ξ)
     storage.t[dyn.ind] = copy(state.t)
     storage.h[1,dyn.ind] = copy(priors.σ.σ) 
     storage.h[2,dyn.ind] = copy(priors.ω.ω)

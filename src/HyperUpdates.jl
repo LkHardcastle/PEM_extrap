@@ -24,6 +24,7 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
     state.s_loc = vcat(state.s_loc, J_loc)[ind_new]
     state.x = hcat(state.x, zero_mat)[:,ind_new]
     state.v = hcat(state.v, zero_mat)[:,ind_new]
+    state.ξ = hcat(state.ξ, zero_mat)[:,ind_new]
     state.s = hcat(state.s, fill(false, size(zero_mat)))[:,ind_new]
     state.g = hcat(state.g, g_new)[:,ind_new]
     state.active = findall(state.s)

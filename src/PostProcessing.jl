@@ -52,6 +52,9 @@ function cts_transform(x::Array{Float64}, s_loc::Array{Float64}, grid::Vector{Fl
             else
                 ind = findlast(s_loc[:,k] .< grid[i]) + 1
             end
+            if ind == (size(s_loc,1) + 1)
+                ind -= 1 
+            end
             for j in 1:size(x,1)
                 if isinf(x[j, ind, k])
                     out[j,i,k] = x[j, ind - 1, k]
