@@ -134,7 +134,7 @@ mutable struct GaussLangevin <: Diffusion
     σ::Float64
 end
 
-mutable struct Gamma <: Diffusion
+mutable struct GammaLangevin <: Diffusion
     α::Float64
     β::Float64
 end

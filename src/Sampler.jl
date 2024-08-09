@@ -157,6 +157,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
     else
         U_det, ∂U_det = Inf, Inf
     end
+    #println("----");println(U_det);println("----")
     ## If potential decreasing at that point jump to it and break
     if ∂U_det < 0.0
         update!(state, dyn.t_det - state.t)
@@ -167,6 +168,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
         if ∂U < 0.0
             t_switch = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[2], (0.0, dyn.t_det - state.t), A42())
             Uθt, ∂U = U_eval(state, t_switch, dyn, priors, dat)
+            #println("+++");println(∂U);println("+++")
         end
         ## Generate uniform r.v and check if deterministic time is close enough - if so break
         V = rand()
@@ -175,20 +177,48 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             event!(state, dat, dyn, priors, times)
         else
             ## Generate next time via time-scale transformation
-            if isinf(dyn.t_det)
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, 5), A42())
+            if isinf(U_det)
+                #println("-----")
+                t_max = find_bracket(state, dyn, priors, dat, Uθt, V, t_switch)
+                 println(t_max);println(U_eval(state, t_max + t_switch, dyn, priors, dat)[1] - Uθt + log(V))
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, t_max), A42())
+                #println(t_event)
             else
-                println("------")
-                println(dyn.t_det - state.t)
-                println(Uθt)
-                println(U_eval(state, 0.0, dyn, priors, dat)[1] - Uθt + log(V) );println(U_eval(state, dyn.t_det - state.t, dyn, priors, dat)[1] - Uθt + log(V))
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t), A42())
+                #println("------")
+                #println(dyn.t_det - state.t)
+                #println(Uθt)
+                #println(U_eval(state, t_switch, dyn, priors, dat)[1] - Uθt + log(V) );println(U_eval(state, dyn.t_det - state.t, dyn, priors, dat)[1] - Uθt + log(V))
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t - t_switch), A42())
             end
-            update!(state, t_switch + t_event)
+            #println("-----");println(state.t);println(t_switch);println(t_event);println("-----")
+            update!(state, t_switch)
+            update!(state, t_event)
             flip!(state, dat, dyn, priors)
             merge_time!(state, times, priors)
         end
     end
+end
+
+function find_bracket(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, Uθt::Float64, V::Float64, t_switch::Float64)
+    t_max = (dyn.t_det - state.t - t_switch)/2
+    if t_max < 0.0
+        error("")
+    end
+    for i in 1:1100
+        test = U_eval(state, t_max + t_switch, dyn, priors, dat)[1]
+        if isinf(test)
+            t_max = t_max/2
+        elseif test -  Uθt + log(V) < 0.0 
+            t_max += t_max/2
+        else
+            return t_max
+        end
+        #println(test);println(t_max)
+        if i > 1000
+            println(test);println(t_max)
+        end
+    end
+    error("Too many iters")
 end
 
 function get_time!(dyn::Dynamics, times::Times)

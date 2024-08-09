@@ -119,7 +119,29 @@ function drift_deriv_t(θ, diff::GaussLangevin)
     return fill(-1/(2*diff.σ^2), size(θ))
 end
 
-function drift_add(x, μθ, ∂μθ, diff::GaussLangevin, j::CartesianIndex)
+###### GammaLangevin
+
+function drift(θ, diff::GammaLangevin)
+    return diff.α .- diff.β.*exp.(θ)
+end
+
+function drift_deriv(θ, diff::GammaLangevin)
+    #return fill(-1/(2*diff.σ^2), size(θ,1), size(θ,2), size(θ,2))
+    #error("")
+    out = Array{Float64, 3}(undef, size(θ,1), size(θ,2), size(θ,2))
+    for i in 1:size(θ, 2)
+        out[:,:,i] = -diff.β.*exp.(θ)
+    end
+    return out
+end
+
+function drift_deriv_t(θ, diff::GammaLangevin)
+    return -diff.β.*exp.(θ)
+end
+
+##################
+
+function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin}, j::CartesianIndex)
     if j[2] > 1
         out = μθ[j]*(tanh(x[j]*μθ[j]) - 1)
     else
