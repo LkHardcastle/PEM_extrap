@@ -180,42 +180,76 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             else
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t - t_switch), A42())
             end
-            #println("-----");println(state.t);println(t_switch);println(t_event);println("-----")
-            update!(state, t_switch)
-            update!(state, t_event)
+            update!(state, t_switch + t_event)
             flip!(state, dat, dyn, priors)
             merge_time!(state, times, priors)
         end
     end
 end
 
-function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, diff::Union{GammaLangevin })
-    
+function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, diff::Union{GammaLangevin})
+    ## Evaluate potential at current point to get constants
+    Uθt, ∂U, ∂2U = U_new!(state, dyn, priors, dat)
+    ## Get next deterministic event and evaluate at that point
+    get_time!(dyn, times)
+    if !isinf(dyn.t_det)
+        U_det, ∂U_det = U_eval(state, dyn.t_det - state.t, dyn, priors, dat)
+    else
+        U_det, ∂U_det = Inf, Inf
+    end
+    ## If potential decreasing at that point jump to it and break
+    if ∂U_det < 0.0
+        update!(state, dyn.t_det - state.t)
+        event!(state, dat, dyn, priors, times)
+    else
+        ## Elseif potential decreasing at initialpoint line search for point where gradient begins to increase
+        t_switch = 0.0
+        if ∂U < 0.0
+            t_switch = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[2], (0.0, dyn.t_det - state.t), A42())
+            Uθt, ∂U = U_eval(state, t_switch, dyn, priors, dat)
+        end
+        t_event, flip = thinning(state, t_switch, dyn, priors, dat)
+        if flip
+            update!(state, t_switch + t_event)
+            flip!(state, dat, dyn, priors)
+            merge_time!(state, times, priors)
+        else
+            update!(state, dyn.t_det - state.t)
+            event!(state, dat, dyn, priors, times)
+        end
+    end
 end
 
+function opt_help(x; state, t_switch, dat, dyn, priors)
+    return -max(0, sum(state.v.*∇U_thin(state, t_switch + x, dat, dyn, priors)))
+end
 
 function thinning(state::State, t_switch::Float64, dyn::Dynamics, priors::Prior, dat::PEMData)
-    # Locally monotonic assumption
-    Λ = max(max(0, sum(state.v.*∇U_thin(state, t_switch, dat, dyn, priors))), max(0, sum(state.v.*∇U_thin(state, dyn.t_det - state.t, dat, dyn, priors))))
+    Λ1, Λ2 = max(0, sum(state.v.*∇U_thin(state, t_switch, dat, dyn, priors))), max(0, sum(state.v.*∇U_thin(state, dyn.t_det - state.t + t_switch, dat, dyn, priors)))
+    Λ1ϵ, Λ2ϵ = max(0, sum(state.v.*∇U_thin(state, t_switch + 0.0001, dat, dyn, priors))), max(0, sum(state.v.*∇U_thin(state, dyn.t_det - state.t - 0.0001, dat, dyn, priors)))
+    if (sortperm([Λ1, Λ1ϵ, Λ2ϵ, Λ2]) == [1,2,3,4]) || (sortperm([Λ1, Λ1ϵ, Λ2ϵ, Λ2]) == [4,3,2,1])
+        #println("---------");println(Λ1);println(Λ1ϵ);println(Λ2ϵ);println(Λ2)
+        Λ = max(Λ1, Λ2)
+    else
+        opt = optimize(x -> opt_help(x; state = state, t_switch = t_switch, dat = dat, dyn = dyn, priors = priors), lower = 0.0, upper = dyn.t_det - state.t - t_switch)
+        Λ = -Optim.minimum(opt)
+    end
     t_move = 0.0
     while t_move < (dyn.t_det - state.t - t_switch)
         t_next = rand(Exponential(1/Λ))
         t_move += t_next
-        λ = max(0, sum(state.v.*∇U_thin(state, t_move + t_switch, dat, dyn, priors)))
-        if λ > Λ
-            println(t_switch);println(dyn.t_det - state.t)
-            println(t_move);println(dyn.t_det - state.t - t_switch)
-            println(max(0, sum(state.v.*∇U_thin(state, t_switch, dat, dyn, priors))));
-            println(max(0, sum(state.v.*∇U_thin(state, t_move + t_switch, dat, dyn, priors))));
-            println(max(0, sum(state.v.*∇U_thin(state, dyn.t_det - state.t, dat, dyn, priors))))
-            println(λ);println(Λ)
-            error("Bad bound")
-        end
-        if rand() < λ/Λ
-            return t_move
+        if t_move < (dyn.t_det - state.t - t_switch)
+            λ = max(0, sum(state.v.*∇U_thin(state, t_move + t_switch, dat, dyn, priors)))
+            if λ > Λ
+                println(λ);println(Λ)
+                println("Bad bound")
+            end
+            if rand() < λ/Λ
+                return t_move, true
+            end
         end
     end
-    error("We've gone too far")
+    return t_move, false
 end
 
 function ∇U_thin(state::State, t::Float64, dat::PEMData, dyn::Dynamics, priors::Prior)
