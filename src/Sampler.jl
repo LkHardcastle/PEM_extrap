@@ -21,7 +21,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
         if settings.verbose
             verbose(dyn, state)
         end
-        sampler_inner!(state, dyn, priors, dat, times)
+        sampler_inner!(state, dyn, priors, dat, times, priors.diff)
         store_state!(state, storage, dyn, priors; skel = settings.skel)
         store_smps!(state, storage, dyn, times, priors)
         stop = sampler_stop(state, dyn, settings)
@@ -147,7 +147,7 @@ function exp_vector(settings::Settings, rate::Float64)
     return out
 end
 
-function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
+function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, diff::Union{RandomWalk, GaussLangevin})
     ## Evaluate potential at current point to get constants
     Uθt, ∂U, ∂2U = U_new!(state, dyn, priors, dat)
     ## Get next deterministic event and evaluate at that point
@@ -157,7 +157,6 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
     else
         U_det, ∂U_det = Inf, Inf
     end
-    #println("----");println(U_det);println("----")
     ## If potential decreasing at that point jump to it and break
     if ∂U_det < 0.0
         update!(state, dyn.t_det - state.t)
@@ -168,7 +167,6 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
         if ∂U < 0.0
             t_switch = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[2], (0.0, dyn.t_det - state.t), A42())
             Uθt, ∂U = U_eval(state, t_switch, dyn, priors, dat)
-            #println("+++");println(∂U);println("+++")
         end
         ## Generate uniform r.v and check if deterministic time is close enough - if so break
         V = rand()
@@ -178,16 +176,8 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
         else
             ## Generate next time via time-scale transformation
             if isinf(U_det)
-                #println("-----")
-                t_max = find_bracket(state, dyn, priors, dat, Uθt, V, t_switch)
-                 println(t_max);println(U_eval(state, t_max + t_switch, dyn, priors, dat)[1] - Uθt + log(V))
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, t_max), A42())
-                #println(t_event)
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, 1), A42())
             else
-                #println("------")
-                #println(dyn.t_det - state.t)
-                #println(Uθt)
-                #println(U_eval(state, t_switch, dyn, priors, dat)[1] - Uθt + log(V) );println(U_eval(state, dyn.t_det - state.t, dyn, priors, dat)[1] - Uθt + log(V))
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t - t_switch), A42())
             end
             #println("-----");println(state.t);println(t_switch);println(t_event);println("-----")
@@ -199,26 +189,53 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
     end
 end
 
-function find_bracket(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, Uθt::Float64, V::Float64, t_switch::Float64)
-    t_max = (dyn.t_det - state.t - t_switch)/2
-    if t_max < 0.0
-        error("")
-    end
-    for i in 1:1100
-        test = U_eval(state, t_max + t_switch, dyn, priors, dat)[1]
-        if isinf(test)
-            t_max = t_max/2
-        elseif test -  Uθt + log(V) < 0.0 
-            t_max += t_max/2
-        else
-            return t_max
+function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, diff::Union{GammaLangevin })
+    
+end
+
+
+function thinning(state::State, t_switch::Float64, dyn::Dynamics, priors::Prior, dat::PEMData)
+    # Locally monotonic assumption
+    Λ = max(max(0, sum(state.v.*∇U_thin(state, t_switch, dat, dyn, priors))), max(0, sum(state.v.*∇U_thin(state, dyn.t_det - state.t, dat, dyn, priors))))
+    t_move = 0.0
+    while t_move < (dyn.t_det - state.t - t_switch)
+        t_next = rand(Exponential(1/Λ))
+        t_move += t_next
+        λ = max(0, sum(state.v.*∇U_thin(state, t_move + t_switch, dat, dyn, priors)))
+        if λ > Λ
+            println(t_switch);println(dyn.t_det - state.t)
+            println(t_move);println(dyn.t_det - state.t - t_switch)
+            println(max(0, sum(state.v.*∇U_thin(state, t_switch, dat, dyn, priors))));
+            println(max(0, sum(state.v.*∇U_thin(state, t_move + t_switch, dat, dyn, priors))));
+            println(max(0, sum(state.v.*∇U_thin(state, dyn.t_det - state.t, dat, dyn, priors))))
+            println(λ);println(Λ)
+            error("Bad bound")
         end
-        #println(test);println(t_max)
-        if i > 1000
-            println(test);println(t_max)
+        if rand() < λ/Λ
+            return t_move
         end
     end
-    error("Too many iters")
+    error("We've gone too far")
+end
+
+function ∇U_thin(state::State, t::Float64, dat::PEMData, dyn::Dynamics, priors::Prior)
+    ∇U_out = zeros(size(state.active))
+    A = transpose(dat.UQ)*cumsum(state.x .+ state.v.*t, dims = 2)
+    # L x J matrix
+    U_ind = reverse(cumsum(reverse(exp.(A).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
+    state_t = copy(state)
+    state_t.x .+= state_t.v.*t
+    # Convert to p x J matrix
+    U_ind = dat.UQ*U_ind
+    ∇U_out = U_ind[state_t.active]
+    Σθ = cumsum(state_t.x, dims = 2)
+    μθ = drift(Σθ, priors.diff)
+    ∂μθ = drift_deriv(Σθ, priors.diff)
+    for i in eachindex(∇U_out)
+        ∇U_out[i] += prior_add(state_t, priors, state_t.active[i])
+        ∇U_out[i] += drift_add(state_t.x, μθ, ∂μθ, priors.diff, state_t.active[i])
+    end
+    return ∇U_out
 end
 
 function get_time!(dyn::Dynamics, times::Times)

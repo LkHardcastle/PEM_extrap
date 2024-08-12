@@ -30,7 +30,7 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dat
     for j in state.active
         if j != state.active[1]
             U_ += (1/(2*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2
-            U_ += -log(1 + tanh(μθ[j[1], j[2]-1]*state.x[j]))
+            U_ += -log(1 + tanh(μθ[j[1], j[2]-1]*(state.x[j] + state.v[j]*t)))
             ∂U_ += (state.v[j]/(priors.σ.σ^2))*(state.x[j] + state.v[j]*t) 
             ∂U_ += -2*(∑v[j[1],j[2] - 1]*(state.x[j] + state.v[j]*t)*∂μθ[j[1], j[2]-1] + state.v[j]*μθ[j[1], j[2]-1])/(exp(2*(state.x[j] + state.v[j]*t)*μθ[j[1], j[2]-1]) + 1)
             ∂2U_ += (state.v[j]^2)/(priors.σ.σ^2)
