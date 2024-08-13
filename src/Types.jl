@@ -188,3 +188,16 @@ struct Settings
     verbose::Bool
     skel::Bool
 end
+
+
+function Base.copy(state::BPS)
+    return BPS(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active), copy(state.ξ))
+end
+
+function Base.copy(state::ECMC)
+    return ECMC(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active), copy(state.ξ))
+end
+
+function Base.copy(state::ECMC2)
+    return ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.ξ))
+end

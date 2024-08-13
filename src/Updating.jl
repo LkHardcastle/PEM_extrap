@@ -121,4 +121,8 @@ function event!(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, times:
         merge_time!(state, times, priors)
         deleteat!(times.hyper, 1)
     end
+    if dyn.next_event == 5
+        flip!(state, dat, dyn, priors)
+        merge_time!(state, times, priors)
+    end
 end
