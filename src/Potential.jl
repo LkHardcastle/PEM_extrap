@@ -43,32 +43,6 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dif
     return U_, ∂U_, ∂2U_
 end
 
-function grad_optim(∂U::Float64, ∂2U::Float64, state::State, dyn::Dynamics, priors::Prior, dat::PEMData)
-    # Conduct a line search along the time-gradient of the potential to find ∂_tU(θ + vt) = 0
-    t0 = 0.0
-    f = copy(∂U)
-    f1 = copy(∂2U)
-    iter = 1
-    while abs(f) > 1e-10
-        t0 = t0 - f/f1
-        blank, f, f1 = U_eval(state, t0, dyn, priors, dat)
-        dyn.sampler_eval.newton[1] += 1
-        iter += 1
-        if iter > 1_000
-            println(state.x);println(state.v)
-            println(t0);println(blank);println(f);println(f1)
-            println(∂U);println(∂2U)
-            error("Too many its in grad optim")
-        end
-    end
-    if isnan(t0)
-        verbose(dyn, state)
-        error("Grad optim error")
-    end
-    #println(t0)
-    return t0
-end
-
 function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     ∇U_out = zeros(size(state.active))
     AV_calc!(state, dyn)
@@ -130,7 +104,7 @@ function drift_deriv(θ, diff::GammaLangevin)
     #error("")
     out = Array{Float64, 3}(undef, size(θ,1), size(θ,2), size(θ,2))
     for i in 1:size(θ, 2)
-        out[:,:,i] = -diff.β.*exp.(θ)
+        out[:,i,:] = -diff.β.*exp.(θ)
     end
     return out
 end
@@ -149,7 +123,7 @@ function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin}, 
     end
     if j[2] < size(x,2)
         for k in (j[2] + 1):size(x,2)
-            out += x[j[1], k]*∂μθ[j[1], j[2], k]*(tanh(x[j[1], k]*μθ[j[1], k]) - 1)
+            out += x[j[1], k]*∂μθ[j[1], j[2], k - 1]*(tanh(x[j[1], k]*μθ[j[1], k - 1]) - 1)
         end
     end
     return  out
@@ -175,7 +149,16 @@ function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Diffu
     if Λ > 0.0
         Λ += 1.0
     end
-    #Λ = max(diff_bound(state_curr, priors, priors.diff), diff_bound(state_new, priors, priors.diff)) + 10.0
+    if Λ > 10_000
+        println(Λ)
+        t_move = min(rand(Exponential(1/λ_diff(state_curr, priors))),0.00001)
+        if t_move < t_end
+            dyn.next_event = 5
+            return t_move, 0.0
+        else
+            return t_end, t_switch
+        end
+    end
     #println("------")
     #println(t_end);println(diff_bound(state_curr, priors, priors.diff));println(diff_bound(state_new, priors, priors.diff))
     #println(Λ)
