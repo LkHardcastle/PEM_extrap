@@ -1,12 +1,8 @@
 
 function hyper_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior)
-    if rand() < 0.1
-        variance_update!(state, priors, priors.σ)
-        weight_update!(state, priors, priors.ω)
-        grid_update!(state, dyn, dat, priors, priors.grid)
-    else
-        barker_update!(state, priors, priors.diff, dat, dyn)
-    end
+    variance_update!(state, priors, priors.σ)
+    weight_update!(state, priors, priors.ω)
+    grid_update!(state, dyn, dat, priors, priors.grid)
 end
 
 function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, Grid::Fixed)
@@ -28,6 +24,7 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
     state.s_loc = vcat(state.s_loc, J_loc)[ind_new]
     state.x = hcat(state.x, zero_mat)[:,ind_new]
     state.v = hcat(state.v, zero_mat)[:,ind_new]
+    state.ξ = hcat(state.ξ, zero_mat)[:,ind_new]
     state.s = hcat(state.s, fill(false, size(zero_mat)))[:,ind_new]
     state.g = hcat(state.g, g_new)[:,ind_new]
     state.active = findall(state.s)
