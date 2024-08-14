@@ -96,7 +96,7 @@ end
 ###### GammaLangevin
 
 function drift(θ, diff::GammaLangevin)
-    return diff.α .- diff.β.*exp.(θ)
+    return 0.5*(diff.α .- diff.β.*exp.(θ))
 end
 
 function drift_deriv(θ, diff::GammaLangevin)
@@ -104,20 +104,20 @@ function drift_deriv(θ, diff::GammaLangevin)
     #error("")
     out = Array{Float64, 3}(undef, size(θ,1), size(θ,2), size(θ,2))
     for i in 1:size(θ, 2)
-        out[:,i,:] = -diff.β.*exp.(θ)
+        out[:,i,:] = -0.5.*diff.β.*exp.(θ)
     end
     return out
 end
 
 function drift_deriv_t(θ, diff::GammaLangevin)
-    return -diff.β.*exp.(θ)
+    return -0.5.*diff.β.*exp.(θ)
 end
 
 ##################
 
 function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin}, j::CartesianIndex)
     if j[2] > 1
-        out = μθ[j]*(tanh(x[j]*μθ[j]) - 1)
+        out = μθ[j[1], j[2] - 1]*(tanh(x[j]*μθ[j[1], j[2] - 1]) - 1)
     else
         out = 0.0
     end
@@ -147,7 +147,7 @@ function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Diffu
     # Compute bound
     Λ = max(λ_diff(state_curr, priors), λ_diff(state_new, priors)) #+ 10.0
     if Λ > 0.0
-        Λ += 1.0
+        Λ += 2.0
     end
     if Λ > 10_000
         println(Λ)
