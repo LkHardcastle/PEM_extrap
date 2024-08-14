@@ -1,3 +1,4 @@
+
 function hyper_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior)
     variance_update!(state, priors, priors.σ)
     weight_update!(state, priors, priors.ω)
@@ -23,6 +24,7 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
     state.s_loc = vcat(state.s_loc, J_loc)[ind_new]
     state.x = hcat(state.x, zero_mat)[:,ind_new]
     state.v = hcat(state.v, zero_mat)[:,ind_new]
+    state.ξ = hcat(state.ξ, zero_mat)[:,ind_new]
     state.s = hcat(state.s, fill(false, size(zero_mat)))[:,ind_new]
     state.g = hcat(state.g, g_new)[:,ind_new]
     state.active = findall(state.s)
@@ -61,6 +63,54 @@ function dat_update!(state::State, dyn::Dynamics, dat::PEMData)
     end
     dyn.W = copy(W)
     dyn.δ = copy(δ)
+end
+
+function barker_update!(state::State, priors::Prior, diff::RandomWalk)
+end
+
+function barker_logistic(state::State, ξ::Array{Float64}, priors::Prior, j_curr::CartesianIndex)
+    Σθ = cumsum(state.x.*ξ, dims = 2)
+    out = []
+    for j in state.active
+        if j[2] != 1
+            if j[2] >= j_curr[2]
+                b = (1 + exp(state.x[j]*(Σθ[j[1],j[2]-1] - priors.diff.μ)/(priors.diff.σ^2)))^-1
+                if ξ[j] != 1
+                    b = 1 - b
+                end
+                push!(out, log(b))
+            end
+        else
+            push!(out, 0.0)
+        end
+    end
+    return out
+end
+
+function barker_update!(state::State, priors::Prior, diff::GaussLangevin, dat::PEMData, dyn::Dynamics)
+    for j in state.active
+        if j[2] != 1
+            Σθ = cumsum(state.x.*state.ξ, dims = 2)
+            b = (1 + exp(state.x[j]*(Σθ[j[1],j[2]-1] - priors.diff.μ)/(priors.diff.σ^2)))^-1
+            if state.ξ[j] == 1
+                b = 1 - b
+            end
+            dyn.sampler_eval.Barker_iter[j[2]] +=1 
+            #if rand() < b
+            dyn.sampler_eval.Barker_att[j[2]] += 1
+            state_new = copy(state.ξ)
+            state_new[j] = -state_new[j]
+            Σθ_new = cumsum(state.x.*state_new, dims = 2)
+            U1 = sum((exp.(transpose(dat.UQ)*Σθ).*dyn.W .- dyn.δ.*(transpose(dat.UQ)*Σθ))) 
+            U2 = sum((exp.(transpose(dat.UQ)*Σθ_new).*dyn.W .- dyn.δ.*(transpose(dat.UQ)*Σθ_new)))
+            A = exp(-U2 + U1 + sum(barker_logistic(state, state_new, priors, j)) - sum(barker_logistic(state, state.ξ, priors, j)))
+            if min(1,A) > rand()
+                dyn.sampler_eval.Barker_acc[j[2]] += 1
+                state.ξ[j] = -state.ξ[j]
+            end
+            #end
+        end
+    end
 end
 
 function variance_update!(state::State, priors::Prior, σ::FixedV)

@@ -9,6 +9,7 @@ mutable struct BPS <: State
     J::Int64
     t::Float64
     active::Array{CartesianIndex{2}}
+    ξ::Matrix{Float64}
 end
 
 mutable struct ECMC <: State
@@ -20,6 +21,7 @@ mutable struct ECMC <: State
     J::Int64
     t::Float64
     active::Array{CartesianIndex{2}}
+    ξ::Matrix{Float64}
 end
 
 mutable struct ECMC2 <: State
@@ -32,12 +34,16 @@ mutable struct ECMC2 <: State
     J::Int64
     b::Bool
     active::Array{CartesianIndex{2}}
+    ξ::Matrix{Float64}
 end
 
 mutable struct SamplerEval
     newton::Vector{Float64}
     gradient::Int64
     Brent_iter::Int64
+    Barker_iter::Vector{Int64}
+    Barker_acc::Vector{Int64}
+    Barker_att::Vector{Int64}
 end
 
 mutable struct Dynamics
@@ -65,6 +71,7 @@ end
 mutable struct Storage
     x::Array{Float64}
     v::Array{Float64}
+    ξ::Array{Float64}
     s::Array{Bool}
     s_loc::Array{Float64}
     J::Vector{Int64}
@@ -72,6 +79,7 @@ mutable struct Storage
     h::Array{Float64}
     x_smp::Array{Float64}
     v_smp::Array{Float64}
+    ξ_smp::Array{Float64}
     s_smp::Array{Bool}
     s_loc_smp::Array{Float64}
     J_smp::Vector{Int64}
@@ -105,6 +113,7 @@ mutable struct Beta <: Weight
     b::Float64
 end
 
+
 abstract type Grid end
 
 mutable struct Fixed <: Grid
@@ -114,6 +123,20 @@ mutable struct Cts <: Grid
     Γ::Float64
     max_points::Int64
     max_time::Float64
+end
+abstract type Diffusion end
+
+mutable struct RandomWalk <: Diffusion
+end
+
+mutable struct GaussLangevin <: Diffusion
+    μ::Float64
+    σ::Float64
+end
+
+mutable struct GammaLangevin <: Diffusion
+    α::Float64
+    β::Float64
 end
 
 abstract type Prior end
@@ -131,6 +154,7 @@ mutable struct BasicPrior <: Prior
     ω::Weight
     p_split::Float64
     grid::Grid
+    diff::Diffusion
 end
 
 mutable struct ARPrior <: Prior
@@ -138,6 +162,7 @@ mutable struct ARPrior <: Prior
     μ0::Float64
     ω::Weight
     p_split::Float64
+    diff::Diffusion
 end
 
 
@@ -162,4 +187,17 @@ struct Settings
     r_rate::Float64
     verbose::Bool
     skel::Bool
+end
+
+
+function Base.copy(state::BPS)
+    return BPS(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active), copy(state.ξ))
+end
+
+function Base.copy(state::ECMC)
+    return ECMC(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active), copy(state.ξ))
+end
+
+function Base.copy(state::ECMC2)
+    return ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.ξ))
 end
