@@ -22,7 +22,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
         if settings.verbose
             verbose(dyn, state)
         end
-        sampler_inner!(state, dyn, priors, dat, times, priors.diff)
+        sampler_inner!(state, dyn, priors, dat, times)
         store_state!(state, storage, dyn, priors; skel = settings.skel)
         store_smps!(state, storage, dyn, times, priors)
         stop = sampler_stop(state, dyn, settings)
@@ -37,54 +37,14 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     return out  
 end
 
-function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, diff::Union{RandomWalk, GaussLangevin})
-    ## Evaluate potential at current point to get constants
-    Uθt, ∂U, ∂2U = U_new!(state, dyn, priors, priors.diff, dat)
-    ## Get next deterministic event and evaluate at that point
-    get_time!(dyn, times)
-    if !isinf(dyn.t_det)
-        U_det, ∂U_det = U_eval(state, dyn.t_det - state.t, dyn, priors, priors.diff, dat)
-    else
-        U_det, ∂U_det = Inf, Inf
-    end
-    ## If potential decreasing at that point jump to it and break
-    if ∂U_det < 0.0
-        update!(state, dyn.t_det - state.t)
-        event!(state, dat, dyn, priors, times)
-    else
-        ## Elseif potential decreasing at initialpoint line search for point where gradient begins to increase
-        t_switch = 0.0
-        if ∂U < 0.0
-            t_switch = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, priors.diff, dat)[2], (0.0, dyn.t_det - state.t), A42())
-            Uθt, ∂U = U_eval(state, t_switch, dyn, priors, priors.diff, dat)
-        end
-        ## Generate uniform r.v and check if deterministic time is close enough - if so break
-        V = rand()
-        if U_det - Uθt < -log(V)
-            update!(state, dyn.t_det - state.t)
-            event!(state, dat, dyn, priors, times)
-        else
-            ## Generate next time via time-scale transformation
-            if isinf(U_det)
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, priors.diff, dat)[1] - Uθt + log(V), (0.0, 1), A42())
-            else
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, priors.diff, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t - t_switch), A42())
-            end
-            update!(state, t_switch + t_event)
-            flip!(state, dat, dyn, priors)
-            merge_time!(state, times, priors)
-        end
-    end
-end
-
-function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, diff::Union{GammaLangevin})
+function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
     #println("t arriving");println(state.t)
     ## Evaluate potential at current point to get constants
-    Uθt, ∂U, ∂2U = U_new!(state, dyn, priors, RandomWalk(), dat)
+    Uθt, ∂U, ∂2U = U_new!(state, dyn, priors)
     ## Get next deterministic event and evaluate at that point
     get_time!(dyn, times)
     if !isinf(dyn.t_det)
-        U_det, ∂U_det = U_eval(state, dyn.t_det - state.t, dyn, priors, RandomWalk(), dat)
+        U_det, ∂U_det = U_eval(state, dyn.t_det - state.t, dyn, priors)
     else
         U_det, ∂U_det = Inf, Inf
     end
@@ -96,8 +56,8 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
         ## Elseif potential decreasing at initialpoint line search for point where gradient begins to increase
         t_switch = 0.0
         if ∂U < 0.0
-            t_switch = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, RandomWalk(), dat)[2], (0.0, dyn.t_det - state.t), A42())
-            Uθt, ∂U = U_eval(state, t_switch, dyn, priors, RandomWalk(), dat)
+            t_switch = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[2], (0.0, dyn.t_det - state.t), A42())
+            Uθt, ∂U = U_eval(state, t_switch, dyn, priors)
         end
         ## Generate uniform r.v and check if deterministic time is close enough - if so break
         V = rand()
@@ -107,19 +67,15 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             dyn.next_event = 5
             ## Generate next time via time-scale transformation
             if isinf(U_det)
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, RandomWalk(), dat)[1] - Uθt + log(V), (0.0, 1), A42())
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, 1), A42())
             else
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, RandomWalk(), dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t - t_switch), A42())
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t - t_switch), A42())
             end
         end
     end
-    t_event, t_switch = diffusion_time!(state, priors, dyn, priors.diff, t_event + t_switch, 0.0)
-    #println("------");println(t_event);println(t_switch);println(dyn.t_det - state.t)
-    #println(dyn.t_det);println(state.t);
-    #println(dyn.next_event);println("------")
+    t_event, t_switch = diffusion_time!(state, priors, dyn, t_event + t_switch, 0.0)
     update!(state, t_switch + t_event)
     event!(state, dat, dyn, priors, times)
-    #println("t leaving");println(state.t)
 end
 
 function get_time!(dyn::Dynamics, times::Times)

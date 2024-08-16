@@ -7,10 +7,10 @@ function AV_calc!(state::State, dyn::Dynamics)
 end
 
 
-function U_new!(state::State, dyn::Dynamics, priors::Prior, diff::Diffusion, dat::PEMData)
+function U_new!(state::State, dyn::Dynamics, priors::Prior)
     ## Calculate the potential, rate of change of potential and constants for updating
     AV_calc!(state, dyn)
-    U_, ∂U_, ∂2U_ = U_eval(state, 0.0, dyn, priors, diff, dat)
+    U_, ∂U_, ∂2U_ = U_eval(state, 0.0, dyn, priors)
     return U_, ∂U_, ∂2U_
 end
 
@@ -18,14 +18,18 @@ function logistic(x::Float64)
     return 1/(1 + exp(-x))
 end
 
-function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, diff::Diffusion, dat::PEMData)
+function U_eval(state::State, t::Float64, dyn::Dynamics, priors::Prior)
     θ = dyn.A .+ t.*dyn.V
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
     ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
     ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
     Σθ = cumsum(state.x .+ t.*state.v, dims = 2)
-    μθ = drift(Σθ, diff)
-    ∂μθ = drift_deriv_t(Σθ, diff)
+    μθ = zeros(size(state.x))
+    ∂μθ = zeros(size(state.x,1), size(state.x,2))
+    for i in 1:size(state.x, 1)
+        μθ[i, :] = drift_U(Σθ[i, :], priors.diff[i])
+        ∂μθ[i,:] = drift_deriv_t(Σθ[i, :], priors.diff[i])
+    end
     ∑v = cumsum(state.v, dims = 2)
     for j in state.active
         if j != state.active[1]
@@ -52,8 +56,12 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     U_ind = dat.UQ*U_ind
     ∇U_out = U_ind[state.active]
     Σθ = cumsum(state.x, dims = 2)
-    μθ = drift(Σθ, priors.diff)
-    ∂μθ = drift_deriv(Σθ, priors.diff)
+    μθ = zeros(size(state.x))
+    ∂μθ = zeros(size(state.x,1), size(state.x,2), size(state.x,2))
+    for i in 1:size(state.x, 1)
+        μθ[i, :] = drift(Σθ[i, :], priors.diff[i])
+        ∂μθ[i, :, :] = drift_deriv(Σθ[i, :], priors.diff[i])
+    end
     for i in eachindex(∇U_out)
         ∇U_out[i] += prior_add(state, priors, state.active[i])
         ∇U_out[i] += drift_add(state.x, μθ, ∂μθ, priors.diff, state.active[i])
@@ -67,11 +75,15 @@ function drift(θ, diff::RandomWalk)
     return zeros(size(θ))
 end
 
+function drift_U(θ, diff::Union{RandomWalk, GammaLangevin})
+    return zeros(size(θ))
+end
+
 function drift_deriv(θ, diff::RandomWalk)
     return zeros(size(θ,1), size(θ,2), size(θ,2))
 end
 
-function drift_deriv_t(θ, diff::RandomWalk)
+function drift_deriv_t(θ, diff::Union{RandomWalk, GammaLangevin})
     return zeros(size(θ))
 end
 
@@ -85,8 +97,12 @@ function drift(θ, diff::GaussLangevin)
     return -0.5.*(θ .- diff.μ)./diff.σ^2
 end
 
+function drift_U(θ, diff::GaussLangevin)
+    return -0.5.*(θ .- diff.μ)./diff.σ^2
+end
+
 function drift_deriv(θ, diff::GaussLangevin)
-    return fill(-1/(2*diff.σ^2), size(θ,1), size(θ,2), size(θ,2))
+    return fill(-1/(2*diff.σ^2), size(θ,2), size(θ,2))
 end
 
 function drift_deriv_t(θ, diff::GaussLangevin)
@@ -102,15 +118,11 @@ end
 function drift_deriv(θ, diff::GammaLangevin)
     #return fill(-1/(2*diff.σ^2), size(θ,1), size(θ,2), size(θ,2))
     #error("")
-    out = Array{Float64, 3}(undef, size(θ,1), size(θ,2), size(θ,2))
+    out = Array{Float64, 3}(undef, size(θ,1), size(θ,2))
     for i in 1:size(θ, 2)
-        out[:,i,:] = -0.5.*diff.β.*exp.(θ)
+        out[i,:] = -0.5.*diff.β.*exp.(θ)
     end
     return out
-end
-
-function drift_deriv_t(θ, diff::GammaLangevin)
-    return -0.5.*diff.β.*exp.(θ)
 end
 
 ##################
@@ -129,7 +141,7 @@ function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin}, 
     return  out
 end
 
-function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
+function prior_add(state::State, priors::Prior, k::CartesianIndex)
     if k[2] == 1
         return state.x[k]/priors.σ0^2
     else
@@ -137,20 +149,27 @@ function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
     end
 end
 
-function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Diffusion, t_end::Float64, t_switch::Float64)
+function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, t_end::Float64, t_switch::Float64)
+    for j in eachindex(priors.diff)
+        t_end, t_switch = diffusion_time_inner!(state, priors, dyn, t_end, t_switch, j, priors.diff[j])
+    end
+    return t_end, t_switch
+end
+
+function diffusion_time_inner!(state::State, priors::Prior, dyn::Dynamics, t_end::Float64, t_switch::Float64, j::Int64, diff::GammaLangevin)
     # Compute end state
     state_curr = copy(state)
     state_curr.x += state.v.*t_switch
     state_new = copy(state)
     state_new.x += state.v.*t_end
     # Compute bound
-    Λ = max(λ_diff(state_curr, priors), λ_diff(state_new, priors)) #+ 10.0
+    Λ = max(λ_diff(state_curr, priors, j), λ_diff(state_new, priors, j)) #+ 10.0
     if Λ > 0.0
         Λ += 2.0
     end
     if Λ > 10_000
         println(Λ)
-        t_move = min(rand(Exponential(1/λ_diff(state_curr, priors))),0.00001)
+        t_move = min(rand(Exponential(1/λ_diff(state_curr, priors, j))),0.00001)
         if t_move < t_end
             dyn.next_event = 5
             return t_move, 0.0
@@ -164,7 +183,7 @@ function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Diffu
         t_move += t_new
         if t_move < t_end
             state_curr.x += t_new.*state.v
-            λ = λ_diff(state_curr, priors)
+            λ = λ_diff(state_curr, priors, j)
             if λ/Λ > 1.0
                 println(λ);println(Λ)
                 error("Bad bound")
@@ -178,41 +197,20 @@ function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Diffu
     return t_end, t_switch
 end
 
-function diff_bound(state::State, priors::Prior, diff::GammaLangevin)
-    bound = zeros(size(state.active))
-    Σθ = cumsum(state.x, dims = 2)
-    for i in eachindex(bound)
-        bound[i] = bound_inner(state.x, Σθ, priors.diff, state.active[i])
-    end
-    Λ = max(0, dot(abs.(state.v), bound))
-    return Λ
+function diffusion_time_inner!(state::State, priors::Prior, dyn::Dynamics, t_end::Float64, t_switch::Float64, j::Int64, diff::Union{GaussLangevin, RandomWalk})
+    return t_end, t_switch
 end
 
-function bound_inner(x::Array{Float64}, Σθ::Array{Float64}, diff::GammaLangevin, j::CartesianIndex)
-    if j[2] > 1
-        out = exp(Σθ[j[1], j[2] - 1])
-    else
-        out = 0.0
-    end
-    if j[2] < size(x,2)
-        for k in (j[2] + 1):size(x,2)
-            out += abs(x[j[1],k]*exp(Σθ[j[1], k - 1]))
-        end
-    end
-    out *= diff.β
-    out += diff.α
-    return out
-end
-
-
-function λ_diff(state::State, priors::Prior)
+function λ_diff(state::State, priors::Prior, j::Int64)
     # Add time movement
     ∇U_out = zeros(size(state.active))
     Σθ = cumsum(state.x, dims = 2)
-    μθ = drift(Σθ, priors.diff)
-    ∂μθ = drift_deriv(Σθ, priors.diff)
+    μθ = drift(Σθ[j,:], priors.diff[j])
+    ∂μθ = drift_deriv(Σθ[j,:], priors.diff)
     for i in eachindex(∇U_out)
-        ∇U_out[i] += drift_add(state.x, μθ, ∂μθ, priors.diff, state.active[i])
+        if state.active[i][1] == j
+            ∇U_out[i] += drift_add(state.x, μθ, ∂μθ, priors.diff[j], state.active[i])
+        end
     end
     return max(0, dot(state.v[state.active],∇U_out))
 end

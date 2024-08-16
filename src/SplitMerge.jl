@@ -10,7 +10,7 @@ function merge_time(state::State, j::CartesianIndex, priors::Prior)
     end
 end
 
-function split_rate(state::State, priors::BasicPrior)
+function split_rate(state::State, priors::Prior)
     rate = priors.p_split*(priors.ω.ω/(1 - priors.ω.ω))*(sqrt(2*pi*priors.σ.σ^2))^-1
     J = 2*sphere_area(size(state.active,1) - 1)/(sphere_area(size(state.active,1))*(size(state.active,1)))
     return rate*J
@@ -21,7 +21,7 @@ function sphere_area(d::Int64)
     return (2*π^(0.5*d+0.5))/gamma(0.5*d+0.5)
 end
 
-function split!(state::State, priors::BasicPrior)
+function split!(state::State, priors::Prior)
     j = findall(state.g)[rand(DiscreteUniform(1,size(findall(state.g),1)))]
     state.s[j] = true
     state.g[j] = false
