@@ -143,7 +143,6 @@ function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Diffu
     state_curr.x += state.v.*t_switch
     state_new = copy(state)
     state_new.x += state.v.*t_end
-    
     # Compute bound
     Λ = max(λ_diff(state_curr, priors), λ_diff(state_new, priors)) #+ 10.0
     if Λ > 0.0
@@ -159,9 +158,6 @@ function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Diffu
             return t_end, t_switch
         end
     end
-    #println("------")
-    #println(t_end);println(diff_bound(state_curr, priors, priors.diff));println(diff_bound(state_new, priors, priors.diff))
-    #println(Λ)
     t_move = 0.0
     while t_move < t_end 
         t_new = rand(Exponential(1/Λ))
@@ -169,7 +165,6 @@ function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Diffu
         if t_move < t_end
             state_curr.x += t_new.*state.v
             λ = λ_diff(state_curr, priors)
-            #println("True rate");println(λ)
             if λ/Λ > 1.0
                 println(λ);println(Λ)
                 error("Bad bound")
