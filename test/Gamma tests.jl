@@ -21,9 +21,9 @@ Random.seed!(12515)
 n = 0
 y = rand(Exponential(1.0),n)
 breaks = collect(1:1:300)
-p = 1
+p = 2
 cens = fill(1.0,n)
-covar = fill(1.0, 1, n)
+covar = fill(1.0, 2, n)
 dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
@@ -34,7 +34,7 @@ nsmp = 20_000
 
 Random.seed!(23462)
 settings = Settings(nits, nsmp, 1_000_000, 2.0, 2.0, 1.0, false, true)
-priors = BasicPrior(1.0, FixedV(0.2), FixedW(0.5), 0.0, Fixed(), GammaLangevin(2.0,1.0))
+priors = Prior(1.0, FixedV(0.2), FixedW(0.5), 0.0, Fixed(), [GammaLangevin(2.0,1.0), GaussLangevin(0.0,0.5)])
 @time out1 = pem_sample(state0, dat, priors, settings)
 t_ = collect(-5.0:0.01:1.0)
 plot(t_, -log.(1 .+ tanh.(t_)))

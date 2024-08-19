@@ -145,7 +145,7 @@ mutable struct Prior
     ω::Weight
     p_split::Float64
     grid::Grid
-    diff::Diffusion
+    diff::Vector{Diffusion}
 end
 
 

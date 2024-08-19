@@ -32,7 +32,7 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::Prior)
     end
     ∑v = cumsum(state.v, dims = 2)
     for j in state.active
-        if j != state.active[1]
+        if j[2] != 1
             U_ += (1/(2*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2
             U_ += -log(1 + tanh(μθ[j[1], j[2]-1]*(state.x[j] + state.v[j]*t)))
             ∂U_ += (state.v[j]/(priors.σ.σ^2))*(state.x[j] + state.v[j]*t) 
@@ -80,7 +80,7 @@ function drift_U(θ, diff::Union{RandomWalk, GammaLangevin})
 end
 
 function drift_deriv(θ, diff::RandomWalk)
-    return zeros(size(θ,1), size(θ,2), size(θ,2))
+    return zeros(size(θ,2), size(θ,2))
 end
 
 function drift_deriv_t(θ, diff::Union{RandomWalk, GammaLangevin})
@@ -118,7 +118,7 @@ end
 function drift_deriv(θ, diff::GammaLangevin)
     #return fill(-1/(2*diff.σ^2), size(θ,1), size(θ,2), size(θ,2))
     #error("")
-    out = Array{Float64, 3}(undef, size(θ,1), size(θ,2))
+    out = Array{Float64, 2}(undef, size(θ,1), size(θ,1))
     for i in 1:size(θ, 2)
         out[i,:] = -0.5.*diff.β.*exp.(θ)
     end
@@ -128,14 +128,15 @@ end
 ##################
 
 function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin}, j::CartesianIndex)
+    println(size(x));println(size(μθ));println(size(μθ))
     if j[2] > 1
-        out = μθ[j[1], j[2] - 1]*(tanh(x[j]*μθ[j[1], j[2] - 1]) - 1)
+        out = μθ[j[2] - 1]*(tanh(x[j]*μθ[j[2] - 1]) - 1)
     else
         out = 0.0
     end
     if j[2] < size(x,2)
         for k in (j[2] + 1):size(x,2)
-            out += x[j[1], k]*∂μθ[j[1], j[2], k - 1]*(tanh(x[j[1], k]*μθ[j[1], k - 1]) - 1)
+            out += x[j[1], k]*∂μθ[k - 1]*(tanh(x[j[1], k]*μθ[k - 1]) - 1)
         end
     end
     return  out
@@ -206,7 +207,7 @@ function λ_diff(state::State, priors::Prior, j::Int64)
     ∇U_out = zeros(size(state.active))
     Σθ = cumsum(state.x, dims = 2)
     μθ = drift(Σθ[j,:], priors.diff[j])
-    ∂μθ = drift_deriv(Σθ[j,:], priors.diff)
+    ∂μθ = drift_deriv(Σθ[j,:], priors.diff[j])
     for i in eachindex(∇U_out)
         if state.active[i][1] == j
             ∇U_out[i] += drift_add(state.x, μθ, ∂μθ, priors.diff[j], state.active[i])
