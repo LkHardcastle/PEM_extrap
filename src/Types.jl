@@ -117,6 +117,7 @@ end
 abstract type Grid end
 
 mutable struct Fixed <: Grid
+    step::Float64
 end
 
 mutable struct Cts <: Grid
