@@ -53,13 +53,14 @@ p2 <- dat2 %>%
     ggplot(aes(x = Time, y = value, col = name, linetype = name)) + geom_step() +
     theme_classic() +
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4,4,6)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time (years)") +
+    scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time") +
     geom_hline(aes(yintercept = exp(1.71)), linetype = "dashed", col = cbPalette[6]) +
     geom_hline(aes(yintercept = exp(-1.41)), linetype = "dashed", col = cbPalette[6]) +
     geom_hline(aes(yintercept = exp(1.02)), linetype = "dotdash", col = cbPalette[4]) +
     geom_hline(aes(yintercept = exp(0.52)), linetype = "solid", col = cbPalette[7]) +
     geom_hline(aes(yintercept = exp(-0.03)), linetype = "dotdash", col = cbPalette[4])
 p2
+ggsave($plotsdir("GammaPrior.pdf"), width = 8, height = 6)
 """
 p1 = view(out1["Sk_x"], 1, 200, :)
 plot(out1["Sk_t"], p1)
@@ -82,7 +83,7 @@ settings = Settings(20_000, nsmp, 1_000_000, 1.0, 5.0, 1.0, false, true)
 priors = BasicPrior(1.0, FixedV(0.2), FixedW(0.5), 0.0, Fixed(), GaussLangevin(2.0,1.0))
 @time out2 = pem_sample(state0, dat, priors, settings)
 
-s2 = view(out2["Smp_trans"], 1, :, :)
+s2 = view(exp.(out2["Smp_trans"]), 1, :, :)
 df2 = DataFrame(hcat(breaks, median(s2, dims = 2), quantile.(eachrow(s2), 0.025), quantile.(eachrow(s2), 0.25), quantile.(eachrow(s2), 0.75), quantile.(eachrow(s2), 0.975)), :auto)
 
 R"""
@@ -96,11 +97,12 @@ p2 <- dat2 %>%
     ggplot(aes(x = Time, y = value, col = name, linetype = name)) + geom_step() +
     theme_classic() +
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4,4,6)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time (years)") +
-    geom_hline(aes(yintercept = 2 + 1.96), linetype = "dashed", col = cbPalette[6]) +
-    geom_hline(aes(yintercept = 2 -1.96), linetype = "dashed", col = cbPalette[6]) +
-    geom_hline(aes(yintercept = 2 + 0.67), linetype = "dotdash", col = cbPalette[4]) +
-    geom_hline(aes(yintercept = 2), linetype = "solid", col = cbPalette[7]) +
-    geom_hline(aes(yintercept = 2 - 0.67), linetype = "dotdash", col = cbPalette[4])
+    scale_linetype_manual(values = c("dotdash","solid","dashed","dashed","dotdash")) + ylab("h(t)") + xlab("Time") +
+    geom_hline(aes(yintercept = exp(2 + 1.96)), linetype = "dashed", col = cbPalette[6]) +
+    geom_hline(aes(yintercept = exp(2 -1.96)), linetype = "dashed", col = cbPalette[6]) +
+    geom_hline(aes(yintercept = exp(2 + 0.67)), linetype = "dotdash", col = cbPalette[4]) +
+    geom_hline(aes(yintercept = exp(2)), linetype = "solid", col = cbPalette[7]) +
+    geom_hline(aes(yintercept = exp(2 - 0.67)), linetype = "dotdash", col = cbPalette[4])
 p2
+ggsave($plotsdir("LogNormalPrior.pdf"), width = 14, height = 6)
 """
