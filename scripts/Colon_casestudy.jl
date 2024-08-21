@@ -29,9 +29,9 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks), true, findall(s0), ones(size(x0)))
-nits = 50000
+nits = 100000
 nsmp = 100000
-settings = Settings(nits, nsmp, 1_000_000, 2.0,0.5, 0.5, false, true)
+settings = Settings(nits, nsmp, 1_000_000, 0.3,0.5, 0.5, false, true)
 
 priors1 = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(0.1), RandomWalk())
 priors2 = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(0.1), GaussLangevin(-1.0,1.0))
@@ -342,7 +342,7 @@ s1 = view(exp.(test_smp), 1, :, :)
 df3 = DataFrame(hcat(grid, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 Random.seed!(1237)
-breaks_extrap = collect(3.2:0.1:20)
+breaks_extrap = collect(3.2:0.1:5)
 extrap1 = barker_extrapolation(out10, priors10.diff, priors10.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
 s1 = vcat(view(exp.(out10["Smp_trans"]), 1, :, :), view(exp.(extrap1), 1, :, :))
 df4 = DataFrame(hcat(vcat(breaks, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
@@ -363,6 +363,12 @@ dat2 = data.frame($df2)
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
 dat3 = data.frame($df3)
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+dat4 = data.frame($df4)
+colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+dat5 = data.frame($df5)
+colnames(dat5) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+dat6 = data.frame($df6)
+colnames(dat6) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
 """
 
 R"""    
@@ -384,9 +390,28 @@ p3 <- dat3 %>%
     theme_classic() +
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
-plot_grid(p1,p2,p3, nrow = 1)
-ggsave($plotsdir("Colon","Colon4.pdf"), width = 8, height = 6)
+p4 <- dat4 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
+    theme_classic() +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
+p5 <- dat5 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
+    theme_classic() +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
+p6 <- dat6 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
+    theme_classic() +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
+plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
+#ggsave($plotsdir("Colon","Colon4.pdf"), width = 8, height = 6)
 """
+
 
 plot(view(exp.(out10["Smp_trans"]),1,30,2984:2986))
 ind = 2984
@@ -418,6 +443,12 @@ dat2 = data.frame($df2)
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
 dat3 = data.frame($df3)
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+dat4 = data.frame($df4)
+colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+dat5 = data.frame($df5)
+colnames(dat5) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+dat6 = data.frame($df6)
+colnames(dat6) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
 """
 
 R"""    
@@ -439,9 +470,28 @@ p3 <- dat3 %>%
     theme_classic() +
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
-plot_grid(p1,p2,p3, nrow = 1)
-ggsave($plotsdir("Colon","Colon5.pdf"), width = 8, height = 6)
+p4 <- dat4 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
+    theme_classic() +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
+p5 <- dat5 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
+    theme_classic() +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
+p6 <- dat6 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
+    theme_classic() +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
+plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
+#ggsave($plotsdir("Colon","Colon3.pdf"), width = 8, height = 6)
 """
+
 
 grid = collect(0.01:0.01:3.2)
 test_smp = cts_transform(cumsum(out16["Smp_x"], dims = 2), out13["Smp_s_loc"], grid)
