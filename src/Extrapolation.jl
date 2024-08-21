@@ -45,9 +45,9 @@ function extrapolation_times(out::Dict, grid::Cts, t_start::Float64, t_end::Floa
     times = Vector{Vector{Float64}}()
     ω = out["Smp_h"][2,:]
     for i in 1:n_smp
-        times_inner = [rand(Exponential(1/(grid.Γ*ω[i])))]
-        while times_inner[end] < (t_end - t_start)
-            push!(times_inner, rand(Exponential(1/(grid.Γ*ω[i]))))
+        times_inner = [t_start + rand(Exponential(1/(grid.Γ*ω[i])))]
+        while times_inner[end] < t_end
+            push!(times_inner, times_inner[end] + rand(Exponential(1/(grid.Γ*ω[i]))))
         end
         push!(times, times_inner)
     end

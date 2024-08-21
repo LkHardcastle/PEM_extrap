@@ -31,7 +31,7 @@ t0 = 0.0
 state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks), true, findall(s0), ones(size(x0)))
 nits = 100000
 nsmp = 100000
-settings = Settings(nits, nsmp, 1_000_000, 0.3,0.5, 0.5, false, true)
+settings = Settings(nits, nsmp, 1_000_000, 0.5,0.5, 0.5, false, true)
 
 priors1 = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(0.1), RandomWalk())
 priors2 = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 0.0, Fixed(0.1), GaussLangevin(-1.0,1.0))
@@ -81,7 +81,7 @@ breaks = collect(0.1:0.1:3.1)
 p = 1
 cens = df.status
 covar = fill(1.0, 1, n)
-covar = [covar; transpose(df.sex)]
+covar = [covar; transpose(df.obstruct)]
 dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 x0[2,:] = vcat(x0[2,1],zeros(size(breaks) .-1))
@@ -94,9 +94,9 @@ nits = 50000
 nsmp = 100000
 settings = Settings(nits, nsmp, 1_000_000, 2.0,0.5, 0.5, false, true)
 Random.seed!(9102)
-priors16 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.5), RandomWalk())
+priors16 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.3, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.5), RandomWalk())
 @time out16 = pem_sample(state0, dat, priors16, settings)
-priors17 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.5), GaussLangevin(0.0,1.0))
+priors17 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.3, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.5), GaussLangevin(0.0,1.0))
 @time out17 = pem_sample(state0, dat, priors16, settings)
 
 s1 = view(exp.(out1["Smp_trans"]), 1, :, :)
@@ -174,7 +174,7 @@ p6 <- dat6 %>%
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
 plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
-#ggsave($plotsdir("Colon","Colon1.pdf"), width = 8, height = 6)
+ggsave($plotsdir("Colon","Colon1.pdf"), width = 8, height = 6)
 """
 
 s1 = view(exp.(out4["Smp_trans"]), 1, :, :)
@@ -251,7 +251,7 @@ p6 <- dat6 %>%
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
 plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
-#ggsave($plotsdir("Colon","Colon2.pdf"), width = 8, height = 6)
+ggsave($plotsdir("Colon","Colon2.pdf"), width = 8, height = 6)
 """
 
 s1 = view(exp.(out7["Smp_trans"]), 1, :, :)
@@ -327,7 +327,7 @@ p6 <- dat6 %>%
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
 plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
-#ggsave($plotsdir("Colon","Colon3.pdf"), width = 8, height = 6)
+ggsave($plotsdir("Colon","Colon3.pdf"), width = 8, height = 6)
 """
 
 grid = collect(0.01:0.01:3.2)
@@ -342,18 +342,21 @@ s1 = view(exp.(test_smp), 1, :, :)
 df3 = DataFrame(hcat(grid, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 Random.seed!(1237)
-breaks_extrap = collect(3.2:0.1:5)
+breaks_extrap = collect(3.2:0.1:15)
 extrap1 = barker_extrapolation(out10, priors10.diff, priors10.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
-s1 = vcat(view(exp.(out10["Smp_trans"]), 1, :, :), view(exp.(extrap1), 1, :, :))
-df4 = DataFrame(hcat(vcat(breaks, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+test_smp = cts_transform(cumsum(out10["Smp_x"], dims = 2), out10["Smp_s_loc"], grid)
+s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), 1, :, :))
+df4 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out11, priors11.diff, priors11.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
-s1 = vcat(view(exp.(out11["Smp_trans"]), 1, :, :), view(exp.(extrap1), 1, :, :))
+test_smp = cts_transform(cumsum(out11["Smp_x"], dims = 2), out11["Smp_s_loc"], grid)
+s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), 1, :, :))
 df5 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out12, priors12.diff, priors12.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
-s1 = vcat(view(exp.(out12["Smp_trans"]), 1, :, :), view(exp.(extrap1), 1, :, :))
-df6 = DataFrame(hcat(vcat(breaks, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+test_smp = cts_transform(cumsum(out12["Smp_x"], dims = 2), out12["Smp_s_loc"], grid)
+s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), 1, :, :))
+df6 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 
 R"""
@@ -409,19 +412,9 @@ p6 <- dat6 %>%
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
 plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
-#ggsave($plotsdir("Colon","Colon4.pdf"), width = 8, height = 6)
+ggsave($plotsdir("Colon","Colon4.pdf"), width = 8, height = 6)
 """
 
-
-plot(view(exp.(out10["Smp_trans"]),1,30,2984:2986))
-ind = 2984
-plot(out10["Smp_s_loc"][findall(out10["Smp_s_loc"][:,ind] .!= Inf),ind], view(out10["Smp_trans"],1,:,ind)[findall(out10["Smp_s_loc"][:,ind] .!= Inf)], seriestype = :steppre)
-plot!(out10["Smp_s_loc"][findall(out10["Smp_s_loc"][:,ind] .!= Inf),ind], view(out10["Smp_x"],1,:,ind)[findall(out10["Smp_s_loc"][:,ind] .!= Inf)], seriestype = :steppre)
-scatter!(dat.y,zeros(size(dat.y)), markershape = :cross)
-view(out10["Smp_trans"],1,1:10,ind)
-view(out10["Smp_x"],1,1:10,ind)
-view(out10["Smp_s"],1,1:10,ind)
-view(cumsum(out10["Smp_x"], dims = 2),1,1:10,ind)
 
 
 
@@ -436,6 +429,22 @@ test_smp = cts_transform(cumsum(out15["Smp_x"], dims = 2), out15["Smp_s_loc"], g
 s1 = view(exp.(test_smp), 1, :, :)
 df3 = DataFrame(hcat(grid, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
+Random.seed!(1237)
+breaks_extrap = collect(3.2:0.1:15)
+extrap1 = barker_extrapolation(out13, priors13.diff, priors13.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
+test_smp = cts_transform(cumsum(out13["Smp_x"], dims = 2), out13["Smp_s_loc"], grid)
+s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), 1, :, :))
+df4 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+extrap1 = barker_extrapolation(out14, priors14.diff, priors14.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
+test_smp = cts_transform(cumsum(out14["Smp_x"], dims = 2), out11["Smp_s_loc"], grid)
+s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), 1, :, :))
+df5 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+extrap1 = barker_extrapolation(out15, priors15.diff, priors15.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
+test_smp = cts_transform(cumsum(out15["Smp_x"], dims = 2), out12["Smp_s_loc"], grid)
+s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), 1, :, :))
+df6 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 R"""
 dat1 = data.frame($df1)
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
@@ -474,27 +483,30 @@ p4 <- dat4 %>%
     pivot_longer(Mean:UCI) %>%
     ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
     theme_classic() +
+    geom_vline(aes(xintercept = 3), linetype = "dotted") +
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
 p5 <- dat5 %>%
     pivot_longer(Mean:UCI) %>%
     ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
     theme_classic() +
+    geom_vline(aes(xintercept = 3), linetype = "dotted") +
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
 p6 <- dat6 %>%
     pivot_longer(Mean:UCI) %>%
     ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
     theme_classic() +
+    geom_vline(aes(xintercept = 3), linetype = "dotted") +
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
 plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
-#ggsave($plotsdir("Colon","Colon3.pdf"), width = 8, height = 6)
+ggsave($plotsdir("Colon","Colon5.pdf"), width = 8, height = 6)
 """
 
 
 grid = collect(0.01:0.01:3.2)
-test_smp = cts_transform(cumsum(out16["Smp_x"], dims = 2), out13["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out16["Smp_x"], dims = 2), out16["Smp_s_loc"], grid)
 s1 = view(exp.(test_smp), 1, :, :)
 df1 = DataFrame(hcat(grid, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
