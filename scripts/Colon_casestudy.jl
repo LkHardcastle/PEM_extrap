@@ -501,7 +501,7 @@ p6 <- dat6 %>%
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
 plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
-ggsave($plotsdir("Colon","Colon5.pdf"), width = 8, height = 6)
+#ggsave($plotsdir("Colon","Colon5.pdf"), width = 8, height = 6)
 """
 
 

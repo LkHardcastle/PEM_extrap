@@ -10,8 +10,8 @@ end
 function U_new!(state::State, dyn::Dynamics, priors::Prior, diff::Diffusion, dat::PEMData)
     ## Calculate the potential, rate of change of potential and constants for updating
     AV_calc!(state, dyn)
-    U_, ∂U_, ∂2U_ = U_eval(state, 0.0, dyn, priors, diff, dat)
-    return U_, ∂U_, ∂2U_
+    U_, ∂U_ = U_eval(state, 0.0, dyn, priors, diff, dat)
+    return U_, ∂U_
 end
 
 function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, diff::Diffusion, dat::PEMData)
@@ -20,7 +20,7 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dif
     ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
 
     Σθ = cumsum(state.x .+ t.*state.v, dims = 2)
-    μθ = drift(Σθ, diff)
+    μθ = drift_U(Σθ, diff)
     ∂μθ = drift_deriv_t(Σθ, diff)
     ∑v = cumsum(state.v, dims = 2)
     for j in state.active
@@ -45,7 +45,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     # Convert to p x J matrix
     U_ind = dat.UQ*U_ind
     ∇U_out = U_ind[state.active]
-    
+
     Σθ = cumsum(state.x, dims = 2)
     μθ = drift(Σθ, priors.diff)
     ∂μθ = drift_deriv(Σθ, priors.diff)
@@ -59,6 +59,10 @@ end
 ############ Random Walk
 
 function drift(θ, diff::RandomWalk)
+    return zeros(size(θ))
+end
+
+function drift_U(θ, diff::RandomWalk)
     return zeros(size(θ))
 end
 
@@ -80,6 +84,10 @@ function drift(θ, diff::GaussLangevin)
     return -0.5.*(θ .- diff.μ)./diff.σ^2
 end
 
+function drift_U(θ, diff::GaussLangevin)
+    return -0.5.*(θ .- diff.μ)./diff.σ^2
+end
+
 function drift_deriv(θ, diff::GaussLangevin)
     return fill(-1/(2*diff.σ^2), size(θ,1), size(θ,2), size(θ,2))
 end
@@ -92,6 +100,10 @@ end
 
 function drift(θ, diff::GammaLangevin)
     return 0.5*(diff.α .- diff.β.*exp.(θ))
+end
+
+function drift_U(θ, diff::GammaLangevin)
+    return zeros(size(θ))
 end
 
 function drift_deriv(θ, diff::GammaLangevin)
