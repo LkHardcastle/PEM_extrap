@@ -18,20 +18,26 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dif
     θ = dyn.A .+ t.*dyn.V
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
     ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
-
     Σθ = cumsum(state.x .+ t.*state.v, dims = 2)
-    μθ = drift_U(Σθ, diff)
-    ∂μθ = drift_deriv_t(Σθ, diff)
-    ∑v = cumsum(state.v, dims = 2)
-    for j in state.active
-        if j != state.active[1] && j[2] != 1
-            U_ += (1/(2*priors.σ.σ^2))*(state.x[j] + state.v[j]*t)^2
-            U_ += -log(1 + tanh(μθ[j[1], j[2]-1]*(state.x[j] + state.v[j]*t)))
-            ∂U_ += (state.v[j]/(priors.σ.σ^2))*(state.x[j] + state.v[j]*t) 
-            ∂U_ += -2*(∑v[j[1],j[2] - 1]*(state.x[j] + state.v[j]*t)*∂μθ[j[1], j[2]-1] + state.v[j]*μθ[j[1], j[2]-1])/(exp(2*(state.x[j] + state.v[j]*t)*μθ[j[1], j[2]-1]) + 1)
+    Σv = cumsum(state.v, dims = 2)
+    for j in axes(state.x, 1)
+        U_, ∂U_ = U_prior(state, j, Σθ, Σv, U_, ∂U_, priors)
+    end
+end
+
+function U_prior(state::State, j::Int64, Σθ::Matrix{Float64}, Σv::Matrix{Float64}, U_::Float64, ∂U_::Float64, priors::Prior)
+    μθ = drift_U(Σθ[j,:], priors.diff[j])
+    ∂μθ = drift_deriv_t(Σθ[j,:], priors.diff[j])
+    active_j = filter(idx -> idx[1] == j, state.active)
+    for k in active_j
+        if k != active_j[1]
+            U_ += (1/(2*priors.σ.σ^2))*(state.x[k] + state.v[k]*t)^2
+            U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)))
+            ∂U_ += (state.v[k]/(priors.σ.σ^2))*(state.x[k] + state.v[k]*t) 
+            ∂U_ += -2*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]) + 1)
         else
-            U_ += (1/(2*priors.σ0^2))*(state.x[j] + state.v[j]*t)^2
-            ∂U_ += (state.v[j]/(priors.σ0^2))*(state.x[j] + state.v[j]*t)
+            U_ += (1/(2*priors.σ0^2))*(state.x[k] + state.v[k]*t)^2
+            ∂U_ += (state.v[k]/(priors.σ0^2))*(state.x[k] + state.v[k]*t)
         end
     end
     return U_, ∂U_
@@ -47,13 +53,19 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     ∇U_out = U_ind[state.active]
 
     Σθ = cumsum(state.x, dims = 2)
+
     μθ = drift(Σθ, priors.diff)
     ∂μθ = drift_deriv(Σθ, priors.diff)
+
     for i in eachindex(∇U_out)
         ∇U_out[i] += prior_add(state, priors, state.active[i])
         ∇U_out[i] += drift_add(state.x, μθ, ∂μθ, priors.diff, state.active[i])
     end
     return ∇U_out
+end
+
+function ∇U_prior()
+
 end
 
 ############ Random Walk
