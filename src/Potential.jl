@@ -18,6 +18,7 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dif
     θ = dyn.A .+ t.*dyn.V
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
     ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
+
     Σθ = cumsum(state.x .+ t.*state.v, dims = 2)
     μθ = drift(Σθ, diff)
     ∂μθ = drift_deriv_t(Σθ, diff)
@@ -44,6 +45,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     # Convert to p x J matrix
     U_ind = dat.UQ*U_ind
     ∇U_out = U_ind[state.active]
+    
     Σθ = cumsum(state.x, dims = 2)
     μθ = drift(Σθ, priors.diff)
     ∂μθ = drift_deriv(Σθ, priors.diff)
