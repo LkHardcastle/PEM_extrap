@@ -18,7 +18,6 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dif
     θ = dyn.A .+ t.*dyn.V
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
     ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
-    ∂2U_ = sum((dyn.V.^2).*exp.(θ).*dyn.W) 
     Σθ = cumsum(state.x .+ t.*state.v, dims = 2)
     μθ = drift(Σθ, diff)
     ∂μθ = drift_deriv_t(Σθ, diff)
@@ -29,14 +28,12 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, dif
             U_ += -log(1 + tanh(μθ[j[1], j[2]-1]*(state.x[j] + state.v[j]*t)))
             ∂U_ += (state.v[j]/(priors.σ.σ^2))*(state.x[j] + state.v[j]*t) 
             ∂U_ += -2*(∑v[j[1],j[2] - 1]*(state.x[j] + state.v[j]*t)*∂μθ[j[1], j[2]-1] + state.v[j]*μθ[j[1], j[2]-1])/(exp(2*(state.x[j] + state.v[j]*t)*μθ[j[1], j[2]-1]) + 1)
-            ∂2U_ += (state.v[j]^2)/(priors.σ.σ^2)
         else
             U_ += (1/(2*priors.σ0^2))*(state.x[j] + state.v[j]*t)^2
             ∂U_ += (state.v[j]/(priors.σ0^2))*(state.x[j] + state.v[j]*t)
-            ∂2U_ += (state.v[j]^2)/(priors.σ0^2)
         end
     end
-    return U_, ∂U_, ∂2U_
+    return U_, ∂U_
 end
 
 function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
