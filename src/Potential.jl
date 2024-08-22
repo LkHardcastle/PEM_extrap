@@ -14,10 +14,6 @@ function U_new!(state::State, dyn::Dynamics, priors::Prior, diff::Diffusion, dat
     return U_, ∂U_, ∂2U_
 end
 
-function logistic(x::Float64)
-    return 1/(1 + exp(-x))
-end
-
 function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior, diff::Diffusion, dat::PEMData)
     θ = dyn.A .+ t.*dyn.V
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
