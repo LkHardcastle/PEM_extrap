@@ -41,11 +41,11 @@ end
 function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
     #println("t arriving");println(state.t)
     ## Evaluate potential at current point to get constants
-    Uθt, ∂U = U_new!(state, dyn, priors, priors.diff, dat)
+    Uθt, ∂U = U_new!(state, dyn, priors)
     ## Get next deterministic event and evaluate at that point
     get_time!(dyn, times)
     if !isinf(dyn.t_det)
-        U_det, ∂U_det = U_eval(state, dyn.t_det - state.t, dyn, priors, priors.diff, dat)
+        U_det, ∂U_det = U_eval(state, dyn.t_det - state.t, dyn, priors)
     else
         U_det, ∂U_det = Inf, Inf
     end
@@ -57,8 +57,8 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
         ## Elseif potential decreasing at initialpoint line search for point where gradient begins to increase
         t_switch = 0.0
         if ∂U < 0.0
-            t_switch = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, priors.diff, dat)[2], (0.0, dyn.t_det - state.t), A42())
-            Uθt, ∂U = U_eval(state, t_switch, dyn, priors, priors.diff, dat)
+            t_switch = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[2], (0.0, dyn.t_det - state.t), A42())
+            Uθt, ∂U = U_eval(state, t_switch, dyn, priors)
         end
         ## Generate uniform r.v and check if deterministic time is close enough - if so break
         V = rand()
@@ -68,13 +68,15 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             dyn.next_event = 5
             ## Generate next time via time-scale transformation
             if isinf(U_det)
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, priors.diff, dat)[1] - Uθt + log(V), (0.0, 1), A42())
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, 1), A42())
             else
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors, priors.diff, dat)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t - t_switch), A42())
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t - t_switch), A42())
             end
         end
     end
-    t_event, t_switch = diffusion_time!(state, priors, dyn, priors.diff, t_event + t_switch, 0.0)
+    for j in axes(state.x, 1)
+        t_event, t_switch = diffusion_time!(state, priors, dyn, priors.diff[j], t_event + t_switch, 0.0, j)
+    end
     update!(state, t_switch + t_event)
     event!(state, dat, dyn, priors, times)
 end

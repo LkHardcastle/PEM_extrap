@@ -1,11 +1,11 @@
-function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::Float64, t_end::Float64, plot_grid::Vector{Float64})
+function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::Float64, t_end::Float64, plot_grid::Vector{Float64}, k::Int64)
     ## Get end points
     n_smp = size(out["Smp_t"],1)
     Σθ = cumsum(out["Smp_x"], dims = 2)
-    initial = cumsum(out["Smp_x"], dims = 2)[:,end,:]
+    initial = Σθ[k,end,:]
     if sum(isinf.(initial)) > 0.0
         for i in 1:n_smp
-            initial[i] = Σθ[1, findlast(isinf.(Σθ[1,:,i]) .== false), i]
+            initial[i] = Σθ[k, findlast(isinf.(Σθ[k,:,i]) .== false), i]
         end
     end
     ## Get time points
@@ -13,9 +13,9 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
     ## Simulate dynamics
     paths = Vector{Vector{Float64}}()
     for i in 1:n_smp
-        push!(paths, barker_dynamics(initial[1,i], size(times[i],1), diffs, out["Smp_h"][2,i]))
+        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, out["Smp_h"][1,i]))
     end
-    output = fill(Inf, 1, length(plot_grid), n_smp)
+    output = fill(Inf, length(plot_grid), n_smp)
     for i in 1:n_smp
         for j in 1:length(plot_grid)
             if isnothing(findlast(times[i] .<= plot_grid[j]))
@@ -23,7 +23,7 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
             else
                 ind = findlast(times[i] .<= plot_grid[j])
             end
-            output[1, j, i] = paths[i][ind]
+            output[j, i] = paths[i][ind]
         end
     end
     return output
@@ -45,9 +45,9 @@ function extrapolation_times(out::Dict, grid::Cts, t_start::Float64, t_end::Floa
     times = Vector{Vector{Float64}}()
     ω = out["Smp_h"][2,:]
     for i in 1:n_smp
-        times_inner = [t_start + rand(Exponential(1/(grid.Γ*ω[i])))]
+        times_inner = [t_start]
         while times_inner[end] < t_end
-            push!(times_inner, times_inner[end] + rand(Exponential(1/(grid.Γ*ω[i]))))
+            push!(times_inner, times_inner[end] + rand(Exponential(size(out["Smp_x"],1)/(grid.Γ*ω[i]))))
         end
         push!(times, times_inner)
     end
@@ -56,12 +56,7 @@ end
 
 function barker_dynamics(init::Float64, iters::Int64, diff::Diffusion, step_size::Float64)
     out_vec = zeros(iters)
-    ξ = rand(Normal(0,step_size))
-    if rand() < 1/(1 + exp.(-2*ξ*drift(init, diff)))
-        out_vec[1] = init + ξ
-    else
-        out_vec[1] = init - ξ
-    end
+    out_vec[1] = init
     for i in 2:iters
         ξ = rand(Normal(0,step_size))
         if rand() < 1/(1 + exp.(-2*ξ*drift(out_vec[i-1], diff)))
