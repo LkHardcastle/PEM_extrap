@@ -76,7 +76,8 @@ mutable struct Storage
     s_loc::Array{Float64}
     J::Vector{Int64}
     t::Vector{Float64}
-    h::Array{Float64}
+    ω::Array{Float64}
+    σ::Array{Float64}
     x_smp::Array{Float64}
     v_smp::Array{Float64}
     ξ_smp::Array{Float64}
@@ -84,31 +85,31 @@ mutable struct Storage
     s_loc_smp::Array{Float64}
     J_smp::Vector{Int64}
     t_smp::Vector{Float64}
-    h_smp::Array{Float64}
+    ω_smp::Array{Float64}
+    σ_smp::Array{Float64}
 end
 
 abstract type Variance end
 
 mutable struct FixedV <: Variance
-    σ::Float64
+    σ::Vector{Float64}
 end
 
 mutable struct PC <: Variance
-    σ::Float64
-    a::Float64
-    h::Float64
+    σ::Vector{Float64}
+    a::Vector{Float64}
+    h::Vector{Float64}
     ind::Float64
-    log_dens::Float64
 end
 
 abstract type Weight end
 
 mutable struct FixedW <: Weight
-    ω::Float64
+    ω::Vector{Float64}
 end
 
 mutable struct Beta <: Weight
-    ω::Float64
+    ω::Vector{Float64}
     a::Float64
     b::Float64
 end

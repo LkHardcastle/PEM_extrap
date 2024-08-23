@@ -32,9 +32,9 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     active_j = filter(idx -> idx[1] == j, state.active)
     for k in active_j
         if k != active_j[1]
-            U_ += (1/(2*priors.σ.σ^2))*(state.x[k] + state.v[k]*t)^2
+            U_ += (1/(2*priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t)^2
             U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)))
-            ∂U_ += (state.v[k]/(priors.σ.σ^2))*(state.x[k] + state.v[k]*t) 
+            ∂U_ += (state.v[k]/(priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t) 
             ∂U_ += -2*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]) + 1)
         else
             U_ += (1/(2*priors.σ0^2))*(state.x[k] + state.v[k]*t)^2
@@ -151,7 +151,7 @@ function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
     if k[2] == 1
         return state.x[k]/priors.σ0^2
     else
-        return state.x[k]/(priors.σ.σ^2)
+        return state.x[k]/(priors.σ.σ[k[1]]^2)
     end
 end
 
