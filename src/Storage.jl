@@ -60,8 +60,8 @@ function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::Bas
     storage.J[dyn.ind] = copy(state.J)
     storage.ξ[:,range, dyn.ind] = copy(state.ξ)
     storage.t[dyn.ind] = copy(state.t)
-    storage.ω[:,dyn.ind] = copy(priors.σ.σ) 
-    storage.σ[:,dyn.ind] = copy(priors.ω.ω)
+    storage.ω[:,dyn.ind] = copy(priors.ω.ω)
+    storage.σ[:,dyn.ind] = copy(priors.σ.σ) 
     dyn.ind += 1
 end
 

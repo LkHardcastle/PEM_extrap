@@ -717,8 +717,10 @@ out18["Smp_h"]
 
 out15["Smp_h"]
 
-histogram(out15["Smp_h"][1,:])
-histogram(out18["Smp_h"][1,:])
+histogram(out18["Smp_ω"][1,:])
+histogram(out18["Smp_ω"][2,:])
+histogram(out18["Smp_σ"][1,:])
+histogram(out18["Smp_σ"][2,:])
 
 testΣ = cumsum(out18["Smp_x"],dims = 2)
 initial = testΣ[1,end,:]
@@ -729,3 +731,4 @@ histogram(exp.(initial))
 quantile(exp.(initial), 0.975)
 
 histogram(exp.(extrap1[1,:]))
+
