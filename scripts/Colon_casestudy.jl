@@ -92,16 +92,16 @@ s0[2,:] = vcat(s0[2,1],zeros(Int,size(breaks) .-1))
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, .!s0, breaks, t0, length(breaks), true, findall(s0), ones(size(x0)))
-nits = 50000
-nsmp = 100000
-settings = Settings(nits, nsmp, 1_000_000, 2.0,0.5, 0.5, false, true)
+nits = 150000
+nsmp = 20000
+settings = Settings(nits, nsmp, 1_000_000, 1.0,0.5, 0.5, false, true)
 Random.seed!(9102)
-priors16 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.3, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.2), [RandomWalk(), RandomWalk()])
+priors16 = BasicPrior(1.0, PC([0.2,0.2], [2,2], [0.5,0.5], Inf), Beta([0.3,0.3], [10.0,10.0], [10.0,10.0]), 1.0, Cts(5.0, 100.0, 3.2), [RandomWalk(), RandomWalk()])
 @time out16 = pem_sample(state0, dat, priors16, settings)
-priors17 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.3, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.2), [GammaLangevin(2.0,4.0), GaussLangevin(0.0,0.5)])
+priors17 = BasicPrior(1.0, PC([0.2,0.2], [2,2], [0.5,0.5], Inf), Beta([0.3,0.3], [10.0,10.0], [10.0,10.0]), 1.0, Cts(5.0, 100.0, 3.2), [GammaLangevin(2.0,4.0), GaussLangevin(0.0,0.5)])
 Random.seed!(9102)
 @time out17 = pem_sample(state0, dat, priors17, settings)
-priors18 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.3, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.2), [GammaLangevin(2.0,4.0), GaussLangevin(1.0,0.5)])
+priors18 = BasicPrior(1.0, PC([0.2,0.2], [2,2], [0.5,0.5], Inf), Beta([0.3,0.3], [10.0,10.0], [10.0,10.0]), 1.0, Cts(5.0, 100.0, 3.2), [GammaLangevin(2.0,4.0), GaussLangevin(1.0,0.5)])
 Random.seed!(9102)
 @time out18 = pem_sample(state0, dat, priors18, settings)
 

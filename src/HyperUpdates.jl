@@ -21,7 +21,7 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
         push!(weight_vec, (1 - priors.ω.ω[k]))
     end
     J_new = min(sum(Pois_new), priors.grid.max_points - J_curr)
-    weight_vec /= norm(weight_vec)
+    weight_vec = weight_vec/sum(weight_vec)
     J_row = rand(Categorical(weight_vec), J_new)
     J_loc = rand(Uniform(0,priors.grid.max_time), J_new)
     g_new = fill(false, size(state.x, 1), J_new)
@@ -79,17 +79,17 @@ function variance_update!(state::State, priors::Prior, σ::FixedV, k::Int64)
 end
 
 function variance_update!(state::State, priors::Prior, σ::PC, k::Int64)
-    σ_prop = exp(log(priors.σ.σ[k]) + rand(Normal(0,priors.σ.h)))
+    σ_prop = exp(log(priors.σ.σ[k]) + rand(Normal(0,priors.σ.h[k])))
     active_j = filter(idx -> idx[1] == k, state.active)
-    log_prop_dens = sum(logpdf.(Normal(0,σ_prop), state.x[active_j])) + log_exp_logpdf(σ_prop, priors.σ.a)
+    log_prop_dens = sum(logpdf.(Normal(0,σ_prop), state.x[active_j])) + log_exp_logpdf(σ_prop, priors.σ.a[k])
     #if isinf(priors.σ.log_dens)
-    log_new_dens = sum(logpdf.(Normal(0,priors.σ.σ[k]), state.x[active_j])) + log_exp_logpdf(log(priors.σ.σ[k]), priors.σ.a)
+    log_new_dens = sum(logpdf.(Normal(0,priors.σ.σ[k]), state.x[active_j])) + log_exp_logpdf(log(priors.σ.σ[k]), priors.σ.a[k])
     #end
     α = min(1, exp(log_prop_dens - log_new_dens))
     acc = 0
     if rand() < α
         acc = 1
-        priors.σ.σ = copy(σ_prop)
+        priors.σ.σ[k] = copy(σ_prop)
     end
     priors.σ.ind += 1
     # Adaptation 
@@ -109,5 +109,5 @@ end
 
 function weight_update!(state::State, priors::Prior, ω::Beta, k::Int64)
     active_j = filter(idx -> idx[1] == k, state.active)
-    priors.ω.ω[k] = rand(Distributions.Beta(priors.ω.a + size(active_j,1) - 1, priors.ω.b + prod(size(state.s,2)) - size(active_j,1) + 1))
+    priors.ω.ω[k] = rand(Distributions.Beta(priors.ω.a[k] + size(active_j,1) - 1, priors.ω.b[k] + prod(size(state.s,2)) - size(active_j,1) + 1))
 end

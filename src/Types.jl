@@ -110,8 +110,8 @@ end
 
 mutable struct Beta <: Weight
     ω::Vector{Float64}
-    a::Float64
-    b::Float64
+    a::Vector{Float64}
+    b::Vector{Float64}
 end
 
 

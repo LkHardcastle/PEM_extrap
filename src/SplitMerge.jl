@@ -24,9 +24,9 @@ end
 function split!(state::State, priors::BasicPrior)
     k_prob = []
     for k in axes(state.x, 1)
-        push!(k_prob, (size(findall(state_g[k,:]),1))*split_rate(state, priors, k))
+        push!(k_prob, (size(findall(state.g[k,:]),1))*split_rate(state, priors, k))
     end
-    k_prob /= norm(k_prob)
+    k_prob = k_prob/sum(k_prob)
     k = rand(Categorical(k_prob))
     j = findall(state.g[k,:])[rand(DiscreteUniform(1,size(findall(state.g[k,:]),1)))]
     state.s[k,j] = true
@@ -65,7 +65,7 @@ function split_time!(state::State, times::Times, priors::Prior)
     if priors.p_split > 0.0
         test_time = []
         for k in axes(state.x,1)
-            rate = (size(findall(state_g[k,:]),1))*split_rate(state, priors, k)
+            rate = (size(findall(state.g[k,:]),1))*split_rate(state, priors, k)
             push!(test_time, rand(Exponential(1/rate)) + state.t)
         end
         times.next_split = minimum(test_time)
