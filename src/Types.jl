@@ -141,6 +141,9 @@ mutable struct GammaLangevin <: Diffusion
     β::Float64
 end
 
+mutable struct GompertzBaseline <: Diffusion
+    α::Float64
+end
 abstract type Prior end
 
 #mutable struct BasicPrior <: Prior

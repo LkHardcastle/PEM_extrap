@@ -85,8 +85,8 @@ function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times
         storage.v_smp[:,range,dyn.smp_ind] = copy(v_old)
         storage.s_smp[:,range,dyn.smp_ind] = copy(s_old)
         storage.ξ_smp[:,range,dyn.smp_ind] = copy(ξ_old)
-        storage.ω_smp[:,dyn.smp_ind] = copy(priors.σ.σ) 
-        storage.σ_smp[:,dyn.smp_ind] = copy(priors.ω.ω)
+        storage.ω_smp[:,dyn.smp_ind] = copy(priors.ω.ω)
+        storage.σ_smp[:,dyn.smp_ind] = copy(priors.σ.σ) 
         storage.J_smp[dyn.smp_ind] = J_old
         storage.s_loc_smp[range, dyn.smp_ind] = s_loc_old
         dyn.smp_ind += 1

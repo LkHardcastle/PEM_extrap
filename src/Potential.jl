@@ -131,9 +131,28 @@ function drift_deriv_t(θ, diff::GammaLangevin)
     return -0.5.*diff.β.*exp.(θ)
 end
 
+############ Gompertz
+
+function drift(θ, diff::GompertzBaseline)
+    return fill(diff.α, size(θ))
+end
+
+function drift_U(θ, diff::GompertzBaseline)
+    return fill(diff.α, size(θ))
+end
+
+function drift_deriv(θ, diff::GompertzBaseline)
+    return zeros(size(θ,1), size(θ,1))
+end
+
+function drift_deriv_t(θ, diff::GompertzBaseline)
+    return zeros(size(θ))
+end
+
+
 ##################
 
-function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin}, j::CartesianIndex)
+function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin, GompertzBaseline}, j::CartesianIndex)
     if j[2] > 1
         out = μθ[j[2] - 1]*(tanh(x[j]*μθ[j[2] - 1]) - 1)
     else
@@ -155,7 +174,7 @@ function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
     end
 end
 
-function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Union{RandomWalk, GaussLangevin}, t_end::Float64, t_switch::Float64, j::Int64)
+function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Union{RandomWalk, GaussLangevin, GompertzBaseline}, t_end::Float64, t_switch::Float64, j::Int64)
     return t_end, t_switch
 end
 
