@@ -33,7 +33,6 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
     state.s_loc = vcat(state.s_loc, J_loc)[ind_new]
     state.x = hcat(state.x, zero_mat)[:,ind_new]
     state.v = hcat(state.v, zero_mat)[:,ind_new]
-    state.ξ = hcat(state.ξ, zero_mat)[:,ind_new]
     state.s = hcat(state.s, fill(false, size(zero_mat)))[:,ind_new]
     state.g = hcat(state.g, g_new)[:,ind_new]
     state.active = findall(state.s)
@@ -90,7 +89,6 @@ function split_state(state::State, s_new::Int64, u::Float64)
     state_new.x = hcat(state_new.x, new_point)[:,ind_new]
     # Fix velocity updates
     state_new.v = hcat(state_new.v, new_point)[:,ind_new]error("")
-    state_new.ξ = hcat(state_new.ξ, new_point)[:,ind_new]
     state_new.s = hcat(state_new.s, fill(true, size(new_point)))[:,ind_new]
     state_new.g = hcat(state_new.g, g_new)[:,ind_new]
     state_new.active = findall(state_new.s)

@@ -9,7 +9,6 @@ mutable struct BPS <: State
     J::Int64
     t::Float64
     active::Array{CartesianIndex{2}}
-    ξ::Matrix{Float64}
 end
 
 mutable struct ECMC <: State
@@ -21,7 +20,6 @@ mutable struct ECMC <: State
     J::Int64
     t::Float64
     active::Array{CartesianIndex{2}}
-    ξ::Matrix{Float64}
 end
 
 mutable struct ECMC2 <: State
@@ -34,7 +32,6 @@ mutable struct ECMC2 <: State
     J::Int64
     b::Bool
     active::Array{CartesianIndex{2}}
-    ξ::Matrix{Float64}
 end
 
 mutable struct SamplerEval
@@ -71,7 +68,6 @@ end
 mutable struct Storage
     x::Array{Float64}
     v::Array{Float64}
-    ξ::Array{Float64}
     s::Array{Bool}
     s_loc::Array{Float64}
     J::Vector{Int64}
@@ -80,7 +76,6 @@ mutable struct Storage
     σ::Array{Float64}
     x_smp::Array{Float64}
     v_smp::Array{Float64}
-    ξ_smp::Array{Float64}
     s_smp::Array{Bool}
     s_loc_smp::Array{Float64}
     J_smp::Vector{Int64}
@@ -201,15 +196,18 @@ struct Settings
     skel::Bool
 end
 
+### Functions
 
 function Base.copy(state::BPS)
-    return BPS(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active), copy(state.ξ))
+    return BPS(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active))
 end
 
 function Base.copy(state::ECMC)
-    return ECMC(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active), copy(state.ξ))
+    return ECMC(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.J), copy(state.t), copy(state.active))
 end
 
 function Base.copy(state::ECMC2)
-    return ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.ξ))
+    return ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active))
 end
+
+Dynamics(state::State, dat::PEMData) = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.s), copy(dat.δ), copy(dat.W), SamplerEval(zeros(2),0, 0 ,zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2))))

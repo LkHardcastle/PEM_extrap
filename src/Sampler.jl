@@ -10,7 +10,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     ### Setup
     state = copy(state0)
     times = time_setup(state, settings, priors)
-    dyn = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.s), copy(dat.δ), copy(dat.W), SamplerEval(zeros(2),0, 0 ,zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2))))
+    dyn = Dynamics(state, dat)
     # Set up storage 
     if settings.skel == false
         dyn.ind = 2
@@ -19,7 +19,6 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     AV_calc!(state, dyn)
     println("Starting sampling")
     while dyn.ind < settings.max_ind
-        #println("---------");println(state.ξ)
         if settings.verbose
             verbose(dyn, state)
         end
@@ -30,9 +29,6 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
         if stop
             break
         end
-        #if dyn.ind % 10_000 == 0
-        #    verbose(dyn, state)
-        #end
     end
     out = sampler_end(storage, dyn, settings)
     return out  
@@ -147,14 +143,12 @@ function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
         out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)], 
                     "Sk_ω" => storage.ω[:,1:(dyn.ind-1)], "Sk_σ" => storage.σ[:,1:(dyn.ind-1)], "Sk_s_loc" => storage.s_loc[:,1:(dyn.ind-1)],
                     "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
-                    "Smp_ξ" => storage.ξ_smp[:,:,1:(dyn.smp_ind-1)],  
                     "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
-                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)].*storage.ξ_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
+                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
     else
         out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
                     "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
-                    "Smp_ξ" => storage.ξ_smp[:,:,1:(dyn.smp_ind-1)],
-                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)].*storage.ξ_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
+                    "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
 
     end
     return out

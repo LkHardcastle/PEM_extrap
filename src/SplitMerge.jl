@@ -54,7 +54,6 @@ function merge!(state::State, j::CartesianIndex)
     state.g[j] = true
     state.v[j] = 0.0
     state.x[j] = 0.0
-    state.ξ[j] = 0.0
     # Remove from state.active
     state.active = findall(state.s)
     state.v[state.active] /= norm(state.v[state.active])
