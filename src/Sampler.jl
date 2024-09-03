@@ -117,7 +117,7 @@ function time_setup(state::State, settings::Settings, priors::Prior)
         end
     end
     if priors.p_split > 0.0
-        T_split = rand(Exponential(1/(size(findall(state.s .== false),1)*split_rate(state, priors))))
+        T_split = Inf
     else 
         T_split = Inf
     end
@@ -145,14 +145,14 @@ end
 function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
     if settings.skel
         out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)], 
-                    "Sk_h" => storage.h[:,1:(dyn.ind-1)], "Sk_s_loc" => storage.s_loc[:,1:(dyn.ind-1)],
+                    "Sk_ω" => storage.ω[:,1:(dyn.ind-1)], "Sk_σ" => storage.σ[:,1:(dyn.ind-1)], "Sk_s_loc" => storage.s_loc[:,1:(dyn.ind-1)],
                     "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
                     "Smp_ξ" => storage.ξ_smp[:,:,1:(dyn.smp_ind-1)],  
-                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_h" => storage.h_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
+                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)].*storage.ξ_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
     else
         out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
-                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_h" => storage.h_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
+                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_ξ" => storage.ξ_smp[:,:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)].*storage.ξ_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
 

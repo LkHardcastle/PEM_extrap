@@ -10,8 +10,8 @@ function merge_time(state::State, j::CartesianIndex, priors::Prior)
     end
 end
 
-function split_rate(state::State, priors::BasicPrior)
-    rate = priors.p_split*(priors.ω.ω/(1 - priors.ω.ω))*(sqrt(2*pi*priors.σ.σ^2))^-1
+function split_rate(state::State, priors::BasicPrior, k::Int64)
+    rate = priors.p_split*(priors.ω.ω[k]/(1 - priors.ω.ω[k]))*(sqrt(2*pi*priors.σ.σ[k]^2))^-1
     J = 2*sphere_area(size(state.active,1) - 1)/(sphere_area(size(state.active,1))*(size(state.active,1)))
     return rate*J
 end
@@ -22,9 +22,15 @@ function sphere_area(d::Int64)
 end
 
 function split!(state::State, priors::BasicPrior)
-    j = findall(state.g)[rand(DiscreteUniform(1,size(findall(state.g),1)))]
-    state.s[j] = true
-    state.g[j] = false
+    k_prob = []
+    for k in axes(state.x, 1)
+        push!(k_prob, (size(findall(state.g[k,:]),1))*split_rate(state, priors, k))
+    end
+    k_prob = k_prob/sum(k_prob)
+    k = rand(Categorical(k_prob))
+    j = findall(state.g[k,:])[rand(DiscreteUniform(1,size(findall(state.g[k,:]),1)))]
+    state.s[k,j] = true
+    state.g[k,j] = false
     # Add to state.active
     a = split_velocity(state)
     if a == 0.0
@@ -33,8 +39,7 @@ function split!(state::State, priors::BasicPrior)
     state.active = findall(state.s)
     # New velocities
     state.v[state.active] *= sqrt(1-a^2)
-    state.v[j] = a
-    state.ξ[j] = 1.0
+    state.v[k,j] = a
 end
 
 
@@ -58,8 +63,12 @@ end
 function split_time!(state::State, times::Times, priors::Prior)
     # Update split time
     if priors.p_split > 0.0
-        rate = (size(findall(state.g),1))*split_rate(state, priors)
-        times.next_split = rand(Exponential(1/rate)) + state.t
+        test_time = []
+        for k in axes(state.x,1)
+            rate = (size(findall(state.g[k,:]),1))*split_rate(state, priors, k)
+            push!(test_time, rand(Exponential(1/rate)) + state.t)
+        end
+        times.next_split = minimum(test_time)
     else 
         times.next_split = Inf
     end

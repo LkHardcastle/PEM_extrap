@@ -32,9 +32,9 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     active_j = filter(idx -> idx[1] == j, state.active)
     for k in active_j
         if k != active_j[1]
-            U_ += (1/(2*priors.σ.σ^2))*(state.x[k] + state.v[k]*t)^2
+            U_ += (1/(2*priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t)^2
             U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)))
-            ∂U_ += (state.v[k]/(priors.σ.σ^2))*(state.x[k] + state.v[k]*t) 
+            ∂U_ += (state.v[k]/(priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t) 
             ∂U_ += -2*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]) + 1)
         else
             U_ += (1/(2*priors.σ0^2))*(state.x[k] + state.v[k]*t)^2
@@ -131,9 +131,28 @@ function drift_deriv_t(θ, diff::GammaLangevin)
     return -0.5.*diff.β.*exp.(θ)
 end
 
+############ Gompertz
+
+function drift(θ, diff::GompertzBaseline)
+    return fill(diff.α, size(θ))
+end
+
+function drift_U(θ, diff::GompertzBaseline)
+    return fill(diff.α, size(θ))
+end
+
+function drift_deriv(θ, diff::GompertzBaseline)
+    return zeros(size(θ,1), size(θ,1))
+end
+
+function drift_deriv_t(θ, diff::GompertzBaseline)
+    return zeros(size(θ))
+end
+
+
 ##################
 
-function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin}, j::CartesianIndex)
+function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin, GompertzBaseline}, j::CartesianIndex)
     if j[2] > 1
         out = μθ[j[2] - 1]*(tanh(x[j]*μθ[j[2] - 1]) - 1)
     else
@@ -151,11 +170,11 @@ function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
     if k[2] == 1
         return state.x[k]/priors.σ0^2
     else
-        return state.x[k]/(priors.σ.σ^2)
+        return state.x[k]/(priors.σ.σ[k[1]]^2)
     end
 end
 
-function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Union{RandomWalk, GaussLangevin}, t_end::Float64, t_switch::Float64, j::Int64)
+function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Union{RandomWalk, GaussLangevin, GompertzBaseline}, t_end::Float64, t_switch::Float64, j::Int64)
     return t_end, t_switch
 end
 

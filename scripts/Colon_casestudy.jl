@@ -51,13 +51,15 @@ Random.seed!(9102)
 @time out5 = pem_sample(state0, dat, priors5, settings)
 @time out6 = pem_sample(state0, dat, priors6, settings)
 
-priors7 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 1.0, Fixed(0.1), [RandomWalk()])
-priors8 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 1.0, Fixed(0.1), [GaussLangevin(-1.0,1.0)])
-priors9 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.4, 10.0, 10.0), 1.0, Fixed(0.1), [GammaLangevin(0.5,2)])
+priors7 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, Fixed(0.1), [RandomWalk()])
+priors8 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, Fixed(0.1), [GaussLangevin(-1.0,1.0)])
+priors9 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, Fixed(0.1), [GammaLangevin(0.5,2)])
+priors10 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, Fixed(0.1), [GompertzBaseline(0.5)])
 Random.seed!(9102)
 @time out7 = pem_sample(state0, dat, priors7, settings)
 @time out8 = pem_sample(state0, dat, priors8, settings)
 @time out9 = pem_sample(state0, dat, priors9, settings)
+@time out10 = pem_sample(state0, dat, priors10, settings)
 
 priors10 = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 1.0, Cts(10.0, 50.0, 3.5), [RandomWalk()])
 priors11 = BasicPrior(1.0, FixedV(0.5), FixedW(0.5), 1.0, Cts(10.0, 50.0, 3.5), [GaussLangevin(-1.0,1.0)])
@@ -92,16 +94,16 @@ s0[2,:] = vcat(s0[2,1],zeros(Int,size(breaks) .-1))
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, .!s0, breaks, t0, length(breaks), true, findall(s0), ones(size(x0)))
-nits = 50000
-nsmp = 100000
-settings = Settings(nits, nsmp, 1_000_000, 2.0,0.5, 0.5, false, true)
+nits = 150000
+nsmp = 20000
+settings = Settings(nits, nsmp, 1_000_000, 1.0,0.5, 0.5, false, true)
 Random.seed!(9102)
-priors16 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.3, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.2), [RandomWalk(), RandomWalk()])
+priors16 = BasicPrior(1.0, PC([0.2,0.2], [2,2], [0.5,0.5], Inf), Beta([0.3,0.3], [10.0,10.0], [10.0,10.0]), 1.0, Cts(5.0, 100.0, 3.2), [RandomWalk(), RandomWalk()])
 @time out16 = pem_sample(state0, dat, priors16, settings)
-priors17 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.3, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.2), [GammaLangevin(2.0,4.0), GaussLangevin(0.0,0.5)])
+priors17 = BasicPrior(1.0, PC([0.2,0.2], [2,2], [0.5,0.5], Inf), Beta([0.3,0.3], [10.0,10.0], [10.0,10.0]), 1.0, Cts(5.0, 100.0, 3.2), [GammaLangevin(2.0,4.0), GaussLangevin(0.0,0.5)])
 Random.seed!(9102)
 @time out17 = pem_sample(state0, dat, priors17, settings)
-priors18 = BasicPrior(1.0, PC(0.2, 2, 0.5, 1, Inf), Beta(0.3, 10.0, 10.0), 1.0, Cts(10.0, 100.0, 3.2), [GammaLangevin(2.0,4.0), GaussLangevin(1.0,0.5)])
+priors18 = BasicPrior(1.0, PC([0.2,0.2], [2,2], [0.5,0.5], Inf), Beta([0.3,0.3], [10.0,10.0], [10.0,10.0]), 1.0, Cts(5.0, 100.0, 3.2), [GammaLangevin(2.0,4.0), GaussLangevin(1.0,0.5)])
 Random.seed!(9102)
 @time out18 = pem_sample(state0, dat, priors18, settings)
 
@@ -261,25 +263,32 @@ plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
 ggsave($plotsdir("Colon","Colon2.pdf"), width = 8, height = 6)
 """
 
-s1 = view(exp.(out7["Smp_trans"]), 1, :, :)
+s1 = view(exp.(cumsum(out7["Smp_x"], dims = 2)), 1, :, :)
 df1 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
-s1 = view(exp.(out8["Smp_trans"]), 1, :, :)
+s1 = view(exp.(cumsum(out8["Smp_x"], dims = 2)), 1, :, :)
 df2 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
-s1 = view(exp.(out9["Smp_trans"]), 1, :, :)
+s1 = view(exp.(cumsum(out9["Smp_x"], dims = 2)), 1, :, :)
 df3 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+s1 = view(exp.(cumsum(out10["Smp_x"], dims = 2)), 1, :, :)
+df7 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 Random.seed!(1237)
-breaks_extrap = collect(3.2:0.1:20)
-extrap1 = barker_extrapolation(out7, priors7.diff, priors7.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
-s1 = vcat(view(exp.(out7["Smp_trans"]), 1, :, :), view(exp.(extrap1), 1, :, :))
+breaks_extrap = collect(3.2:0.1:5)
+extrap1 = barker_extrapolation(out7, priors7.diff[1], priors7.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
+s1 = vcat(view(exp.(cumsum(out7["Smp_x"], dims = 2)), 1, :, :), exp.(extrap1))
 df4 = DataFrame(hcat(vcat(breaks, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
-extrap1 = barker_extrapolation(out8, priors8.diff, priors8.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
-s1 = vcat(view(exp.(out8["Smp_trans"]), 1, :, :), view(exp.(extrap1), 1, :, :))
+extrap1 = barker_extrapolation(out8, priors8.diff[1], priors8.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
+s1 = vcat(view(exp.(cumsum(out8["Smp_x"], dims = 2)), 1, :, :), exp.(extrap1))
 df5 = DataFrame(hcat(vcat(breaks, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
-extrap1 = barker_extrapolation(out9, priors9.diff, priors9.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap)
-s1 = vcat(view(exp.(out9["Smp_trans"]), 1, :, :), view(exp.(extrap1), 1, :, :))
+extrap1 = barker_extrapolation(out9, priors9.diff[1], priors9.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
+s1 = vcat(view(exp.(cumsum(out9["Smp_x"], dims = 2)), 1, :, :), exp.(extrap1))
 df6 = DataFrame(hcat(vcat(breaks, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+extrap1 = barker_extrapolation(out10, priors10.diff[1], priors10.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
+s1 = vcat(view(exp.(cumsum(out10["Smp_x"], dims = 2)), 1, :, :), exp.(extrap1))
+df8 = DataFrame(hcat(vcat(breaks, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
 
 R"""
 dat1 = data.frame($df1)
@@ -294,6 +303,10 @@ dat5 = data.frame($df5)
 colnames(dat5) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
 dat6 = data.frame($df6)
 colnames(dat6) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+dat7 = data.frame($df7)
+colnames(dat7) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
+dat8 = data.frame($df8)
+colnames(dat8) <- c("Time","Mean","LCI","Q1","Q4","UCI") 
 """
 
 R"""    
@@ -310,6 +323,12 @@ p2 <- dat2 %>%
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
 p3 <- dat3 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
+    theme_classic() +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
+p7 <- dat7 %>%
     pivot_longer(Mean:UCI) %>%
     ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
     theme_classic() +
@@ -333,8 +352,14 @@ p6 <- dat6 %>%
     theme_classic() +
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
-plot_grid(p1,p2,p3,p4,p5,p6, nrow = 2)
-ggsave($plotsdir("Colon","Colon3.pdf"), width = 8, height = 6)
+p8 <- dat8 %>%
+    pivot_longer(Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = name,linetype = name)) + geom_step() +
+    theme_classic() +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,6,6,6)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,NA)
+plot_grid(p1,p2,p3, p7, p4,p5,p6, p8,  nrow = 2)
+#ggsave($plotsdir("Colon","Colon3.pdf"), width = 8, height = 6)
 """
 
 grid = collect(0.01:0.01:3.2)
@@ -717,8 +742,10 @@ out18["Smp_h"]
 
 out15["Smp_h"]
 
-histogram(out15["Smp_h"][1,:])
-histogram(out18["Smp_h"][1,:])
+histogram(out18["Smp_ω"][1,:])
+histogram(out18["Smp_ω"][2,:])
+histogram(out18["Smp_σ"][1,:])
+histogram(out18["Smp_σ"][2,:])
 
 testΣ = cumsum(out18["Smp_x"],dims = 2)
 initial = testΣ[1,end,:]
@@ -729,3 +756,4 @@ histogram(exp.(initial))
 quantile(exp.(initial), 0.975)
 
 histogram(exp.(extrap1[1,:]))
+

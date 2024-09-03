@@ -9,11 +9,11 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
         end
     end
     ## Get time points
-    times = extrapolation_times(out, grid, t_start, t_end, n_smp)
+    times = extrapolation_times(out, grid, t_start, t_end, n_smp, out["Smp_ω"][k,:])
     ## Simulate dynamics
     paths = Vector{Vector{Float64}}()
     for i in 1:n_smp
-        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, out["Smp_h"][1,i]))
+        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, out["Smp_σ"][k,i]))
     end
     output = fill(Inf, length(plot_grid), n_smp)
     for i in 1:n_smp
@@ -29,25 +29,23 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
     return output
 end
 
-function extrapolation_times(out::Dict, grid::Fixed, t_start::Float64, t_end::Float64, n_smp::Int64)
+function extrapolation_times(out::Dict, grid::Fixed, t_start::Float64, t_end::Float64, n_smp::Int64, ω::Vector{Float64})
     times = Vector{Vector{Float64}}()
     # Find candidate times
     cand_times = collect(t_start:grid.step:t_end)
     # Thin
-    ω = out["Smp_h"][2,:]
     for i in 1:n_smp
         push!(times, vcat(t_start - grid.step, cand_times[findall(rand(Bernoulli(ω[i]),size(cand_times,1)) .== 1)]))
     end
     return times
 end
 
-function extrapolation_times(out::Dict, grid::Cts, t_start::Float64, t_end::Float64, n_smp::Int64)
+function extrapolation_times(out::Dict, grid::Cts, t_start::Float64, t_end::Float64, n_smp::Int64, ω::Vector{Float64})
     times = Vector{Vector{Float64}}()
-    ω = out["Smp_h"][2,:]
     for i in 1:n_smp
         times_inner = [t_start]
         while times_inner[end] < t_end
-            push!(times_inner, times_inner[end] + rand(Exponential(size(out["Smp_x"],1)/(grid.Γ*ω[i]))))
+            push!(times_inner, times_inner[end] + rand(Exponential(1/(grid.Γ*ω[i]))))
         end
         push!(times, times_inner)
     end
