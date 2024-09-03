@@ -141,12 +141,13 @@ function variance_update!(state::State, priors::Prior, σ::FixedV, k::Int64)
 end
 
 function variance_update!(state::State, priors::Prior, σ::PC, k::Int64)
+    # Drift terms don't depend on σ and cancel 
     σ_prop = exp(log(priors.σ.σ[k]) + rand(Normal(0,priors.σ.h[k])))
     active_j = filter(idx -> idx[1] == k, state.active)
+    # Remove first coord
+    popfirst!(active_j)
     log_prop_dens = sum(logpdf.(Normal(0,σ_prop), state.x[active_j])) + log_exp_logpdf(σ_prop, priors.σ.a[k])
-    #if isinf(priors.σ.log_dens)
     log_new_dens = sum(logpdf.(Normal(0,priors.σ.σ[k]), state.x[active_j])) + log_exp_logpdf(log(priors.σ.σ[k]), priors.σ.a[k])
-    #end
     α = min(1, exp(log_prop_dens - log_new_dens))
     acc = 0
     if rand() < α
@@ -156,7 +157,7 @@ function variance_update!(state::State, priors::Prior, σ::PC, k::Int64)
     priors.σ.ind += 1
     # Adaptation 
     if priors.σ.ind < 1_000
-        priors.σ.h[k] = exp(log(priors.σ.h[k]) + (priors.σ.ind^(-0.6))*(α - 0.234))
+        priors.σ.h[k] = exp(log(priors.σ.h[k]) + (priors.σ.ind^(-0.6))*(α - 0.44))
     end
 end 
 
