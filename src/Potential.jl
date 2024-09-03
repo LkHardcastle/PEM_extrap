@@ -1,5 +1,4 @@
 function AV_calc!(state::State, dyn::Dynamics)
-    #active = findall(sum.(eachcol(state.s)) .!= 0.0)
     A = cumsum(state.x, dims = 2)
     dyn.A = transpose(dat.UQ)*A
     V = cumsum(state.v, dims = 2)
@@ -8,7 +7,6 @@ end
 
 
 function U_new!(state::State, dyn::Dynamics, priors::Prior)
-    ## Calculate the potential, rate of change of potential and constants for updating
     AV_calc!(state, dyn)
     U_, ∂U_ = U_eval(state, 0.0, dyn, priors)
     return U_, ∂U_
@@ -52,7 +50,6 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
     # Convert to p x J matrix
     U_ind = dat.UQ*U_ind
     ∇U_out = U_ind[state.active]
-
     Σθ = cumsum(state.x, dims = 2)
     μθ = Vector{Vector{Float64}}()
     ∂μθ = Vector{Array{Float64}}()
@@ -118,8 +115,6 @@ function drift_U(θ, diff::GammaLangevin)
 end
 
 function drift_deriv(θ, diff::GammaLangevin)
-    #return fill(-1/(2*diff.σ^2), size(θ,1), size(θ,2), size(θ,2))
-    #error("")
     out = fill(Inf, size(θ,1), size(θ,1))
     for i in 1:size(θ, 1)
         out[i,:] = -0.5.*diff.β.*exp.(θ)

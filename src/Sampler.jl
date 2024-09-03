@@ -9,7 +9,7 @@ include("Extrapolation.jl")
 function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settings)
     ### Setup
     state = copy(state0)
-    times = time_setup(state, settings, priors)
+    times = Times(state, settings, priors)
     dyn = Dynamics(state, dat)
     # Set up storage 
     if settings.skel == false
@@ -35,7 +35,6 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
 end
 
 function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
-    #println("t arriving");println(state.t)
     ## Evaluate potential at current point to get constants
     Uθt, ∂U = U_new!(state, dyn, priors)
     ## Get next deterministic event and evaluate at that point
@@ -98,7 +97,7 @@ function sampler_stop(state::State, dyn::Dynamics, settings::Settings)
     return false
 end
 
-function time_setup(state::State, settings::Settings, priors::Prior)
+function Times(state::State, settings::Settings, priors::Prior)
     merge_curr = Inf
     j_curr = CartesianIndex(0,0)
     for j in state.active
@@ -159,6 +158,5 @@ function verbose(dyn::Dynamics, state::State)
     print("Iteration: ");print(dyn.ind);print("\n");
     println(dyn.next_event)
     println(state.t)
-    #println(state.x);println(state.v)
     println("----------------------")
 end
