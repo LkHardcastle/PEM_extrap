@@ -126,6 +126,13 @@ mutable struct Cts <: Grid
     max_points::Int64
     max_time::Float64
 end
+
+mutable struct RJ <: Grid
+    Γ::Float64
+    σ::Float64
+    max_time::Float64
+end
+
 abstract type Diffusion end
 
 mutable struct RandomWalk <: Diffusion
