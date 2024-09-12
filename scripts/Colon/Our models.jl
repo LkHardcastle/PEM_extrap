@@ -202,37 +202,5 @@ p4 <- dat4 %>%
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4,6,7,4,6,7,4)]) +
     scale_linetype_manual(values = c("dotdash","dotdash","dotdash","solid", "solid", "solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
 plot_grid(p1,p2,p3,p4, nrow = 2)
-#ggsave($plotsdir("Colon","Colon_note3.pdf"), width = 8, height = 4)
+ggsave($plotsdir("CovariateColon.pdf"), width = 8, height = 6)
 """
-
-out1["Smp_s"][1,:,:]
-histogram(out1["Smp_s_loc"][out1["Smp_s"][1,:,:]]; bins = 0:0.05:3.2)
-histogram(out1["Smp_s_loc"][out1["Smp_s"][2,:,:]]; bins = 0:0.05:3.2)
-histogram(out1["Smp_s_loc"][out1["Smp_s"][3,:,:]]; bins = 0:0.05:3.2)
-
-histogram(out2["Smp_s_loc"][out2["Smp_s"][1,:,:]]; bins = 0:0.05:3.2)
-histogram(out2["Smp_s_loc"][out2["Smp_s"][2,:,:]]; bins = 0:0.05:3.2)
-histogram(out2["Smp_s_loc"][out2["Smp_s"][3,:,:]]; bins = 0:0.05:3.2)
-
-histogram(out3["Smp_s_loc"][out3["Smp_s"][1,:,:]]; bins = 0:0.05:3.2)
-histogram(out3["Smp_s_loc"][out3["Smp_s"][2,:,:]]; bins = 0:0.05:3.2)
-histogram(out3["Smp_s_loc"][out3["Smp_s"][3,:,:]]; bins = 0:0.05:3.2)
-
-histogram(out4["Smp_s_loc"][out4["Smp_s"][1,:,:]]; bins = 0:0.05:3.2)
-histogram(out4["Smp_s_loc"][out4["Smp_s"][2,:,:]]; bins = 0:0.05:3.2)
-histogram(out4["Smp_s_loc"][out4["Smp_s"][3,:,:]]; bins = 0:0.05:3.2)
-
-histogram(out1["Smp_ω"][1,:])
-histogram(out2["Smp_ω"][1,:])
-histogram(out3["Smp_ω"][1,:])
-histogram(out4["Smp_ω"][1,:])
-
-histogram(out1["Smp_ω"][2,:])
-histogram(out2["Smp_ω"][2,:])
-histogram(out3["Smp_ω"][2,:])
-histogram(out4["Smp_ω"][2,:])
-
-histogram(out1["Smp_ω"][3,:])
-histogram(out2["Smp_ω"][3,:])
-histogram(out3["Smp_ω"][3,:])
-histogram(out4["Smp_ω"][3,:])
