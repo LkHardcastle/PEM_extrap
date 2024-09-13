@@ -28,13 +28,13 @@ dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
-state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0), ones(size(x0)))
+state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
 nits = 50_000
 nsmp = 20_000
 
 Random.seed!(23462)
 settings = Settings(nits, nsmp, 1_000_000, 2.0, 2.0, 1.0, false, true)
-priors = BasicPrior(1.0, FixedV(0.2), FixedW(0.5), 0.0, Fixed(), GammaLangevin(2.0,1.0))
+priors = BasicPrior(1.0, FixedV([0.2]), FixedW([0.5]), 0.0, Fixed(0.1), [GammaLangevin(2.0,1.0)])
 @time out1 = pem_sample(state0, dat, priors, settings)
 t_ = collect(-5.0:0.01:1.0)
 plot(t_, -log.(1 .+ tanh.(t_)))
@@ -60,7 +60,7 @@ p2 <- dat2 %>%
     geom_hline(aes(yintercept = exp(0.52)), linetype = "solid", col = cbPalette[7]) +
     geom_hline(aes(yintercept = exp(-0.03)), linetype = "dotdash", col = cbPalette[4])
 p2
-ggsave($plotsdir("GammaPrior.pdf"), width = 8, height = 6)
+#ggsave($plotsdir("GammaPrior.pdf"), width = 8, height = 6)
 """
 p1 = view(out1["Sk_x"], 1, 200, :)
 plot(out1["Sk_t"], p1)
