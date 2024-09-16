@@ -8,6 +8,7 @@ function hyper_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior)
 end
 
 function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, Grid::Fixed)
+    
 end
 
 function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, grid::Cts)
@@ -38,69 +39,6 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
     state.active = findall(state.s)
     state.J = length(state.s_loc)
     dat_update!(state, dyn, dat)
-end
-
-function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, grid::RJ)
-    grid_merge!()
-    grid_split!()
-end
-
-function grid_merge!()
-    # Select point to remove uniformly at random
-    s_remove = rand(DiscreteUniform(1,state.J))
-    u = state.x[1,s_remove]
-    state_merge = merge_state(state, s_remove)
-    A = log_MHG_ratio(state, state_merge, u, grid)
-    if rand() < min(1, exp(-A))
-        state = copy(state_merge)
-    end
-
-end
-
-function merge_state(state::State, s_remove::Int64)
-    state_merge = copy(state)
-    # Update state
-
-    # Update velocity
-
-    # Remove 
-    state_merge.x, state_merge.v, state_merge.s, state_merge.g, state_merge.s_loc = state_merge.x[:,rem_ind], state_merge.v[:,rem_ind], state_merge.s[:,rem_ind], state_merge.g[:,rem_ind], state_merge.s_loc[rem_ind]
-    return state_merge
-end
-
-function grid_split!()
-    # Find new location
-    s_new = rand(Uniform(0,grid.max_time))
-    u = rand(Normal(0, grid.σ))
-    state_new = split_state(state, s_new, u)
-    A = log_MHG_ratio(state_new, state, u, grid)
-    if rand() < min(1, exp(A))
-        state = copy(state_new)
-    end
-end
-
-function split_state(state::State, s_new::Int64, u::Float64)
-    # Place new point
-    state_new = copy(state)
-    g_new = fill(true, size(state_new.x, 1), 1)
-    ind_new = sortperm(vcat(state_new.s_loc, s_new))
-    new_point = fill(u, size(state_new.x, 1), 1)
-    state_new.s_loc = vcat(state_new.s_loc, s_new)[ind_new]
-    state_new.x = hcat(state_new.x, new_point)[:,ind_new]
-    # Fix velocity updates
-    state_new.v = hcat(state_new.v, new_point)[:,ind_new]error("")
-    state_new.s = hcat(state_new.s, fill(true, size(new_point)))[:,ind_new]
-    state_new.g = hcat(state_new.g, g_new)[:,ind_new]
-    state_new.active = findall(state_new.s)
-    state_new.J = length(state_new.s_loc)
-    # Update next point
-    state_new.x[1,findfirst(state_new.x[1,:] .== u) + 1] -= u
-    return state_new
-end
-
-function log_MHG_ratio(state_split::State, state_curr::State, u::Float64, grid::RJ)
-    A = U_eval(state_split) - U_eval(state) - logpdf(Normal(0, grid.σ), u) - log(state_split.J - 1)
-    return A
 end
 
 function dat_update!(state::State, dyn::Dynamics, dat::PEMData)

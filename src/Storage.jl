@@ -22,7 +22,7 @@ function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors:
     return storage
 end
 
-function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors::Prior, grid::Cts)
+function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors::Prior, grid::Union{Cts,RJ})
     storage = Storage(fill(Inf,size(state.x, 1), grid.max_points, settings.max_ind + 1),
                         fill(Inf,size(state.v, 1),grid.max_points, settings.max_ind + 1), 
                         fill(false,size(state.s, 1),grid.max_points, settings.max_ind + 1),

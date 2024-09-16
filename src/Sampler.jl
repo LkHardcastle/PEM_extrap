@@ -5,6 +5,7 @@ include("SplitMerge.jl")
 include("HyperUpdates.jl")
 include("Storage.jl")
 include("Extrapolation.jl")
+include("RJ.jl")
 
 function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settings)
     ### Setup
