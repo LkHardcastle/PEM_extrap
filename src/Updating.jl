@@ -77,11 +77,11 @@ function event!(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, times:
     end
     if dyn.next_event == 2
         # Merge 
-        if priors.p_split > rand()
-            merge!(state, times.next_merge_index)
-            split_time!(state, times, priors)
-            merge_time!(state, times, priors)
-        end
+        #if priors.p_split > rand()
+        merge!(state, times.next_merge_index)
+        split_time!(state, times, priors)
+        merge_time!(state, times, priors)
+        #end
     end
     if dyn.next_event == 3
         # Refresh

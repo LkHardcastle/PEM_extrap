@@ -18,13 +18,13 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
     Pois_new = []
     weight_vec = []
     for k in axes(state.x,1)
-        push!(Pois_new, rand(Poisson(priors.grid.max_time*priors.grid.Γ*(1 - priors.ω.ω[k]))))
+        push!(Pois_new, rand(Poisson((priors.grid.max_time - state.s_loc[1])*priors.grid.Γ*(1 - priors.ω.ω[k]))))
         push!(weight_vec, (1 - priors.ω.ω[k]))
     end
     J_new = min(sum(Pois_new), priors.grid.max_points - J_curr)
     weight_vec = weight_vec/sum(weight_vec)
     J_row = rand(Categorical(weight_vec), J_new)
-    J_loc = rand(Uniform(0,priors.grid.max_time), J_new)
+    J_loc = rand(Uniform(state.s_loc[1], priors.grid.max_time), J_new)
     g_new = fill(false, size(state.x, 1), J_new)
     for i in 1:J_new
         g_new[J_row[i], i] = true

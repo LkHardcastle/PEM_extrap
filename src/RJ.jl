@@ -12,10 +12,11 @@ end
 
 function grid_merge!(state::State, dyn::Dynamics, priors::Prior)
     # Select point to remove uniformly at random
-    s_remove = rand(DiscreteUniform(1,state.J))
+    s_remove = rand(DiscreteUniform(2,state.J))
     u = state.x[1,s_remove]
     state_merge = merge_state(state, s_remove)
     A = log_MHG_ratio(state, state_merge, u, dyn, priors)
+    #println(u);println(A)
     if rand() < min(1, exp(-A))
         state.x, state.v, state.s, state.g, state.s_loc, state.t, state.J, state.b, state.active = copy(state_merge.x), copy(state_merge.v), copy(state_merge.s), copy(state_merge.g), copy(state_merge.s_loc), copy(state_merge.t), copy(state_merge.J), copy(state_merge.b), copy(state_merge.active)
     end
@@ -41,10 +42,11 @@ end
 
 function grid_split!(state::State, dyn::Dynamics, priors::Prior)
     # Find new location
-    s_new = rand(Uniform(0, priors.grid.max_time))
+    s_new = rand(Uniform(state.s_loc[1], priors.grid.max_time))
     u = rand(Normal(0, priors.grid.σ))
     state_new = split_state(state, s_new, u)
     A = log_MHG_ratio(state_new, state, u, dyn, priors)
+    #println(state.x);println(u);println(state.s_loc);println(s_new);println(A)error("")
     if rand() < min(1, exp(A))
         state.x, state.v, state.s, state.g, state.s_loc, state.t, state.J, state.b, state.active = copy(state_new.x), copy(state_new.v), copy(state_new.s), copy(state_new.g), copy(state_new.s_loc), copy(state_new.t), copy(state_new.J), copy(state_new.b), copy(state_new.active)
     end
@@ -81,18 +83,12 @@ function log_MHG_ratio(state_split::State, state_curr::State, u::Float64, dyn::D
     AV_calc!(state_split, dyn)
     dat_update!(state_split, dyn, dat)
     U2 = U_new!(state_split, dyn, priors)[1] 
-    if isinf(U1)
-        error("")
-    end
-    if isinf(U2)
-        error("")
-    end
-    logpriors = - logpdf(Normal(0, priors.grid.σ), u) - log(state_split.J - 1) + 
-        logpdf(Poisson(priors.grid.Γ*priors.grid.max_time*priors.ω.ω[1]), state_split.J) - logpdf(Poisson(priors.grid.Γ*priors.grid.max_time*priors.ω.ω[1]), state_curr.J)
+    logpriors = -logpdf(Normal(0, priors.grid.σ), u) -log(state_split.J - 1)  + log(priors.grid.max_time - state_curr.s_loc[1]) + 
+        logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_split.J) - logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_curr.J)
     J = 2*sphere_area(size(state_curr.active,1) - 1)/(sphere_area(size(state_curr.active,1))*(size(state_curr.active,1)))
-    A = U2 - U1 + logpriors + J
+    A = -U2 + U1 + logpriors + log(J)
     if state_split.J > priors.grid.max_points
         A = -Inf
     end
     return A
-end
+end 

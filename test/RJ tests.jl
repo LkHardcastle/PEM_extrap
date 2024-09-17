@@ -29,31 +29,26 @@ v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
 nits = 50_000
-nsmp = 5_000
+nsmp = 25_000
 
 
 
 priors1 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 1.0, Cts(5.0, 100.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.01, 100.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.05, 100.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.1, 100.0, 3.2), [RandomWalk()])
-priors5 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.2, 100.0, 3.2), [RandomWalk()])
-priors6 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.5, 100.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.1, 100.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.1, 100.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 2.0, 100.0, 3.2), [RandomWalk()])
 
 Random.seed!(9102)
-settings = Settings(nits, nsmp, 1_000_000, 2.0, 0.1, 1.0, false, true)
+settings = Settings(nits, nsmp, 1_000_000, 5.0, 0.1, 1.0, false, true)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 Random.seed!(9102)
-settings = Settings(nits, nsmp, 1_000_000, 2.0, 10.0, 1.0, false, true)
+settings = Settings(nits, nsmp, 1_000_000, 5.0, 10.0, 1.0, false, true)
 @time out2 = pem_sample(state0, dat, priors2, settings)
 Random.seed!(9102)
 @time out3 = pem_sample(state0, dat, priors3, settings)
 Random.seed!(9102)
 @time out4 = pem_sample(state0, dat, priors4, settings)
-Random.seed!(9102)
-@time out5 = pem_sample(state0, dat, priors5, settings)
-Random.seed!(9102)
-@time out6 = pem_sample(state0, dat, priors6, settings)
+
 
 histogram(out1["Smp_J"])
 histogram(out2["Smp_J"])
@@ -73,18 +68,24 @@ mean(out5["Smp_J"])
 mean(out6["Smp_J"])
 
 
-plot(sum(out1["Smp_s"],dims = 2)[1,1,:])
-plot!(out2["Smp_J"])
-plot!(out3["Smp_J"])
+
+plot(log.(sum(out1["Smp_s"],dims = 2)[1,1,:]))
+plot!(log.(out2["Smp_J"]))
+plot!(log.(out3["Smp_J"]))
 plot!(out4["Smp_J"])
 plot!(out5["Smp_J"])
 
-plot(out1["Smp_x"][1,1,:])
-plot(out2["Smp_x"][1,1,:])
-plot(out3["Smp_x"][1,1,:])
+plot(out1["Smp_x"][1,2,:])
+plot(out2["Smp_x"][1,2,:])
+plot(out3["Smp_x"][1,4,:])
 
+out3["Smp_s_loc"]
 
 sum(out2["Smp_v"][1,:,5_000])
 plot(sum(out2["Smp_v"][1,1:out2["Smp_J"][1:end],1:end].^2))
 
 out1["Smp_s_loc"]
+
+histogram(sum(out1["Smp_s"],dims = 2)[1,1, 1_000:end], normalize = :probability)
+histogram!(out2["Smp_J"], normalize = :probability)
+plot!(collect(2:31),pdf.(Poisson(3.1*2.5),1:30)/(1-pdf(Poisson(3.1*2.5),0)))
