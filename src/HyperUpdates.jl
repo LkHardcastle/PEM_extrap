@@ -100,7 +100,7 @@ end
 
 
 function log_exp_logpdf(logσ::Float64,a::Float64)
-    return logσ - exp(logσ)*a
+    return logσ - exp(logσ)*a - exp(logσ)
 end
 
 function weight_update!(state::State, priors::Prior, ω::FixedW, k::Int64)

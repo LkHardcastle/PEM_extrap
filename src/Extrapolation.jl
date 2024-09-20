@@ -1,6 +1,7 @@
 function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::Float64, t_end::Float64, plot_grid::Vector{Float64}, k::Int64)
     ## Get end points
     n_smp = size(out["Smp_t"],1)
+    k = 1
     Σθ = cumsum(out["Smp_x"], dims = 2)
     initial = Σθ[k,end,:]
     if sum(isinf.(initial)) > 0.0
@@ -43,11 +44,14 @@ end
 function extrapolation_times(out::Dict, grid::Cts, t_start::Float64, t_end::Float64, n_smp::Int64, ω::Vector{Float64})
     times = Vector{Vector{Float64}}()
     for i in 1:n_smp
-        times_inner = [t_start +  rand(Exponential(1/(grid.Γ*ω[i])))]
-        while times_inner[end] < t_end
-            push!(times_inner, times_inner[end] + rand(Exponential(1/(grid.Γ*ω[i]))))
+        times_inner = [0.0]
+        time_past = copy(t_start)
+        while time_past < t_end
+            t_push = rand(Exponential(1/(grid.Γ*ω[i])))
+            push!(times_inner, t_push)
+            time_past += t_push
         end
-        push!(times, times_inner)
+        push!(times, t_start .+ cumsum(times_inner))
     end
     return times
 end

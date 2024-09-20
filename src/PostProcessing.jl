@@ -67,3 +67,8 @@ function cts_transform(x::Array{Float64}, s_loc::Array{Float64}, grid::Vector{Fl
     end
     return out
 end
+
+function pem_survival(λ::Matrix{Float64}, times::Vector{Float64})
+    t_ = times[2:end] .- times[1:(end -1)]
+    return cumprod(exp.(.- t_'.*λ'), dims = 2)'
+end
