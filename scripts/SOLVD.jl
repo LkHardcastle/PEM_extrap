@@ -265,12 +265,12 @@ nits = 500_000
 nsmp = 20_000
 settings = Settings(nits, nsmp, 1_000_000, 1.0,0.1, 0.5, false, true)
 
--log(0.35)
+-log(0.65)
 
-a = 5.5
-b = 3.6
+a = 3.0
+b = 4.0
 a/b
--log(0.35)
+-log(0.65)
 quantile(Gamma(a, 1/b),0.25)
 quantile(Gamma(a, 1/b),0.05)
 quantile(Gamma(a, 1/b),0.95)

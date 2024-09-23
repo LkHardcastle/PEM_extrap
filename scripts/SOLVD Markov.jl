@@ -13,5 +13,174 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(cowplot)
+library(ggsurvfit)
+library(survival)
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+"""
+
+
+Random.seed!(9102)
+df_all = CSV.read(datadir("SOLVD","SOLVD.csv"), DataFrame)
+df = filter(idx -> idx.TRIAL == "P" && idx.EPATIME > 0.0, df_all)
+sum(df.EPA)
+y = df.EPATIME/365
+maximum(y)
+minimum(y)
+n = length(y)
+breaks = vcat(0.001, collect(0.02:0.1:5.22))
+p = 1
+cens = df.EPA
+covar = fill(1.0, 1, n)
+trt = (df.DRUG .== "P").*1.0
+covar = [covar; transpose(trt)]
+dat = init_data(y, cens, covar, breaks)
+x0, v0, s0 = init_params(p, dat)
+x0[2,:] = vcat(x0[2,1], zeros(size(breaks) .-1))
+v0[2,:] = vcat(v0[2,1], 1.0, zeros(size(breaks) .-2))
+s0[2,:] = vcat(s0[2,1], true, zeros(Int,size(breaks) .-2))
+
+# Based on figures from the paper
+-log(0.85)
+-log(0.5)
+μ = -1.35
+σ = 0.6
+quantile(LogNormal(μ, σ),0.25)
+quantile(LogNormal(μ, σ),0.5)
+quantile(LogNormal(μ, σ),0.95)
+
+
+v0 = v0./norm(v0)
+t0 = 0.0
+state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
+nits = 1_000_000
+nsmp = 20_000
+settings = Settings(nits, nsmp, 1_000_000, 1.0,0.1, 0.5, false, true)
+
+priors1 = BasicPrior(1.0, PC([0.2, 0.2], [2, 2], [0.5, 0.5], Inf), Beta([0.4, 0.4], [10.0, 10.0], [10.0, 10.0]), 1.0, Cts(15.0, 250.0, 5.3), [GaussLangevin(μ,σ), GaussLangevin(0.0,0.5)])
+Random.seed!(9102)
+@time out1 = pem_sample(state0, dat, priors1, settings)
+
+
+Random.seed!(1237)
+grid = sort(unique(out1["Smp_s_loc"][cumsum(out1["Smp_s"],dims = 1)[2,:,:] .> 0.0]))
+grid = grid[1:10:length(grid)]
+
+breaks_extrap = collect(5.3:0.02:15)
+extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
+extrap2 = barker_extrapolation(out1, priors1.diff[2], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 2)
+test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], grid)
+h1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
+h2 = vcat(exp.(test_smp[1,:,:] .+ test_smp[2,:,:]), exp.(extrap1 .+ extrap2))
+df1 = DataFrame(hcat(vcat(grid, breaks_extrap), median(h1, dims = 2), quantile.(eachrow(h1), 0.025),  quantile.(eachrow(h1), 0.975), median(h2, dims = 2), quantile.(eachrow(h2), 0.025),  quantile.(eachrow(h2), 0.975)), :auto)
+
+s1 = pem_survival(h1, vcat(0.0, grid, breaks_extrap))
+s2 = pem_survival(h2, vcat(0.0, grid, breaks_extrap))
+df2 = DataFrame(hcat(vcat(0.0, grid, breaks_extrap)[1:(end-1)], median(s1, dims = 2), quantile.(eachrow(s1), 0.025),  quantile.(eachrow(s1), 0.975), median(s2, dims = 2), quantile.(eachrow(s2), 0.025),  quantile.(eachrow(s2), 0.975)), :auto)
+
+hr = h2./h1
+
+df3 = DataFrame(hcat(vcat(grid, breaks_extrap), median(hr, dims = 2), quantile.(eachrow(hr), 0.025),  quantile.(eachrow(hr), 0.975)), :auto)
+
+R"""
+dat1 = data.frame($df1)
+colnames(dat1) <- c("Time","Median1","LCI1","UCI1","Median2","LCI2","UCI2")
+dat2 = data.frame($df2)
+colnames(dat2) <- c("Time","Median1","LCI1","UCI1","Median2","LCI2","UCI2") 
+dat3 = data.frame($df3)
+colnames(dat3) <- c("Time","Median1","LCI1","UCI1") 
+"""
+
+R"""    
+p1 <- dat1 %>%
+    pivot_longer(Median1:UCI2) %>%
+    mutate(Arm = case_when(
+        grepl("1", name, fixed = TRUE) ~ "Placebo",
+        grepl("2", name, fixed = TRUE) ~ "Enalapril",
+            ),
+        Stat = case_when(
+        grepl("Median", name, fixed = TRUE) ~ "Median",
+        grepl("UCI", name, fixed = TRUE) ~ "UCI",
+        grepl("LCI", name, fixed = TRUE) ~ "LCI",
+            )
+    ) %>%
+    ggplot(aes(x = Time, y = value, col = Arm, linetype = Stat)) + geom_step() +
+    theme_classic() +
+    geom_vline(xintercept = 4.7) +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid",  "dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,5.2)
+#ggsave($plotsdir("CovariateColon.pdf"), width = 8, height = 6)
+p2 <- dat1 %>%
+    pivot_longer(Median1:UCI2) %>%
+    mutate(Arm = case_when(
+        grepl("1", name, fixed = TRUE) ~ "Placebo",
+        grepl("2", name, fixed = TRUE) ~ "Enalapril",
+            ),
+        Stat = case_when(
+        grepl("Median", name, fixed = TRUE) ~ "Median",
+        grepl("UCI", name, fixed = TRUE) ~ "UCI",
+        grepl("LCI", name, fixed = TRUE) ~ "LCI",
+            )
+    ) %>%
+    ggplot(aes(x = Time, y = value, col = Arm, linetype = Stat)) + geom_step() +
+    theme_classic() +
+    geom_vline(xintercept = 4.7) +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
+
+km = survfit(Surv($y,$cens) ~ $trt)
+time1 = km$time[1:km$strata[1]]
+time2 = km$time[(km$strata[1] + 1):length(km$time)]
+surv1 = km$surv[1:km$strata[1]]
+surv2 = km$surv[(km$strata[1] + 1):length(km$surv)]
+km_dat1 = data.frame(time = time1, surv = surv1)
+km_dat2 = data.frame(time = time2, surv = surv2)
+
+p3 <- dat2 %>%
+    pivot_longer(Median1:UCI2) %>%
+    mutate(Arm = case_when(
+        grepl("1", name, fixed = TRUE) ~ "Placebo",
+        grepl("2", name, fixed = TRUE) ~ "Enalapril",
+            ),
+        Stat = case_when(
+        grepl("Median", name, fixed = TRUE) ~ "Median",
+        grepl("UCI", name, fixed = TRUE) ~ "UCI",
+        grepl("LCI", name, fixed = TRUE) ~ "LCI",
+            )
+    ) %>%
+    ggplot(aes(x = Time, y = value)) + geom_step(aes(col = Arm, linetype = Stat)) + 
+    theme_classic() + 
+    geom_vline(xintercept = 4.7) +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid", "dotdash"))+ ylab("S(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,5.2)
+p3 <- p3 + geom_step(data = km_dat1, aes(x = time, y = surv), col = cbPalette[7], linetype = "dashed") + geom_step(data = km_dat2, aes(x = time, y = surv), col = cbPalette[6], linetype = "dashed")
+p4 <- dat2 %>%
+    pivot_longer(Median1:UCI2) %>%
+    mutate(Arm = case_when(
+        grepl("1", name, fixed = TRUE) ~ "Placebo",
+        grepl("2", name, fixed = TRUE) ~ "Enalapril",
+            ),
+        Stat = case_when(
+        grepl("Median", name, fixed = TRUE) ~ "Median",
+        grepl("UCI", name, fixed = TRUE) ~ "UCI",
+        grepl("LCI", name, fixed = TRUE) ~ "LCI",
+            )
+    ) %>%
+    ggplot(aes(x = Time, y = value)) + geom_step(aes(col = Arm, linetype = Stat)) + 
+    theme_classic() +
+    geom_vline(xintercept = 4.7, linetype = "dotted") +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("S(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
+p4 <- p4 + geom_step(data = km_dat1, aes(x = time, y = surv), col = cbPalette[7], linetype = "dashed") + geom_step(data = km_dat2, aes(x = time, y = surv), col = cbPalette[6], linetype = "dashed")
+
+p5 <- dat3 %>%
+    pivot_longer(Median1:UCI1) %>%
+    ggplot(aes(x = Time, y = value, linetype = name)) + geom_step(col = cbPalette[7]) + 
+    theme_classic() +
+    geom_vline(xintercept = 4.7, linetype = "dotted") +
+    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("Hazard ratio") + xlab("Time (years)") + ylim(0,2.5) + xlim(0,15)
+p5
+plot_grid(p1,p2,p4, p5)
+#p3
+#ggsave($plotsdir("SOLVD_Trt.pdf"), width = 8, height = 4)
 """
