@@ -76,6 +76,14 @@ function variance_update!(state::State, priors::Prior, σ::FixedV, k::Int64)
 
 end
 
+function variance_update!(state::State, priors::Prior, σ::InvGamma, k::Int64)
+    active_j = filter(idx -> idx[1] == k, state.active)
+    n = length(active_j)
+    if length(active_j) > 1
+        priors.σ.σ[k] = sqrt(rand(InverseGamma(0.5*n + σ.a[k], 0.5*sum(state.x[active_j].^2) + σ.b[k])))
+    end
+end
+
 function variance_update!(state::State, priors::Prior, σ::PC, k::Int64)
     # Drift terms don't depend on σ and cancel 
     σ_prop = exp(log(priors.σ.σ[k]) + rand(Normal(0,priors.σ.h[k])))

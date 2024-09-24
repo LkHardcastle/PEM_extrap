@@ -97,6 +97,12 @@ mutable struct PC <: Variance
     ind::Float64
 end
 
+mutable struct InvGamma <: Variance
+    σ::Vector{Float64}
+    a::Vector{Float64}
+    b::Vector{Float64}
+end
+
 abstract type Weight end
 
 mutable struct FixedW <: Weight
@@ -149,13 +155,6 @@ mutable struct GompertzBaseline <: Diffusion
 end
 abstract type Prior end
 
-#mutable struct BasicPrior <: Prior
-#    σ0::Float64
-#    σ::Float64
-#    ω::Float64
-#    p_split::Float64
-#end
-
 mutable struct BasicPrior <: Prior
     σ0::Float64
     σ::Variance
@@ -164,15 +163,6 @@ mutable struct BasicPrior <: Prior
     grid::Grid
     diff::Vector{Diffusion}
 end
-
-mutable struct ARPrior <: Prior
-    σ0::Float64
-    μ0::Float64
-    ω::Weight
-    p_split::Float64
-    diff::Diffusion
-end
-
 
 struct PEMData
     y::Vector{Float64}

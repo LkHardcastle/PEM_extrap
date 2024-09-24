@@ -1,7 +1,6 @@
 function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::Float64, t_end::Float64, plot_grid::Vector{Float64}, k::Int64)
     ## Get end points
     n_smp = size(out["Smp_t"],1)
-    k = 1
     Σθ = cumsum(out["Smp_x"], dims = 2)
     initial = Σθ[k,end,:]
     if sum(isinf.(initial)) > 0.0
