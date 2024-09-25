@@ -331,7 +331,7 @@ p1 <- dat1 %>%
     ggplot(aes(x = Time, y = value, col = Arm, linetype = Stat)) + geom_step() +
     theme_classic() +
     geom_vline(xintercept = 4.7) +
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    theme(legend.position = "none",text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid",  "dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,4.6)
 #ggsave($plotsdir("CovariateColon.pdf"), width = 8, height = 6)
 p2 <- dat1 %>%
@@ -349,7 +349,7 @@ p2 <- dat1 %>%
     ggplot(aes(x = Time, y = value, col = Arm, linetype = Stat)) + geom_step() +
     theme_classic() +
     geom_vline(xintercept = 4.7) +
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    theme(legend.position = "none",text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
 
 km = survfit(Surv($y,$cens) ~ $trt)
@@ -375,7 +375,7 @@ p3 <- dat2 %>%
     ggplot(aes(x = Time, y = value)) + geom_step(aes(col = Arm, linetype = Stat)) + 
     theme_classic() + 
     geom_vline(xintercept = 4.7) +
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    theme(legend.position = "none",text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid", "dotdash"))+ ylab("S(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,4.6)
 p3 <- p3 + geom_step(data = km_dat1, aes(x = time, y = surv), col = cbPalette[7]) + geom_step(data = km_dat2, aes(x = time, y = surv), col = cbPalette[6])
 p4 <- dat2 %>%
@@ -393,7 +393,7 @@ p4 <- dat2 %>%
     ggplot(aes(x = Time, y = value)) + geom_step(aes(col = Arm, linetype = Stat)) + 
     theme_classic() +
     geom_vline(xintercept = 4.7, linetype = "dotted") +
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    theme(legend.position = "none",text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("S(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
 p4 <- p4 + geom_step(data = km_dat1, aes(x = time, y = surv), col = cbPalette[7]) + geom_step(data = km_dat2, aes(x = time, y = surv), col = cbPalette[6])
 
@@ -402,7 +402,7 @@ p5 <- dat3 %>%
     ggplot(aes(x = Time, y = value, linetype = name)) + geom_step(col = cbPalette[7]) + 
     theme_classic() +
     geom_vline(xintercept = 4.7, linetype = "dotted") +
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    theme(legend.position = "none",text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("Hazard ratio") + xlab("Time (years)") + ylim(0,2.5) + xlim(0,15)
 p5
 plot_grid(p1,p2,p4, p5)

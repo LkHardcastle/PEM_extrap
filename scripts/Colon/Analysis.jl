@@ -43,7 +43,7 @@ p1 <- dat_diffusion %>%
     pivot_longer(Mean:UCI,) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
-    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
+    theme(legend.position = "bottom", text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3)
 """
 
@@ -91,10 +91,10 @@ R"""
 p2 <- dat_comp %>%
     ggplot(aes(x = Time, y = hazard, col = Model)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
-    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[1:8]) +
+    theme(legend.position = "bottom", text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[1:8]) +
     ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3)
-plot_grid(p1,p2)
-#ggsave($plotsdir("WithinColon.pdf"), width = 8, height = 6)
+plot_grid(p1,p2, nrow = 1)
+ggsave($plotsdir("WithinColon.pdf"), width = 8, height = 4)
 """
 
 df1 = CSV.read(datadir("ColonSmps","RW.csv"), DataFrame)
@@ -123,7 +123,7 @@ p3 <- dat_diffusion %>%
     pivot_longer(c(Mean, Q1, Q4)) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
-    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
+    theme(legend.position = "bottom", text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
     scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
 """
 
@@ -171,8 +171,8 @@ R"""
 p4 <- dat_comp %>%
     ggplot(aes(x = Time, y = hazard, col = Model)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
-    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[1:8]) +
+    theme(legend.position = "bottom", text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[1:8]) +
     ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
 plot_grid(p3,p4)
-ggsave($plotsdir("ExtrapColon.pdf"), width = 8, height = 6)
+ggsave($plotsdir("ExtrapColon.pdf"), width = 8, height = 5)
 """

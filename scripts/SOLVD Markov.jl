@@ -645,25 +645,27 @@ t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
 nits = 1_000_000
 nsmp = 20_000
-settings = Settings(nits, nsmp, 1_000_000, 1.0,1.0, 1.0, false, true)
+settings = Settings(nits, nsmp, 1_000_000, 5.0,5.0, 5.0, false, true)
 
-priors1 = BasicPrior(1.0, PC([0.2, 0.2], [0.2, 0.2], [0.5, 0.5], Inf), Beta([0.4, 0.4], [10.0, 10.0], [10.0, 10.0]), 1.0, Cts(15.0, 250.0, 5.22), [GompertzBaseline(0.5), GaussLangevin(0.0,0.5)])
+priors1 = BasicPrior(1.0, PC([0.2, 0.2], [0.1, 0.1], [0.5, 0.5], Inf), Beta([0.5, 0.25], [10.0, 10.0], [5.0, 15.0]), 1.0, Cts(15.0, 250.0, 5.22), [GompertzBaseline(0.5), GaussLangevin(0.0,0.5)])
 Random.seed!(9102)
 @time out1 = pem_sample(state0, dat, priors1, settings)
-priors2 = BasicPrior(1.0, InvGamma([0.2,0.2], [0.5,0.5], [0.5,0.5]), Beta([0.4, 0.4], [10.0, 10.0], [10.0, 10.0]), 1.0, Cts(15.0, 250.0, 5.22), [GompertzBaseline(0.5), GaussLangevin(0.0,0.5)])
-Random.seed!(9102)
-@time out2 = pem_sample(state0, dat, priors2, settings)
+
+
+#priors2 = BasicPrior(1.0, InvGamma([0.2,0.2], [0.5,0.5], [0.5,0.5]), Beta([0.4, 0.4], [10.0, 10.0], [10.0, 10.0]), 1.0, Cts(15.0, 250.0, 5.22), [GompertzBaseline(0.5), GaussLangevin(0.0,0.5)])
+#Random.seed!(9102)
+#@time out2 = pem_sample(state0, dat, priors2, settings)
 
 
 Random.seed!(1237)
-grid = sort(unique(out2["Smp_s_loc"][cumsum(out2["Smp_s"],dims = 1)[2,:,:] .> 0.0]))
+grid = sort(unique(out1["Smp_s_loc"][cumsum(out1["Smp_s"],dims = 1)[2,:,:] .> 0.0]))
 grid = grid[1:10:length(grid)]
 
 breaks_extrap = collect(5.2:0.02:15)
-extrap1 = barker_extrapolation(out2, priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-extrap2 = barker_extrapolation(out2, priors2.diff[2], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 2)
+extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
+extrap2 = barker_extrapolation(out1, priors1.diff[2], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 2)
 
-test_smp = cts_transform(cumsum(out2["Smp_x"], dims = 2), out2["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], grid)
 h1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 h2 = vcat(exp.(test_smp[1,:,:] .+ test_smp[2,:,:]), exp.(extrap1 .+ extrap2))
 df1 = DataFrame(hcat(vcat(grid, breaks_extrap), median(h1, dims = 2), quantile.(eachrow(h1), 0.025),  quantile.(eachrow(h1), 0.975), median(h2, dims = 2), quantile.(eachrow(h2), 0.025),  quantile.(eachrow(h2), 0.975)), :auto)
@@ -680,6 +682,28 @@ CSV.write(datadir("SOLVDSmps","ACM_Base.csv"), df1)
 CSV.write(datadir("SOLVDSmps","ACM_Trt.csv"), df2)
 CSV.write(datadir("SOLVDSmps","ACM_HR.csv"), df3)
 
+plot(out1["Smp_J"])
+plot(cumsum(out1["Smp_s"] .== 1, dims = 2)[1,end,:])
+plot(cumsum(out1["Smp_s"] .== 1, dims = 2)[2,end,:])
+
+plot(vec(log.(h1[5,:])))
+plot(vec(log.(h1[1_000,:])))
+plot(vec(log.(h1[2_000,:])))
+plot(vec(log.(h1[3_000,:])))
+plot(vec(log.(h1[4_000,:])))
+plot(vec(log.(h1[5_000,:])))
+plot(vec(log.(h1[6_500,:])))
+
+plot(vec(log.(h2[5,:])))
+plot(vec(log.(h2[1_000,2_000:3_000])))
+plot(vec(log.(h2[2_000,:])))
+plot(vec(log.(h2[3_000,:])))
+plot(vec(log.(h2[4_000,:])))
+plot(vec(log.(h2[5_000,:])))
+plot(vec(log.(h2[6_000,:])))
+plot(vec(log.(h2[6_500,:])))
+
+
 plot(vec(out1["Smp_σ"][1,:]))
 plot(vec(out1["Smp_σ"][2,:]))
 plot(scatter(log.(vec(out1["Smp_σ"][1,:])),log.(vec(out1["Smp_σ"][2,:]))))
@@ -691,6 +715,11 @@ plot(vec(out1["Smp_ω"][1,:]))
 plot(vec(out1["Smp_ω"][2,:]))
 plot(vec(out2["Smp_ω"][1,:]))
 plot(vec(out2["Smp_ω"][2,:]))
+
+df1 = CSV.read(datadir("SOLVDSmps","ACM_Base.csv"), DataFrame)
+df2 = CSV.read(datadir("SOLVDSmps","ACM_Trt.csv"), DataFrame)
+df3 = CSV.read(datadir("SOLVDSmps","ACM_HR.csv"), DataFrame)
+
 R"""
 dat1 = data.frame($df1)
 colnames(dat1) <- c("Time","Median1","LCI1","UCI1","Median2","LCI2","UCI2")
@@ -716,9 +745,8 @@ p1 <- dat1 %>%
     ggplot(aes(x = Time, y = value, col = Arm, linetype = Stat)) + geom_step() +
     theme_classic() +
     geom_vline(xintercept = 5.3) +
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid",  "dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5
-    ) + xlim(0,5.2)
+    theme(text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid",  "dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.2) + xlim(0,5.2)
 #ggsave($plotsdir("CovariateColon.pdf"), width = 8, height = 6)
 p2 <- dat1 %>%
     pivot_longer(Median1:UCI2) %>%
@@ -735,8 +763,8 @@ p2 <- dat1 %>%
     ggplot(aes(x = Time, y = value, col = Arm, linetype = Stat)) + geom_step() +
     theme_classic() +
     geom_vline(xintercept = 5.3) +
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,2) + xlim(0,15)
+    theme(legend.position = "none",text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,15)
 
 km = survfit(Surv($y,$cens) ~ $trt)
 time1 = km$time[1:km$strata[1]]
@@ -762,8 +790,8 @@ p3 <- dat2 %>%
     ggplot(aes(x = Time, y = value)) + geom_step(aes(col = Arm, linetype = Stat)) + 
     theme_classic() + 
     geom_vline(xintercept = 5.3) +
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid", "dotdash"))+ ylab("S(t)") + xlab("Time (years)") + xlim(0,5.2)
+    theme(legend.position = "none",text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("solid","solid"))+ ylab("S(t)") + xlab("Time (years)") + xlim(0,5.2)
 p3 <- p3 + geom_step(data = km_dat1, aes(x = time, y = surv), col = cbPalette[7], linetype = "dashed") + geom_step(data = km_dat2, aes(x = time, y = surv), col = cbPalette[6], linetype = "dashed")
 p4 <- dat2 %>%
     pivot_longer(Median1:UCI2) %>%
@@ -780,20 +808,20 @@ p4 <- dat2 %>%
     ggplot(aes(x = Time, y = value)) + geom_step(aes(col = Arm, linetype = Stat)) + 
     theme_classic() +
     geom_vline(xintercept = 5.3, linetype = "dotted") +
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    theme(legend.position = "none",text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("S(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
-p4 <- p4 + geom_step(data = km_dat1, aes(x = time, y = surv), col = cbPalette[7], linetype = "dashed") + geom_step(data = km_dat2, aes(x = time, y = surv), col = cbPalette[6], linetype = "dashed")
+#p4 <- p4 + geom_step(data = km_dat1, aes(x = time, y = surv), col = cbPalette[7], linetype = "dashed") + geom_step(data = km_dat2, aes(x = time, y = surv), col = cbPalette[6], linetype = "dashed")
 
 p5 <- dat3 %>%
     pivot_longer(Median1:UCI1) %>%
-    ggplot(aes(x = Time, y = value, linetype = name)) + geom_step(col = cbPalette[7]) + 
+    ggplot(aes(x = Time, y = log(value), linetype = name)) + geom_step(col = cbPalette[7]) + 
     theme_classic() +
     geom_vline(xintercept = 5.3, linetype = "dotted") + 
     geom_hline(yintercept = 1, linetype = "dashed") + 
-    theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("Hazard ratio") + xlab("Time (years)") + ylim(0,2.5) + xlim(0,15)
+    theme(legend.position = "none",text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid", "dotdash")) + ylab("Hazard ratio") + xlab("Time (years)") #+ ylim(0,2.5) + xlim(0,15)
 p5
-plot_grid(p1,p2, p3, p4, p5, nrow = 2)
-#p3
-#ggsave($plotsdir("SOLVD_Trt.pdf"), width = 8, height = 4)
+plot_grid(p1,p2, p3, p4, nrow = 2)
+#p5
+#ggsave($plotsdir("SOLVD_ACM.pdf"), width = 8, height = 6)
 """
