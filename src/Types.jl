@@ -164,6 +164,15 @@ mutable struct BasicPrior <: Prior
     diff::Vector{Diffusion}
 end
 
+mutable struct EulerMaruyama <: Prior
+    σ0::Float64
+    σ::Variance
+    ω::Weight
+    p_split::Float64
+    grid::Grid
+    diff::Vector{Diffusion}
+end
+
 struct PEMData
     y::Vector{Float64}
     cens::Vector{Float64}

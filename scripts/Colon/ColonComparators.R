@@ -8,9 +8,16 @@ library(zoo)
 #install.packages("survextrap", repos=c('https://chjackson.r-universe.dev',
 #                                       'https://cloud.r-project.org'))
 library(survextrap)
-
 # Survextrap
-nd_modr1 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
+
+dat <- read.csv("C:\\Users\\hardc\\Documents\\PEM_extrap\\data\\SOLVD\\SOLVD.csv")
+dat <- dat %>%
+  subset(EPYTIME > 0) %>%
+  subset(TRIAL == "P")
+
+dat$cens <-  as.numeric(nchar(dat$DDATE) > 0)
+dat$years = dat$FUTIME/365
+nd_modr1 <- survextrap(Surv(years, cens) ~ DRUG, data=dat, chains=2, 
                       smooth_model = "random_walk",
                       mspline = list(add_knots=4))
 spline_out1 = hazard(nd_modr1, t = seq(0.01, 15, .01))

@@ -44,7 +44,7 @@ function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors:
 end
 
 
-function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::BasicPrior; skel = true)
+function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::Prior; skel = true)
     if !skel
         dyn.ind -= 1
     end
@@ -60,7 +60,7 @@ function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::Bas
     dyn.ind += 1
 end
 
-function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times, priors::BasicPrior)
+function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times, priors::Prior)
     ind_end = findfirst(times.smps .> state.t)
     if isnothing(ind_end)
         ind_end = size(times.smps,1)

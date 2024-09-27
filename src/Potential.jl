@@ -12,7 +12,7 @@ function U_new!(state::State, dyn::Dynamics, priors::Prior)
     return U_, ∂U_
 end
 
-function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior)
+function U_eval(state::State, t::Float64, dyn::Dynamics, priors::Prior)
     θ = dyn.A .+ t.*dyn.V
     U_ = sum((exp.(θ).*dyn.W .- dyn.δ.*θ)) 
     ∂U_ = sum(dyn.V.*(exp.(θ).*dyn.W .- dyn.δ)) 
@@ -24,7 +24,7 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::BasicPrior)
     return U_, ∂U_
 end
 
-function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv::Matrix{Float64}, U_::Float64, ∂U_::Float64, priors::Prior)
+function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv::Matrix{Float64}, U_::Float64, ∂U_::Float64, priors::BasicPrior)
     μθ = drift_U(Σθ[j,:], priors.diff[j])
     ∂μθ = drift_deriv_t(Σθ[j,:], priors.diff[j])
     active_j = filter(idx -> idx[1] == j, state.active)
@@ -42,7 +42,63 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     return U_, ∂U_
 end
 
-function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::Prior)
+function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv::Matrix{Float64}, U_::Float64, ∂U_::Float64, priors::BasicPrior)
+    μθ = drift_U(Σθ[j,:], priors.diff[j])
+    ∂μθ = drift_deriv_t(Σθ[j,:], priors.diff[j])
+    active_j = filter(idx -> idx[1] == j, state.active)
+    for k in active_j
+        if k != active_j[1]
+            U_ -= logpdf(Normal(0.0, priors.σ.σ[k[1]]), state.x[k] + state.v[k]*t)
+            U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)))
+            ∂U_ += (state.v[k]/(priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t) 
+            ∂U_ += -2*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]) + 1)
+        else
+            U_ -= logpdf(Normal(0.0, priors.σ0), state.x[k] + state.v[k]*t)
+            ∂U_ += (state.v[k]/(priors.σ0^2))*(state.x[k] + state.v[k]*t)
+        end
+    end
+    return U_, ∂U_
+end
+
+function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv::Matrix{Float64}, U_::Float64, ∂U_::Float64, priors::EulerMaruyama)
+    μθ = drift_U(Σθ[j,:], priors.diff[j])
+    ∂μθ = drift_deriv_t(Σθ[j,:], priors.diff[j])
+    active_j = filter(idx -> idx[1] == j, state.active)
+    for k in active_j
+        if k != active_j[1]
+            U_ -= logpdf(Normal(μθ[k[2]-1]*priors.σ.σ[k[1]]^2, priors.σ.σ[k[1]]), state.x[k] + state.v[k]*t)
+            ∂U_ += (state.v[k]/(priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t) 
+        else
+            U_ -= logpdf(Normal(0.0, priors.σ0), state.x[k] + state.v[k]*t)
+            ∂U_ += (state.v[k]/(priors.σ0^2))*(state.x[k] + state.v[k]*t)
+        end
+    end
+    return U_, ∂U_
+end
+
+function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
+    ∇U_out = zeros(size(state.active))
+    AV_calc!(state, dyn)
+    # L x J matrix
+    U_ind = reverse(cumsum(reverse(exp.(dyn.A).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
+    # Convert to p x J matrix
+    U_ind = dat.UQ*U_ind
+    ∇U_out = U_ind[state.active]
+    Σθ = cumsum(state.x, dims = 2)
+    μθ = Vector{Vector{Float64}}()
+    ∂μθ = Vector{Array{Float64}}()
+    for j in axes(state.x, 1)
+        push!(μθ, drift(Σθ[j,:], priors.diff[j]))
+        push!(∂μθ, drift_deriv(Σθ[j,:], priors.diff[j]))
+    end
+    for i in eachindex(∇U_out)
+        ∇U_out[i] += prior_add(state, priors, state.active[i])
+        ∇U_out[i] += drift_add(state.x, μθ[state.active[i][1]], ∂μθ[state.active[i][1]], priors.diff[state.active[i][1]], state.active[i])
+    end
+    return ∇U_out
+end
+
+function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
     ∇U_out = zeros(size(state.active))
     AV_calc!(state, dyn)
     # L x J matrix
@@ -161,7 +217,7 @@ function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin, G
     return  out
 end
 
-function prior_add(state::State, priors::BasicPrior, k::CartesianIndex)
+function prior_add(state::State, priors::Prior, k::CartesianIndex)
     if k[2] == 1
         return state.x[k]/priors.σ0^2
     else

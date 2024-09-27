@@ -823,5 +823,5 @@ p5 <- dat3 %>%
 p5
 plot_grid(p1,p2, p3, p4, nrow = 2)
 #p5
-#ggsave($plotsdir("SOLVD_ACM.pdf"), width = 8, height = 6)
+ggsave($plotsdir("SOLVD_ACM.pdf"), width = 8, height = 6)
 """
