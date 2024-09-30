@@ -42,24 +42,6 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     return U_, ∂U_
 end
 
-function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv::Matrix{Float64}, U_::Float64, ∂U_::Float64, priors::BasicPrior)
-    μθ = drift_U(Σθ[j,:], priors.diff[j])
-    ∂μθ = drift_deriv_t(Σθ[j,:], priors.diff[j])
-    active_j = filter(idx -> idx[1] == j, state.active)
-    for k in active_j
-        if k != active_j[1]
-            U_ -= logpdf(Normal(0.0, priors.σ.σ[k[1]]), state.x[k] + state.v[k]*t)
-            U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)))
-            ∂U_ += (state.v[k]/(priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t) 
-            ∂U_ += -2*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]) + 1)
-        else
-            U_ -= logpdf(Normal(0.0, priors.σ0), state.x[k] + state.v[k]*t)
-            ∂U_ += (state.v[k]/(priors.σ0^2))*(state.x[k] + state.v[k]*t)
-        end
-    end
-    return U_, ∂U_
-end
-
 function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv::Matrix{Float64}, U_::Float64, ∂U_::Float64, priors::EulerMaruyama)
     μθ = drift_U(Σθ[j,:], priors.diff[j])
     ∂μθ = drift_deriv_t(Σθ[j,:], priors.diff[j])
@@ -67,7 +49,7 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     for k in active_j
         if k != active_j[1]
             U_ -= logpdf(Normal(μθ[k[2]-1]*priors.σ.σ[k[1]]^2, priors.σ.σ[k[1]]), state.x[k] + state.v[k]*t)
-            ∂U_ += (state.v[k]/(priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t) 
+            ∂U_ += (1/(priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t - μθ[k[2]-1]*priors.σ.σ[k[1]]^2)*(state.v[k] - Σv[k[1],k[2] - 1]*∂μθ[k[2]-1]*priors.σ.σ[k[1]]^2) 
         else
             U_ -= logpdf(Normal(0.0, priors.σ0), state.x[k] + state.v[k]*t)
             ∂U_ += (state.v[k]/(priors.σ0^2))*(state.x[k] + state.v[k]*t)
@@ -114,8 +96,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
         push!(∂μθ, drift_deriv(Σθ[j,:], priors.diff[j]))
     end
     for i in eachindex(∇U_out)
-        ∇U_out[i] += prior_add(state, priors, state.active[i])
-        ∇U_out[i] += drift_add(state.x, μθ[state.active[i][1]], ∂μθ[state.active[i][1]], priors.diff[state.active[i][1]], state.active[i])
+        ∇U_out[i] += prior_EM(state, μθ, ∂μθ, priors, state.active[i])
     end
     return ∇U_out
 end
@@ -224,6 +205,21 @@ function prior_add(state::State, priors::Prior, k::CartesianIndex)
         return state.x[k]/(priors.σ.σ[k[1]]^2)
     end
 end
+
+function prior_EM(state::State, μθ, ∂μθ, priors::EulerMaruyama, k::CartesianIndex)
+    if k[2] == 1
+        return state.x[k]/priors.σ0^2
+    else
+        out = (1/priors.σ.σ[k[1]]^2)*(state.x[k] - μθ[k - 1]*priors.σ.σ[k[1]]^2)
+        if k[2] < size(state.x, 2)
+            for j in (k[2] + 1):size(state.x,2)
+                out -= (1/priors.σ.σ[k[1]]^2)*(state.x[k[1], j] - μθ[j - 1]*priors.σ.σ[k[1]]^2)*∂μθ[k[2], j - 1]
+            end
+        end
+        return out
+    end
+end
+
 
 function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Union{RandomWalk, GaussLangevin, GompertzBaseline}, t_end::Float64, t_switch::Float64, j::Int64)
     return t_end, t_switch
