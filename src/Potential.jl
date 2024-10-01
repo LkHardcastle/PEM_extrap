@@ -207,6 +207,7 @@ function prior_add(state::State, priors::Prior, k::CartesianIndex)
 end
 
 function prior_EM(state::State, μθ, ∂μθ, priors::EulerMaruyama, k::CartesianIndex)
+    # Need to update for GammaLangevin
     if k[2] == 1
         return state.x[k]/priors.σ0^2
     else
@@ -270,7 +271,20 @@ function diffusion_time!(state::State, priors::Prior, dyn::Dynamics, diff::Gamma
     return t_end, t_switch
 end
 
-function λ_diff(state::State, priors::Prior, j::Int64)
+function λ_diff(state::State, priors::BasicPrior, j::Int64)
+    # Add time movement
+    active_j = filter(idx -> idx[1] == j, state.active)
+    ∇U_out = zeros(size(active_j))
+    Σθ = cumsum(state.x, dims = 2)
+    μθ = drift(Σθ[j,:], priors.diff[j])
+    ∂μθ = drift_deriv(Σθ[j,:], priors.diff[j])
+    for i in eachindex(∇U_out)
+        ∇U_out[i] += drift_add(state.x, μθ, ∂μθ, priors.diff[j], active_j[i])
+    end
+    return max(0, dot(state.v[active_j],∇U_out))
+end
+
+function λ_diff(state::State, priors::EulerMaruyama, j::Int64)
     # Add time movement
     active_j = filter(idx -> idx[1] == j, state.active)
     ∇U_out = zeros(size(active_j))
