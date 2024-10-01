@@ -10,7 +10,7 @@ function merge_time(state::State, j::CartesianIndex, priors::Prior)
     end
 end
 
-function split_rate(state::State, priors::BasicPrior, k::Int64)
+function split_rate(state::State, priors::Prior, k::Int64)
     rate = priors.p_split*(priors.ω.ω[k]/(1 - priors.ω.ω[k]))*(sqrt(2*pi*priors.σ.σ[k]^2))^-1
     J = 2*sphere_area(size(state.active,1) - 1)/(sphere_area(size(state.active,1))*(size(state.active,1)))
     return rate*J
@@ -21,7 +21,7 @@ function sphere_area(d::Int64)
     return (2*π^(0.5*d+0.5))/gamma(0.5*d+0.5)
 end
 
-function split!(state::State, priors::BasicPrior)
+function split!(state::State, priors::Prior)
     k_prob = []
     for k in axes(state.x, 1)
         push!(k_prob, (size(findall(state.g[k,:]),1))*split_rate(state, priors, k))
@@ -42,6 +42,32 @@ function split!(state::State, priors::BasicPrior)
     state.v[k,j] = a
 end
 
+function split!(state::State, priors::EulerMaruyama)
+    k_prob = []
+    for k in axes(state.x, 1)
+        push!(k_prob, (size(findall(state.g[k,:]),1))*split_rate(state, priors, k))
+    end
+    k_prob = k_prob/sum(k_prob)
+    k = rand(Categorical(k_prob))
+    j = findall(state.g[k,:])[rand(DiscreteUniform(1,size(findall(state.g[k,:]),1)))]
+    Σθ = cumsum(state.x, dims = 2)
+    μθ = drift_U(Σθ[k,:], priors.diff[k])
+    p = exp(logpdf(Normal(μθ[j-1]*priors.σ.σ[k]^2 , priors.σ.σ[k]),state.x[k,j]) - logpdf(Normal(0.0, priors.σ.σ[k]), 0.0))
+    acc = rand(Bernoulli(p))
+    if acc
+        state.s[k,j] = true
+        state.g[k,j] = false
+        # Add to state.active
+        a = split_velocity(state)
+        if a == 0.0
+            error("Bad split velocity")
+        end
+        state.active = findall(state.s)
+        # New velocities
+        state.v[state.active] *= sqrt(1-a^2)
+        state.v[k,j] = a
+    end
+end
 
 function split_velocity(state::State)
     # Draw new velocity 

@@ -210,10 +210,14 @@ function prior_EM(state::State, μθ, ∂μθ, priors::EulerMaruyama, k::Cartesi
     if k[2] == 1
         return state.x[k]/priors.σ0^2
     else
-        out = (1/priors.σ.σ[k[1]]^2)*(state.x[k] - μθ[k[2] - 1]*priors.σ.σ[k[1]]^2)
+        if k[2] > 1
+            out = (1/priors.σ.σ[k[1]]^2)*(state.x[k] - μθ[k[2] - 1]*priors.σ.σ[k[1]]^2)
+        else
+            out = 0.0
+        end
         if k[2] < size(state.x, 2)
             for j in (k[2] + 1):size(state.x,2)
-                out -= (1/priors.σ.σ[k[1]]^2)*(state.x[k[1], j] - μθ[j - 1]*priors.σ.σ[k[1]]^2)*∂μθ[k[2], j - 1]
+                out -= (state.x[k[1], j] - μθ[j - 1]*priors.σ.σ[k[1]]^2)*∂μθ[k[2], j - 1]
             end
         end
         return out

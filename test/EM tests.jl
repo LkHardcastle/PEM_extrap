@@ -33,13 +33,31 @@ nits = 100_000
 nsmp = 10_000
 
 Random.seed!(23462)
-settings = Settings(nits, nsmp, 1_000_000, 2.0, 2.0, 1.0, false, true)
-priors1 = EulerMaruyama(1.0, FixedV([0.05]), FixedW([0.5]), 0.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
-#priors1 = EulerMaruyama(1.0, FixedV([0.2]), FixedW([0.5]), 0.0, Fixed(0.1), [RandomWalk()])
-@time out1 = pem_sample(state0, dat, priors1, settings)
+settings = Settings(nits, nsmp, 1_000_000, 10.0, 2.0, 5.0, false, true)
+priors = EulerMaruyama(1.0, FixedV([0.01]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out1 = pem_sample(state0, dat, priors, settings)
+priors = BasicPrior(1.0, FixedV([0.01]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out2 = pem_sample(state0, dat, priors, settings)
+priors = EulerMaruyama(1.0, FixedV([0.05]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out3 = pem_sample(state0, dat, priors, settings)
+priors = BasicPrior(1.0, FixedV([0.05]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out4 = pem_sample(state0, dat, priors, settings)
+priors = EulerMaruyama(1.0, FixedV([0.1]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out5 = pem_sample(state0, dat, priors, settings)
+priors = BasicPrior(1.0, FixedV([0.1]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out6 = pem_sample(state0, dat, priors, settings)
+priors = EulerMaruyama(1.0, FixedV([0.25]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out7 = pem_sample(state0, dat, priors, settings)
+priors = BasicPrior(1.0, FixedV([0.25]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out8 = pem_sample(state0, dat, priors, settings)
+priors = EulerMaruyama(1.0, FixedV([0.5]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out9 = pem_sample(state0, dat, priors, settings)
+priors = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 1.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out10 = pem_sample(state0, dat, priors, settings)
 
-plot(out1["Smp_t"], out1["Smp_x"][1,10,:])
-
+plot(out1["Smp_t"], out1["Smp_x"][1,2,:])
+plot(out1["Smp_x"][1,2,:], out1["Smp_x"][1,3,:])
+plot(out2["Smp_t"], out2["Smp_x"][1,2,:])
 s2 = cumsum(out1["Smp_x"], dims = 2)[1,:,:]
 df2 = DataFrame(hcat(breaks, median(s2, dims = 2), quantile.(eachrow(s2), 0.025), quantile.(eachrow(s2), 0.25), quantile.(eachrow(s2), 0.75), quantile.(eachrow(s2), 0.975)), :auto)
 
@@ -59,5 +77,52 @@ p2
 #ggsave($plotsdir("GammaPrior.pdf"), width = 8, height = 6)
 """
 
-priors2 = BasicPrior(1.0, FixedV([0.2]), FixedW([0.5]), 0.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
-@time out2 = pem_sample(state0, dat, priors2, settings)
+plot()
+plot(out2["Smp_s"][1,:,:])
+
+df1 = out1["Smp_s"][1,:,:]
+df2 = out2["Smp_s"][1,:,:]
+df3 = out3["Smp_s"][1,:,:]
+df4 = out4["Smp_s"][1,:,:]
+df5 = out5["Smp_s"][1,:,:]
+df6 = out6["Smp_s"][1,:,:]
+df7 = out7["Smp_s"][1,:,:]
+df8 = out8["Smp_s"][1,:,:]
+df9 = out9["Smp_s"][1,:,:]
+df10 = out10["Smp_s"][1,:,:]
+
+
+df = DataFrame(EM1 = (sum(out1["Smp_s"][1,:,:], dims = 2)/length(out1["Smp_s"][1,5,:]))[2:end],
+                Barker1 = (sum(out2["Smp_s"][1,:,:], dims = 2)/length(out2["Smp_s"][1,5,:]))[2:end],
+                EM2 = (sum(out3["Smp_s"][1,:,:], dims = 2)/length(out3["Smp_s"][1,5,:]))[2:end],
+                Barker2 = (sum(out4["Smp_s"][1,:,:], dims = 2)/length(out4["Smp_s"][1,5,:]))[2:end],
+                EM3 = (sum(out5["Smp_s"][1,:,:], dims = 2)/length(out5["Smp_s"][1,5,:]))[2:end],
+                Barker3 = (sum(out6["Smp_s"][1,:,:], dims = 2)/length(out6["Smp_s"][1,5,:]))[2:end],
+                EM4 = (sum(out7["Smp_s"][1,:,:], dims = 2)/length(out7["Smp_s"][1,5,:]))[2:end],
+                Barker4 = (sum(out8["Smp_s"][1,:,:], dims = 2)/length(out8["Smp_s"][1,5,:]))[2:end],
+                EM5 = (sum(out9["Smp_s"][1,:,:], dims = 2)/length(out9["Smp_s"][1,5,:]))[2:end],
+                Barker5 = (sum(out10["Smp_s"][1,:,:], dims = 2)/length(out10["Smp_s"][1,5,:]))[2:end],)
+
+R"""
+$df %>%
+    pivot_longer(c(EM1:Barker5)) %>%
+    mutate(method = case_when(
+        grepl("EM", name, fixed = TRUE) ~ "EM",
+        grepl("Barker", name, fixed = TRUE) ~ "Barker"
+            ),
+            step_size = case_when(
+                grepl("1", name, fixed = TRUE) ~ "0.01",
+                grepl("2", name, fixed = TRUE) ~ "0.05",
+                grepl("3", name, fixed = TRUE) ~ "0.1",
+                grepl("4", name, fixed = TRUE) ~ "0.25",
+                grepl("5", name, fixed = TRUE) ~ "0.5"
+            )) %>%
+    ggplot(aes(x = step_size, y = value, col = method)) + geom_boxplot() +
+    theme_classic() + scale_colour_manual(values = cbPalette[6:7]) + geom_hline(yintercept = 0.5, linetype = "dotted")
+"""
+
+
+Random.seed!(23462)
+settings = Settings(nits, nsmp, 1_000_000, 10.0, 2.0, 5.0, false, true)
+priors = EulerMaruyama(1.0, FixedV([0.01]), FixedW([0.5]), 1.0, Fixed(0.1), [GammaLangevin(2.0,1.0)])
+@time out1 = pem_sample(state0, dat, priors, settings)
