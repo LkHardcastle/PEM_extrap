@@ -64,7 +64,7 @@ function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData
             dyn.next_event = 5
             ## Generate next time via time-scale transformation
             if isinf(U_det)
-                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, 1), A42())
+                t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, 1), A42(); atol = 0.1)
             else
                 t_event = find_zero(x -> U_eval(state, x + t_switch, dyn, priors)[1] - Uθt + log(V), (0.0, dyn.t_det - state.t - t_switch), A42())
             end
