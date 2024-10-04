@@ -8,19 +8,15 @@ library(zoo)
 #install.packages("survextrap", repos=c('https://chjackson.r-universe.dev',
 #                                       'https://cloud.r-project.org'))
 library(survextrap)
+library(BayesReversePLLH)
 # Survextrap
 
-dat <- read.csv("C:\\Users\\hardc\\Documents\\PEM_extrap\\data\\SOLVD\\SOLVD.csv")
-dat <- dat %>%
-  subset(EPYTIME > 0) %>%
-  subset(TRIAL == "P")
 
-dat$cens <-  as.numeric(nchar(dat$DDATE) > 0)
-dat$years = dat$FUTIME/365
-nd_modr1 <- survextrap(Surv(years, cens) ~ DRUG, data=dat, chains=2, 
+nd_modr1 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
                       smooth_model = "random_walk",
                       mspline = list(add_knots=4))
 spline_out1 = hazard(nd_modr1, t = seq(0.01, 15, .01))
+plot(nd_modr1)
 extdat <- data.frame(start = c(10), stop =  c(15), 
                      n = c(20), r = c(6))
 nd_modr2 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
@@ -207,6 +203,35 @@ ltHaz$Drift <- ltHaz$AtRisk * approx(x=dfDGLM$Time, y=dfDGLM$Drift, xout=ltHaz$T
 dfDGLM = dfDGLM %>% select(-logTime) %>% gather(key = "Model", value = "Haz", -Time)
 
 DSM_out <- dfDGLM
+
+# Chapple
+
+out <- BayesPiecewiseHazard(colons$years, colons$status, 100, 10000)
+# Split points
+out[[1]]
+# log-hazards
+plot(out[[2]][,1], type = "l")
+# No. split points
+plot(out[[3]])
+# Variance
+out[[4]]
+# RMST
+out[[5]]
+plot(out)
+
+n <- 100
+int_prob <- runif(n)
+int <- ifelse(int_prob < 1-exp(-1), 1, ifelse(int_prob < 1-exp(-1)*exp(-1.1),2,3))
+cens <- ifelse(int == 3, 0,1)
+
+y <- rep(NA,n)
+for(i in 1:100){
+  y[i] <- ifelse(int[i] == 1, runif(1,min = 0, max = 1)[1], ifelse(int[i] == 2, runif(1,min = 1,max = 2)[1], 2))
+}
+
+out2 <- BayesPiecewiseHazard(y, cens, 5, 1000000)
+
+plot(out2[[3]])
 
 # Save 
 write.csv(spline_out1, "C:\\Users\\hardc\\Documents\\PEM_extrap\\data\\ColonSmps\\spline.csv")
