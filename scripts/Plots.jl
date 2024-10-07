@@ -110,7 +110,7 @@ p2 <- $df %>%
     theme_classic() + scale_colour_manual(values = cbPalette[6:7]) + ylab("State") + xlab("Sampler time (arbitrary units)") +
     theme(legend.position = "none", text = element_text(size = 20))
 plot_grid(p1,p2)
-ggsave($plotsdir("SM.pdf"), width = 14, height = 6)
+#ggsave($plotsdir("SM.pdf"), width = 14, height = 6)
 """
 
 Random.seed!(123)
