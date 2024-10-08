@@ -233,14 +233,189 @@ p1 <- dat_diffusion %>%
     pivot_longer(Mean:UCI,) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
-    theme(legend.position = "bottom", text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3)
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) + 
+    geom_vline(xintercept = 3, linetype = "dotted")
+p2 <- dat_diffusion %>%
+    pivot_longer(c(Mean, Q1, Q4)) %>%
+    ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)  + 
+    geom_vline(xintercept = 3, linetype = "dotted")
 p3 <- dat_diffusion %>%
     pivot_longer(c(Mean, Q1, Q4)) %>%
-    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    subset(Model == "Random Walk") %>%
+    ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
-    theme(legend.position = "bottom", text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
-    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(7)]) +
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(t)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
+    geom_vline(xintercept = 3, linetype = "dotted")
+p4 <- dat_diffusion %>%
+    pivot_longer(c(Mean, Q1, Q4)) %>%
+    subset(Model == "Log-Normal Langevin") %>%
+    ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6)]) +
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(t)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
+    geom_vline(xintercept = 3, linetype = "dotted")
+p5 <- dat_diffusion %>%
+    pivot_longer(c(Mean, Q1, Q4)) %>%
+    subset(Model == "Gamma Langevin") %>%
+    ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8)]) +
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(t)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
+    geom_vline(xintercept = 3, linetype = "dotted")
+p6 <- dat_diffusion %>%
+    pivot_longer(c(Mean, Q1, Q4)) %>%
+    subset(Model == "Gompertz dynamics") %>%
+    ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(4)]) +
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(t)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
+    geom_vline(xintercept = 3, linetype = "dotted")
 
-plot_grid(p1,p3, nrow = 1)
+p_extrap <- plot_grid(p3,p4,p5,p6, ncol = 2)
+grobs <- ggplotGrob(p2)$grobs
+legend <- grobs[[which(sapply(grobs, function(x) x$name) == "guide-box")]]
+p <- plot_grid(p1,p_extrap, nrow = 1)
+p_ <- plot_grid(p, legend, nrow = 2,  rel_heights = c(1, .1))
+
+ggsave($plotsdir("Talks","Colon.png"), width = 14, height = 6)
+"""
+
+
+df1 = CSV.read(datadir("EM_exp1.csv"), DataFrame)
+df2 = CSV.read(datadir("EM_exp2.csv"), DataFrame)
+R"""
+p1 <- $df1 %>%
+    pivot_longer(c(EM1:Barker5)) %>%
+    mutate(method = case_when(
+        grepl("EM", name, fixed = TRUE) ~ "Euler-Maruyama",
+        grepl("Barker", name, fixed = TRUE) ~ "Barker"
+            ),
+            step_size = case_when(
+                grepl("1", name, fixed = TRUE) ~ "0.01",
+                grepl("2", name, fixed = TRUE) ~ "0.05",
+                grepl("3", name, fixed = TRUE) ~ "0.1",
+                grepl("4", name, fixed = TRUE) ~ "0.25",
+                grepl("5", name, fixed = TRUE) ~ "0.5"
+            )) %>%
+    ggplot(aes(x = step_size, y = value, col = method)) + geom_boxplot(size = 0.5) +
+    theme_classic() + scale_colour_manual(values = cbPalette[6:7]) + geom_hline(yintercept = 0.5, linetype = "dotted") + ylim(0,1) +
+    theme(legend.position = "none", text = element_text(size = 20)) + ylab("omega") + xlab("Step size")
+
+p2 <- $df2 %>%
+    pivot_longer(c(EM1:Barker5)) %>%
+    mutate(method = case_when(
+        grepl("EM", name, fixed = TRUE) ~ "Euler-Maruyama",
+        grepl("Barker", name, fixed = TRUE) ~ "Barker"
+            ),
+            step_size = case_when(
+                grepl("1", name, fixed = TRUE) ~ "0.01",
+                grepl("2", name, fixed = TRUE) ~ "0.05",
+                grepl("3", name, fixed = TRUE) ~ "0.1",
+                grepl("4", name, fixed = TRUE) ~ "0.25",
+                grepl("5", name, fixed = TRUE) ~ "0.5"
+            )) %>%
+    ggplot(aes(x = step_size, y = value, col = method)) + geom_boxplot(size = 0.5) +
+    theme_classic() + scale_colour_manual(values = cbPalette[6:7]) + geom_hline(yintercept = 0.5, linetype = "dotted") + ylim(0,1) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + ylab("omega") + xlab("Step size")
+p3 <- $df2 %>%
+    pivot_longer(c(EM1:Barker5)) %>%
+    mutate(Discretisation = case_when(
+        grepl("EM", name, fixed = TRUE) ~ "Euler-Maruyama",
+        grepl("Barker", name, fixed = TRUE) ~ "Barker"
+            ),
+            step_size = case_when(
+                grepl("1", name, fixed = TRUE) ~ "0.01",
+                grepl("2", name, fixed = TRUE) ~ "0.05",
+                grepl("3", name, fixed = TRUE) ~ "0.1",
+                grepl("4", name, fixed = TRUE) ~ "0.25",
+                grepl("5", name, fixed = TRUE) ~ "0.5"
+            )) %>%
+    ggplot(aes(x = step_size, y = value, col = Discretisation)) + geom_boxplot(size = 0.5) +
+    theme_classic() + scale_colour_manual(values = cbPalette[6:7]) + geom_hline(yintercept = 0.5, linetype = "dotted") + ylim(0,1) + 
+    theme(legend.position = "bottom", text = element_text(size = 20))
+
+p <- plot_grid(p2,p1, ncol = 2)
+grobs <- ggplotGrob(p3)$grobs
+legend <- grobs[[which(sapply(grobs, function(x) x$name) == "guide-box")]]
+p_ <- plot_grid(p, legend, nrow = 2,  rel_heights = c(1, .1))
+ggsave($plotsdir("Talks","Disc_exp.png"), width = 14, height = 4.8)
+"""
+
+
+
+Random.seed!(12515)
+n = 0
+y = rand(Exponential(1.0),n)
+breaks = collect(1:1:300)
+p = 1
+cens = fill(1.0,n)
+covar = fill(1.0, 1, n)
+dat = init_data(y, cens, covar, breaks)
+x0, v0, s0 = init_params(p, dat)
+v0 = v0./norm(v0)
+t0 = 0.0
+state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
+nits = 50_000
+nsmp = 20_000
+
+Random.seed!(23462)
+settings = Settings(nits, nsmp, 1_000_000, 2.0, 2.0, 1.0, false, true)
+priors1 = BasicPrior(1.0, FixedV([0.2]), FixedW([0.5]), 0.0, Fixed(0.1), [RandomWalk()])
+@time out1 = pem_sample(state0, dat, priors1, settings)
+priors2 = BasicPrior(1.0, FixedV([0.2]), FixedW([0.5]), 0.0, Fixed(0.1), [GaussLangevin(2.0,1.0)])
+@time out2 = pem_sample(state0, dat, priors2, settings)
+priors3 = BasicPrior(1.0, FixedV([0.2]), FixedW([0.5]), 0.0, Fixed(0.1), [GompertzBaseline(0.1)])
+@time out3 = pem_sample(state0, dat, priors3, settings)
+
+s1 = view(exp.(cumsum(out1["Smp_x"], dims = 2)), 1, :, :)
+df1 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+s1 = view(exp.(cumsum(out2["Smp_x"], dims = 2)), 1, :, :)
+df2 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+s1 = view(exp.(cumsum(out3["Smp_x"], dims = 2)), 1, :, :)
+df3 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+R"""
+dat1 = data.frame($df1)
+dat1 = cbind(dat1, "Random Walk")
+colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat2 = data.frame($df2)
+dat2 = cbind(dat2, "Log-Normal stationary")
+colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat3 = data.frame($df3)
+dat3 = cbind(dat3, "Gompertz dynamics")
+colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
+dat_diffusion <- rbind(dat1, dat2, dat3)
+"""
+
+R"""
+p1 <- dat_diffusion %>%
+    pivot_longer(c(Mean, Q1, Q4)) %>%
+    subset(Model == "Random Walk") %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 1), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6)]) +
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (arbitrary units)") + ylim(0,17)
+p2 <- dat_diffusion %>%
+    pivot_longer(c(Mean, Q1, Q4)) %>%
+    subset(Model == "Log-Normal stationary") %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 1), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(7)]) +
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (arbitrary units)") + ylim(0,17)
+p3 <- dat_diffusion %>%
+    pivot_longer(c(Mean, Q1, Q4)) %>%
+    subset(Model == "Gompertz dynamics") %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 1), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(4)]) +
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (arbitrary units)") + ylim(0,17)
+plot_grid(p1,p2,p3,ncol = 3)
+ggsave($plotsdir("Talks","Diffusions.png"), width = 17, height = 4.8)
 """
