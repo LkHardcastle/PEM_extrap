@@ -41,26 +41,26 @@ p <- $df %>%
     subset(x1 < 2.71) %>%
     ggplot() + #geom_smooth(se = F, col = cbPalette[7], linetype = "solid") + 
     theme_classic() + theme(text = element_text(size = 20)) + 
-    xlab("Time (years)") + ylab("log h(t)") + ylim(0,0.7) + geom_vline(xintercept = 2.7, linetype = "dashed") + 
-    annotate("segment", x = 0, y = 0.4, xend = 0.5, yend = 0.4, col = cbPalette[6], linetype = "solid") + 
-    annotate("segment", x = 0.5, y = 0.5, xend = 1.2, yend = 0.5, col = cbPalette[6], linetype = "solid") + 
-    annotate("segment", x = 1.2, y = 0.45, xend = 1.5, yend = 0.45, col = cbPalette[6], linetype = "solid") + 
-    annotate("segment", x = 1.5, y = 0.3, xend = 1.7, yend = 0.3, col = cbPalette[6], linetype = "solid") + 
-    annotate("segment", x = 1.7, y = 0.2, xend = 2, yend = 0.2, col = cbPalette[6], linetype = "solid") + 
-    annotate("segment", x = 2, y = 0.1, xend = 2.2, yend = 0.1, col = cbPalette[6], linetype = "solid") + 
-    annotate("segment", x = 2.2, y = 0.15, xend = 2.7, yend = 0.15, col = cbPalette[6], linetype = "solid") + 
-    annotate("segment", x = 2.7, y = 0.15, xend = 3.5, yend = 0.15, col = cbPalette[7], linetype = "solid") + 
-    annotate("segment", x = 3, y = 0.15, xend = 3.5, yend = 0.15, col = cbPalette[7], linetype = "solid") + 
-    annotate("segment", x = 3.5, y = 0.15, xend = 4, yend = 0.15, col = cbPalette[7], linetype = "solid") +
-    annotate("segment", x = 2.7, y = 0.22, xend = 3, yend = 0.22, col = cbPalette[7], linetype = "dashed") +
-    annotate("segment", x = 3, y = 0.27, xend = 3.5, yend = 0.27, col = cbPalette[7], linetype = "dashed") + 
-    annotate("segment", x = 3.5, y = 0.33, xend = 4, yend = 0.33, col = cbPalette[7], linetype = "dashed") +
-    annotate("segment", x = 2.7, y = 0.08, xend = 3, yend = 0.08, col = cbPalette[7], linetype = "dashed") +
-    annotate("segment", x = 3, y = 0.05, xend = 3.5, yend = 0.05, col = cbPalette[7], linetype = "dashed") + 
-    annotate("segment", x = 3.5, y = 0.02, xend = 4, yend = 0.02, col = cbPalette[7], linetype = "dashed") + xlim(0,3.5)
+    xlab("Time (years)") + ylab("log h(y)") + ylim(0,0.7) + geom_vline(xintercept = 2.7, linetype = "dashed") + 
+    annotate("segment", x = 0, y = 0.4, xend = 0.5, yend = 0.4, col = cbPalette[6], linetype = "solid", size = 0.8) + 
+    annotate("segment", x = 0.5, y = 0.5, xend = 1.2, yend = 0.5, col = cbPalette[6], linetype = "solid", size = 0.8) + 
+    annotate("segment", x = 1.2, y = 0.45, xend = 1.5, yend = 0.45, col = cbPalette[6], linetype = "solid", size = 0.8) + 
+    annotate("segment", x = 1.5, y = 0.3, xend = 1.7, yend = 0.3, col = cbPalette[6], linetype = "solid", size = 0.8) + 
+    annotate("segment", x = 1.7, y = 0.2, xend = 2, yend = 0.2, col = cbPalette[6], linetype = "solid", size = 0.8) + 
+    annotate("segment", x = 2, y = 0.1, xend = 2.2, yend = 0.1, col = cbPalette[6], linetype = "solid", size = 0.8) + 
+    annotate("segment", x = 2.2, y = 0.15, xend = 2.7, yend = 0.15, col = cbPalette[6], linetype = "solid", size = 0.8) + 
+    annotate("segment", x = 2.7, y = 0.15, xend = 3.5, yend = 0.15, col = cbPalette[7], linetype = "solid", size = 0.8) + 
+    annotate("segment", x = 3, y = 0.15, xend = 3.5, yend = 0.15, col = cbPalette[7], linetype = "solid", size = 0.8) + 
+    annotate("segment", x = 3.5, y = 0.15, xend = 4, yend = 0.15, col = cbPalette[7], linetype = "solid", size = 0.8) +
+    annotate("segment", x = 2.7, y = 0.22, xend = 3, yend = 0.22, col = cbPalette[7], linetype = "dashed", size = 0.8) +
+    annotate("segment", x = 3, y = 0.27, xend = 3.5, yend = 0.27, col = cbPalette[7], linetype = "dashed", size = 0.8) + 
+    annotate("segment", x = 3.5, y = 0.33, xend = 4, yend = 0.33, col = cbPalette[7], linetype = "dashed", size = 0.8) +
+    annotate("segment", x = 2.7, y = 0.08, xend = 3, yend = 0.08, col = cbPalette[7], linetype = "dashed", size = 0.8) +
+    annotate("segment", x = 3, y = 0.05, xend = 3.5, yend = 0.05, col = cbPalette[7], linetype = "dashed", size = 0.8) + 
+    annotate("segment", x = 3.5, y = 0.02, xend = 4, yend = 0.02, col = cbPalette[7], linetype = "dashed", size = 0.8) + xlim(0,3.5)
 p1 <- p + geom_vline(xintercept = c(0,0.5,1.2,1.5,1.7,2.2, 3), linetype = "dotted", alpha = 0.4)
 ggsave($plotsdir("Talks","PWEXP1.png"), width = 10, height = 6)
-p2 <- p + geom_vline(xintercept = seq(0,2.7,by = 0.1), linetype = "dotted", alpha = 0.4)
+p2 <- p + geom_vline(xintercept = seq(0,2.7,by = 0.1), linetype = "dotted", alpha = 0.8)
 ggsave($plotsdir("Talks","PWEXP2.png"), width = 10, height = 6)
 """
 
@@ -197,7 +197,7 @@ $df %>%
     subset(x1 < 2.71) %>%
     ggplot(aes(x = x1, y = x2)) + geom_smooth(se = F, col = cbPalette[7]) + theme_classic() +
     theme(text = element_text(size = 20)) +
-    xlab("Time (years)") + ylab("h(t)") + ylim(0,0.7) + geom_vline(xintercept = 2.7, linetype = "dashed") + 
+    xlab("Time (years)") + ylab("h(y)") + ylim(0,0.7) + geom_vline(xintercept = 2.7, linetype = "dashed") + 
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.4, col = cbPalette[6], linetype = "dashed") + 
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.12, col = cbPalette[4], linetype = "dashed") + 
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.7, col = cbPalette[7], linetype = "dashed")
@@ -234,14 +234,14 @@ p1 <- dat_diffusion %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) + 
+    scale_linetype_manual(values = c("dotdash","solid","dotdash","dotdash","dotdash")) + ylab("h(y)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) + 
     geom_vline(xintercept = 3, linetype = "dotted")
 p2 <- dat_diffusion %>%
     pivot_longer(c(Mean, Q1, Q4)) %>%
     ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
-    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)  + 
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(y)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)  + 
     geom_vline(xintercept = 3, linetype = "dotted")
 p3 <- dat_diffusion %>%
     pivot_longer(c(Mean, Q1, Q4)) %>%
@@ -249,7 +249,7 @@ p3 <- dat_diffusion %>%
     ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(7)]) +
-    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(t)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(y)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
     geom_vline(xintercept = 3, linetype = "dotted")
 p4 <- dat_diffusion %>%
     pivot_longer(c(Mean, Q1, Q4)) %>%
@@ -257,7 +257,7 @@ p4 <- dat_diffusion %>%
     ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6)]) +
-    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(t)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(y)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
     geom_vline(xintercept = 3, linetype = "dotted")
 p5 <- dat_diffusion %>%
     pivot_longer(c(Mean, Q1, Q4)) %>%
@@ -265,7 +265,7 @@ p5 <- dat_diffusion %>%
     ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8)]) +
-    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(t)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(y)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
     geom_vline(xintercept = 3, linetype = "dotted")
 p6 <- dat_diffusion %>%
     pivot_longer(c(Mean, Q1, Q4)) %>%
@@ -273,7 +273,7 @@ p6 <- dat_diffusion %>%
     ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(4)]) +
-    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("logh(t)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("loghyt)") + xlab("Time (years)") + #ylim(0,1) + xlim(0,15)  + 
     geom_vline(xintercept = 3, linetype = "dotted")
 
 p_extrap <- plot_grid(p3,p4,p5,p6, ncol = 2)
