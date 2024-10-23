@@ -60,7 +60,7 @@ p <- $df %>%
     annotate("segment", x = 3.5, y = 0.02, xend = 4, yend = 0.02, col = cbPalette[7], linetype = "dashed", size = 0.8) + xlim(0,3.5)
 p1 <- p + geom_vline(xintercept = c(0,0.5,1.2,1.5,1.7,2.2, 3), linetype = "dotted", alpha = 0.4)
 ggsave($plotsdir("Talks","PWEXP1.png"), width = 10, height = 6)
-p2 <- p + geom_vline(xintercept = seq(0,2.7,by = 0.1), linetype = "dotted", alpha = 0.8)
+p2 <- p + geom_vline(xintercept = seq(0,3.5,by = 0.1), linetype = "dotted", alpha = 0.8)
 ggsave($plotsdir("Talks","PWEXP2.png"), width = 10, height = 6)
 """
 
