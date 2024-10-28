@@ -9,7 +9,7 @@ function metropolis_step(state::RWM, dyn::Dynamics, priors::Prior, dat::PEMData)
     AV_calc!(state, dyn)
     dat_update!(state, dyn, dat)
     U1 = U_new!(state, dyn, priors)[1] 
-    state_prop = ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.step_size), copy(state.acc))
+    state_prop = RWM(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.step_size), copy(state.acc))
     state_prop.x[1,1:state.J] += u
     AV_calc!(state_prop, dyn)
     dat_update!(state_prop, dyn, dat)

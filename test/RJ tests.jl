@@ -28,8 +28,8 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
-nits = 10_000
-nsmp = 50_000
+nits = 200_000
+nsmp = 200_000
 
 
 
@@ -45,10 +45,12 @@ Random.seed!(9102)
 settings = Settings(nits, nsmp, 1_000_000, 5.0, 1.0, 1.0, false, true)
 @time out2 = pem_sample(state0, dat, priors2, settings)
 Random.seed!(9102)
-state0 = RWM(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0), 0.1)
+settings = Settings(nits, nsmp, 1_000_000, 5.0, 1.0, 1.0, false, true)
+state0 = RWM(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0), 0.1, 0)
 @time out3 = pem_sample(state0, dat, priors3, settings)
 Random.seed!(9102)
 @time out4 = pem_sample(state0, dat, priors4, settings)
+
 
 out2["Smp_x"]
 logpdf(Normal(0,))
@@ -64,9 +66,9 @@ mean(sum(out1["Smp_s"],dims = 2)[1,1,:])
 mean(out2["Smp_J"])
 mean(out3["Smp_J"])
 plot!(out2["Smp_J"])
-plot!(out3["Smp_J"])
+plot!(out3["Sk_J"])
 plot(out1["Smp_x"][1,3,:])
-plot(out3["Smp_x"][1,3,:])
+plot(out3["Sk_x"][1,3,:])
 
 plot(pdf.(Poisson(15.3/2),1:20))
 sum(pdf.(Poisson(15.3/2),1:20).*collect(1:20))
