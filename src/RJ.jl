@@ -1,10 +1,13 @@
 
 function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, grid::RJ)
-    if state.J > 1
-        grid_merge!(state, dyn, priors)
-    end
-    if state.J < priors.grid.max_points
-        grid_split!(state, dyn, priors)
+    if rand() < 0.5
+        if state.J > 1
+            grid_merge!(state, dyn, priors)
+        end
+    else
+        if state.J < priors.grid.max_points
+            grid_split!(state, dyn, priors)
+        end
     end
     AV_calc!(state, dyn)
     dat_update!(state, dyn, dat)
@@ -15,8 +18,8 @@ function grid_merge!(state::State, dyn::Dynamics, priors::Prior)
     s_remove = rand(DiscreteUniform(2,state.J))
     u = state.x[1,s_remove]
     state_merge = merge_state(state, s_remove)
-    A = log_MHG_ratio(state, state_merge, u, dyn, priors)
-    #println(u);println(A)
+    A = log_MHG_ratio(state, state_merge, u, state.v[s_remove], dyn, priors)
+    #println("Merge");println(state.J);println(exp(-A))
     if rand() < min(1, exp(-A))
         state.x, state.v, state.s, state.g, state.s_loc, state.t, state.J, state.b, state.active = copy(state_merge.x), copy(state_merge.v), copy(state_merge.s), copy(state_merge.g), copy(state_merge.s_loc), copy(state_merge.t), copy(state_merge.J), copy(state_merge.b), copy(state_merge.active)
     end
@@ -45,8 +48,8 @@ function grid_split!(state::State, dyn::Dynamics, priors::Prior)
     s_new = rand(Uniform(state.s_loc[1], priors.grid.max_time))
     u = rand(Normal(0, priors.grid.σ))
     state_new = split_state(state, s_new, u)
-    A = log_MHG_ratio(state_new, state, u, dyn, priors)
-    #println(state.x);println(u);println(state.s_loc);println(s_new);println(A)error("")
+    A = log_MHG_ratio(state_new, state, u, state_new.v[findfirst(state_new.s_loc .== s_new)], dyn, priors)
+    #println("Split");println(state.J);println(exp(A))
     if rand() < min(1, exp(A))
         state.x, state.v, state.s, state.g, state.s_loc, state.t, state.J, state.b, state.active = copy(state_new.x), copy(state_new.v), copy(state_new.s), copy(state_new.g), copy(state_new.s_loc), copy(state_new.t), copy(state_new.J), copy(state_new.b), copy(state_new.active)
     end
@@ -76,17 +79,34 @@ function split_state(state::State, s_new::Float64, u::Float64)
     return state_new
 end
 
-function log_MHG_ratio(state_split::State, state_curr::State, u::Float64, dyn::Dynamics, priors::Prior)
+function log_MHG_ratio(state_split::State, state_curr::State, u::Float64, v::Float64, dyn::Dynamics, priors::Prior)
     AV_calc!(state_curr, dyn)
     dat_update!(state_curr, dyn, dat)
     U1 = U_new!(state_curr, dyn, priors)[1] 
     AV_calc!(state_split, dyn)
     dat_update!(state_split, dyn, dat)
     U2 = U_new!(state_split, dyn, priors)[1] 
-    logpriors = -logpdf(Normal(0, priors.grid.σ), u) -log(state_split.J - 1)  + log(priors.grid.max_time - state_curr.s_loc[1]) + 
-        logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_split.J) - logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_curr.J)
-    J = 2*sphere_area(size(state_curr.active,1) - 1)/(sphere_area(size(state_curr.active,1))*(size(state_curr.active,1)))
-    A = -U2 + U1 + logpriors + log(J)
+    logpriors = logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_split.J - 1) - 
+                logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_curr.J - 1) #+
+                #log(2*(state_curr.J + 1)*(2*state_curr.J + 3)) + 
+                #-log((priors.grid.max_time - state_curr.s_loc[1])^2) +
+                #sum(log.(sort(vcat(state_split.s_loc,priors.grid.max_time)) .- sort(vcat(state_split.s_loc, 0.0)))) - 
+                #sum(log.(sort(vcat(state_curr.s_loc,priors.grid.max_time)) .- sort(vcat(state_curr.s_loc, 0.0))))
+    prop_terms = -logpdf(Normal(0, priors.grid.σ), u) - log(state_split.J - 1)  + log(priors.grid.max_time - state_curr.s_loc[1])
+    #J = log(2*sphere_area(size(state_curr.active,1) - 1)/(sphere_area(size(state_curr.active,1))*(size(state_curr.active,1))))
+    #J += log(abs(v)*sqrt(1-v^2)^(size(state_curr.active,1)-2))
+    J = 1
+    A = -U2 + U1 + logpriors + prop_terms + J
+    #A = logpriors + log(J) + prop_terms
+    #println(state_split.J);println(u)
+    #println(state_curr.x);println(state_split.x)
+    #println(-U2 + U1)
+    #println(exp(logpriors));println(exp(prop_terms));println(J);
+    #println(exp(A))
+    #println("---------")
+    #if state_curr.J < 3
+    #    error("")
+    #end
     if state_split.J > priors.grid.max_points
         A = -Inf
     end

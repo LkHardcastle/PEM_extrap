@@ -34,6 +34,20 @@ mutable struct ECMC2 <: State
     active::Array{CartesianIndex{2}}
 end
 
+mutable struct RWM <: State
+    x::Matrix{Float64}
+    v::Matrix{Float64}
+    s::Matrix{Bool}
+    g::Matrix{Bool}
+    s_loc::Vector{Float64}
+    t::Float64
+    J::Int64
+    b::Bool
+    active::Array{CartesianIndex{2}}
+    step_size::Float64
+    acc::Int64
+end
+
 mutable struct SamplerEval
     newton::Vector{Float64}
     gradient::Int64
@@ -208,6 +222,10 @@ end
 
 function Base.copy(state::ECMC2)
     return ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active))
+end
+
+function Base.copy(state::RWM)
+    return RWM(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.step_size), copy(state.acc))
 end
 
 Dynamics(state::State, dat::PEMData) = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.s), copy(dat.δ), copy(dat.W), SamplerEval(zeros(2),0, 0 ,zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2))))

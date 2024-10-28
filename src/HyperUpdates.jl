@@ -1,10 +1,13 @@
 
 function hyper_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior)
-    for k in axes(state.x,1)
-        variance_update!(state, priors, priors.σ, k)
-        weight_update!(state, priors, priors.ω, k)
+    if rand() < 0.5
+        for k in axes(state.x,1)
+            variance_update!(state, priors, priors.σ, k)
+            weight_update!(state, priors, priors.ω, k)
+        end
+    else
+        grid_update!(state, dyn, dat, priors, priors.grid)
     end
-    grid_update!(state, dyn, dat, priors, priors.grid)
 end
 
 function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, Grid::Fixed)

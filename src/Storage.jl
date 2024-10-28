@@ -34,7 +34,7 @@ function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors:
                         fill(Inf,size(state.x, 1),grid.max_points, settings.max_smp + 1),
                         fill(Inf,size(state.v, 1),grid.max_points, settings.max_smp + 1), 
                         fill(false,size(state.s, 1),grid.max_points, settings.max_smp + 1),
-                        fill(Inf,grid.max_points, settings.max_ind + 1),
+                        fill(Inf,grid.max_points, settings.max_smp + 1),
                         zeros(settings.max_smp + 1),
                         zeros(settings.max_smp + 1),
                         fill(Inf, size(state.x, 1), settings.max_smp + 1),

@@ -6,6 +6,7 @@ include("HyperUpdates.jl")
 include("Storage.jl")
 include("Extrapolation.jl")
 include("RJ.jl")
+include("Metropolis.jl")
 
 function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settings)
     ### Setup
@@ -35,7 +36,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     return out  
 end
 
-function sampler_inner!(state::State, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
+function sampler_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
     ## Evaluate potential at current point to get constants
     Uθt, ∂U = U_new!(state, dyn, priors)
     ## Get next deterministic event and evaluate at that point
