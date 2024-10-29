@@ -1,9 +1,9 @@
 function sampler_inner!(state::RWM, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
-    metropolis_step(state, dyn, priors, dat)
+    metropolis_step!(state, dyn, priors, dat)
     grid_update!(state, dyn, dat, priors, priors.grid)
 end
 
-function metropolis_step(state::RWM, dyn::Dynamics, priors::Prior, dat::PEMData)
+function metropolis_step!(state::RWM, dyn::Dynamics, priors::Prior, dat::PEMData)
     state.t += 1
     u = rand(Normal(0.0, state.step_size), state.J)
     AV_calc!(state, dyn)
@@ -17,8 +17,6 @@ function metropolis_step(state::RWM, dyn::Dynamics, priors::Prior, dat::PEMData)
     A = -U2 + U1
     if rand() < min(1, exp(A))
         state.acc += 1
-        return state_prop
-    else
-        return state
+        state.x[1,1:state.J] += u
     end
 end

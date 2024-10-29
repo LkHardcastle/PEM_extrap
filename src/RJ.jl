@@ -27,11 +27,27 @@ function grid_merge!(state::State, dyn::Dynamics, priors::Prior)
     dat_update!(state, dyn, dat)
 end
 
-function merge_state(state::State, s_remove::Int64)
+function merge_state(state::ECMC2, s_remove::Int64)
     state_merge = ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active))
-    if s_remove < state_merge.J
-        state_merge.x[1,s_remove + 1] +=  state.x[1,s_remove]
-    end
+    #if s_remove < state_merge.J
+    #    state_merge.x[1,s_remove + 1] +=  state.x[1,s_remove]
+    #end
+    state_merge.x = state_merge.x[:, 1:end .!= s_remove]
+    state_merge.v = state_merge.v[:, 1:end .!= s_remove]
+    state_merge.s = state_merge.s[:, 1:end .!= s_remove]
+    state_merge.g = state_merge.g[:, 1:end .!= s_remove]
+    deleteat!(state_merge.s_loc, s_remove)
+    state_merge.v /= norm(state_merge.v)
+    state_merge.active = findall(state_merge.s)
+    state_merge.J -= 1
+    return state_merge
+end
+
+function merge_state(state::RWM, s_remove::Int64)
+    state_merge = RWM(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.step_size), copy(state.acc))
+    #if s_remove < state_merge.J
+    #    state_merge.x[1,s_remove + 1] +=  state.x[1,s_remove]
+    #end
     state_merge.x = state_merge.x[:, 1:end .!= s_remove]
     state_merge.v = state_merge.v[:, 1:end .!= s_remove]
     state_merge.s = state_merge.s[:, 1:end .!= s_remove]
@@ -57,7 +73,7 @@ function grid_split!(state::State, dyn::Dynamics, priors::Prior)
     dat_update!(state, dyn, dat)
 end
 
-function split_state(state::State, s_new::Float64, u::Float64)
+function split_state(state::ECMC2, s_new::Float64, u::Float64)
     # Place new point
     state_new = ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active))
     g_new = fill(true, size(state_new.x, 1), 1)
@@ -73,9 +89,32 @@ function split_state(state::State, s_new::Float64, u::Float64)
     state_new.active = findall(state_new.s)
     state_new.J = length(state_new.s_loc)
     # Update next point
-    if findfirst(state_new.s_loc .== s_new)[1] < state_new.J
-        state_new.x[1, findfirst(state_new.s_loc .== s_new) + 1] -= u
-    end
+    #if findfirst(state_new.s_loc .== s_new)[1] < state_new.J
+    #    state_new.x[1, findfirst(state_new.s_loc .== s_new) + 1] -= u
+    #end
+    return state_new
+end
+
+
+function split_state(state::RWM, s_new::Float64, u::Float64)
+    # Place new point
+    state_new = RWM(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.step_size), copy(state.acc))
+    g_new = fill(true, size(state_new.x, 1), 1)
+    ind_new = sortperm(vcat(state_new.s_loc, s_new))
+    new_point = fill(u, size(state_new.x, 1), 1)
+    state_new.s_loc = vcat(state_new.s_loc, s_new)[ind_new]
+    state_new.x = hcat(state_new.x, new_point)[:,ind_new]
+    v_new = split_velocity(state_new)
+    state_new.v[state.active] *= sqrt(1-v_new^2)
+    state_new.v = hcat(state_new.v, v_new)[:,ind_new]
+    state_new.s = hcat(state_new.s, fill(true, size(new_point)))[:,ind_new]
+    state_new.g = hcat(state_new.g, g_new)[:,ind_new]
+    state_new.active = findall(state_new.s)
+    state_new.J = length(state_new.s_loc)
+    # Update next point
+    #if findfirst(state_new.s_loc .== s_new)[1] < state_new.J
+    #    state_new.x[1, findfirst(state_new.s_loc .== s_new) + 1] -= u
+    #end
     return state_new
 end
 
@@ -88,27 +127,22 @@ function log_MHG_ratio(state_split::State, state_curr::State, u::Float64, v::Flo
     U2 = U_new!(state_split, dyn, priors)[1] 
     logpriors = logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_split.J - 1) - 
                 logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_curr.J - 1) #+
-                #log(2*(state_curr.J + 1)*(2*state_curr.J + 3)) + 
-                #-log((priors.grid.max_time - state_curr.s_loc[1])^2) +
-                #sum(log.(sort(vcat(state_split.s_loc,priors.grid.max_time)) .- sort(vcat(state_split.s_loc, 0.0)))) - 
-                #sum(log.(sort(vcat(state_curr.s_loc,priors.grid.max_time)) .- sort(vcat(state_curr.s_loc, 0.0))))
-    prop_terms = -logpdf(Normal(0, priors.grid.σ), u) - log(state_split.J - 1)  + log(priors.grid.max_time - state_curr.s_loc[1])
-    #J = log(2*sphere_area(size(state_curr.active,1) - 1)/(sphere_area(size(state_curr.active,1))*(size(state_curr.active,1))))
-    #J += log(abs(v)*sqrt(1-v^2)^(size(state_curr.active,1)-2))
-    J = 1
-    A = -U2 + U1 + logpriors + prop_terms + J
-    #A = logpriors + log(J) + prop_terms
-    #println(state_split.J);println(u)
-    #println(state_curr.x);println(state_split.x)
-    #println(-U2 + U1)
-    #println(exp(logpriors));println(exp(prop_terms));println(J);
-    #println(exp(A))
-    #println("---------")
-    #if state_curr.J < 3
-    #    error("")
-    #end
+    prop_terms = -logpdf(Normal(0, priors.grid.σ), u) #- log(state_split.J - 1)
+    J = Jacobian(state_curr, v)
+    A = -U2 + U1 + prop_terms + logpriors 
+    #A = logpriors
     if state_split.J > priors.grid.max_points
         A = -Inf
     end
     return A
 end 
+
+function Jacobian(state_curr::ECMC2, v::Float64)
+    #log(2*sphere_area(size(state_curr.active,1) - 1)/(sphere_area(size(state_curr.active,1))*(size(state_curr.active,1)))) +
+    #    log(abs(v)*sqrt(1-v^2)^(size(state_curr.active,1)-2))
+    0.0
+end
+
+function Jacobian(state_curr::RWM, v::Float64)
+    0.0
+end
