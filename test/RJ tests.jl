@@ -39,7 +39,7 @@ priors3 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.2, 100.0,
 priors4 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 2.0, 100.0, 3.1), [RandomWalk()])
 
 nits = 100_000
-nsmp = 200_000
+nsmp = 20_000
 Random.seed!(9102)
 settings = Settings(nits, nsmp, 1_000_000, 5.0, 1.0, 1.0, false, true)
 state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
@@ -51,8 +51,6 @@ settings = Settings(nits, nsmp, 1_000_000, 5.0, 1.0, 1.0, false, true)
 Random.seed!(9102)
 settings = Settings(nits, nsmp, 5_000_000, 0.1, 1.0, 1.0, false, true)
 state0 = RWM(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0), 0.05, 0)
-nits = 50_000
-nsmp = 500_000
 @time out3 = pem_sample(state0, dat, priors3, settings)
 
 out2["Smp_x"]
