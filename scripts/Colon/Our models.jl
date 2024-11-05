@@ -23,6 +23,7 @@ maximum(y)
 n = length(y)
 breaks = collect(0.1:0.1:3.1)
 p = 1
+sum(y .== 3.0)
 cens = df.status
 covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
@@ -101,15 +102,15 @@ s0[3,:] = vcat(s0[3,1], true, zeros(Int,size(breaks) .-2))
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
-nits = 300_000
-nsmp = 20_000
-settings = Settings(nits, nsmp, 1_000_000, 1.0,0.1, 0.5, false, true)
+nits = 250_000
+nsmp = 50_000
+settings = Settings(nits, nsmp, 1_000_000, 5.0,0.5, 0.5, false, true)
 
 
-priors1 = BasicPrior(1.0, PC([0.2, 0.2, 0.2], [2, 2, 2], [0.5, 0.5, 0.5], Inf), Beta([0.4, 0.4, 0.4], [10.0, 5.0, 5.0], [10.0, 15.0, 15.0]), 1.0, Cts(10.0, 150.0, 3.2), [RandomWalk(), GaussLangevin(-0.5,0.5), GaussLangevin(-1,0.5)])
-priors2 = BasicPrior(1.0, PC([0.2, 0.2, 0.2], [2, 2, 2], [0.5, 0.5, 0.5], Inf), Beta([0.4, 0.4, 0.4], [10.0, 5.0, 5.0], [10.0, 15.0, 15.0]), 1.0, Cts(10.0, 150.0, 3.2), [GaussLangevin(-1.0,1.0), GaussLangevin(-0.5,0.5), GaussLangevin(-1,0.5)])
-priors3 = BasicPrior(1.0, PC([0.2, 0.2, 0.2], [2, 2, 2], [0.5, 0.5, 0.5], Inf), Beta([0.4, 0.4, 0.4], [10.0, 5.0, 5.0], [10.0, 15.0, 15.0]), 1.0, Cts(10.0, 150.0, 3.2), [GammaLangevin(0.5,2), GaussLangevin(-0.5,0.5), GaussLangevin(-1,0.5)])
-priors4 = BasicPrior(1.0, PC([0.2, 0.2, 0.2], [2, 2, 2], [0.5, 0.5, 0.5], Inf), Beta([0.4, 0.4, 0.4], [10.0, 5.0, 5.0], [10.0, 15.0, 15.0]), 1.0, Cts(10.0, 150.0, 3.2), [GompertzBaseline(0.5), GaussLangevin(-0.5,0.5), GaussLangevin(-1,0.5)])
+priors1 = BasicPrior(1.0, PC([0.2, 0.2, 0.2], [2, 2, 2], [0.5, 0.5, 0.5], Inf), Beta([0.4, 0.4, 0.4], [10.0, 5.0, 5.0], [10.0, 15.0, 15.0]), 1.0, Cts(10.0, 150.0, 3.2), [RandomWalk(), GaussLangevin(-0.0,0.5), GaussLangevin(-0.0,0.5)])
+priors2 = BasicPrior(1.0, PC([0.2, 0.2, 0.2], [2, 2, 2], [0.5, 0.5, 0.5], Inf), Beta([0.4, 0.4, 0.4], [10.0, 5.0, 5.0], [10.0, 15.0, 15.0]), 1.0, Cts(10.0, 150.0, 3.2), [GaussLangevin(-1.0,1.0), GaussLangevin(-0.0,0.5), GaussLangevin(-0.0,0.5)])
+priors3 = BasicPrior(1.0, PC([0.2, 0.2, 0.2], [2, 2, 2], [0.5, 0.5, 0.5], Inf), Beta([0.4, 0.4, 0.4], [10.0, 5.0, 5.0], [10.0, 15.0, 15.0]), 1.0, Cts(10.0, 150.0, 3.2), [GammaLangevin(0.5,2), GaussLangevin(-0.0,0.5), GaussLangevin(-0.0,0.5)])
+priors4 = BasicPrior(1.0, PC([0.2, 0.2, 0.2], [2, 2, 2], [0.5, 0.5, 0.5], Inf), Beta([0.4, 0.4, 0.4], [10.0, 5.0, 5.0], [10.0, 15.0, 15.0]), 1.0, Cts(10.0, 150.0, 3.2), [GompertzBaseline(0.5), GaussLangevin(-0.0,0.5), GaussLangevin(-0.0,0.5)])
 Random.seed!(9102)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
@@ -160,7 +161,6 @@ s3 = vcat(exp.(test_smp[1,:,:] .+ test_smp[3,:,:]), exp.(extrap1 .+ extrap3))
 df4 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025),  quantile.(eachrow(s1), 0.975), median(s2, dims = 2), quantile.(eachrow(s2), 0.025),  quantile.(eachrow(s2), 0.975), median(s3, dims = 2), quantile.(eachrow(s3), 0.025),  quantile.(eachrow(s3), 0.975)), :auto)
 
 
-
 R"""
 dat1 = data.frame($df1)
 colnames(dat1) <- c("Time","Median1","LCI1","UCI1","Median2","LCI2","UCI2","Median3","LCI3","UCI3") 
@@ -202,5 +202,5 @@ p4 <- dat4 %>%
     theme(legend.position = "none",text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4,6,7,4,6,7,4)]) +
     scale_linetype_manual(values = c("dotdash","dotdash","dotdash","solid", "solid", "solid","dotdash","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
 plot_grid(p1,p2,p3,p4, nrow = 2)
-ggsave($plotsdir("CovariateColon.pdf"), width = 8, height = 6)
+#ggsave($plotsdir("CovariateColon.pdf"), width = 8, height = 6)
 """

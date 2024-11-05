@@ -70,7 +70,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
     μθ = Vector{Vector{Float64}}()
     ∂μθ = Vector{Array{Float64}}()
     for j in axes(state.x, 1)
-        push!(μθ, drift(Σθ[j,:], priors.diff[j]))
+        push!(μθ, drift(Σθ[j,:], 0.0, priors.diff[j]))
         push!(∂μθ, drift_deriv(Σθ[j,:], priors.diff[j]))
     end
     for i in eachindex(∇U_out)
@@ -92,7 +92,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
     μθ = Vector{Vector{Float64}}()
     ∂μθ = Vector{Array{Float64}}()
     for j in axes(state.x, 1)
-        push!(μθ, drift(Σθ[j,:], priors.diff[j]))
+        push!(μθ, drift(Σθ[j,:], 0.0, priors.diff[j]))
         push!(∂μθ, drift_deriv(Σθ[j,:], priors.diff[j]))
     end
     for i in eachindex(∇U_out)
@@ -103,7 +103,7 @@ end
 
 ############ Random Walk
 
-function drift(θ, diff::RandomWalk)
+function drift(θ, t, diff::RandomWalk)
     return zeros(size(θ))
 end
 
@@ -125,7 +125,7 @@ end
 
 ################ GaussLangevin
 
-function drift(θ, diff::GaussLangevin)
+function drift(θ, t, diff::GaussLangevin)
     return -0.5.*(θ .- diff.μ)./diff.σ^2
 end
 
@@ -141,9 +141,16 @@ function drift_deriv_t(θ, diff::GaussLangevin)
     return fill(-1/(2*diff.σ^2), size(θ))
 end
 
+################ Gauss Langevin - treatment effect decay
+
+
+function drift(θ, t, diff::TrtDecay)
+    return -t*0.5.*(θ .- diff.μ)./(diff.σ^2)
+end
+
 ###### GammaLangevin
 
-function drift(θ, diff::GammaLangevin)
+function drift(θ, t, diff::GammaLangevin)
     return 0.5*(diff.α .- diff.β.*exp.(θ))
 end
 
@@ -165,7 +172,7 @@ end
 
 ############ Gompertz
 
-function drift(θ, diff::GompertzBaseline)
+function drift(θ, t, diff::GompertzBaseline)
     return fill(diff.α, size(θ))
 end
 
@@ -276,7 +283,7 @@ function λ_diff(state::State, priors::BasicPrior, j::Int64)
     active_j = filter(idx -> idx[1] == j, state.active)
     ∇U_out = zeros(size(active_j))
     Σθ = cumsum(state.x, dims = 2)
-    μθ = drift(Σθ[j,:], priors.diff[j])
+    μθ = drift(Σθ[j,:], 0.0, priors.diff[j])
     ∂μθ = drift_deriv(Σθ[j,:], priors.diff[j])
     for i in eachindex(∇U_out)
         ∇U_out[i] += drift_add(state.x, μθ, ∂μθ, priors.diff[j], active_j[i])
@@ -289,7 +296,7 @@ function λ_diff(state::State, priors::EulerMaruyama, j::Int64)
     active_j = filter(idx -> idx[1] == j, state.active)
     ∇U_out = zeros(size(active_j))
     Σθ = cumsum(state.x, dims = 2)
-    μθ = drift(Σθ[j,:], priors.diff[j])
+    μθ = drift(Σθ[j,:], 0.0, priors.diff[j])
     ∂μθ = drift_deriv(Σθ[j,:], priors.diff[j])
     for i in eachindex(∇U_out)
         ∇U_out[i] += drift_add(state.x, μθ, ∂μθ, priors.diff[j], active_j[i])

@@ -13,7 +13,7 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
     ## Simulate dynamics
     paths = Vector{Vector{Float64}}()
     for i in 1:n_smp
-        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, out["Smp_σ"][k,i]))
+        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, out["Smp_σ"][k,i], times))
     end
     output = fill(Inf, length(plot_grid), n_smp)
     for i in 1:n_smp
@@ -55,12 +55,12 @@ function extrapolation_times(out::Dict, grid::Cts, t_start::Float64, t_end::Floa
     return times
 end
 
-function barker_dynamics(init::Float64, iters::Int64, diff::Diffusion, step_size::Float64)
+function barker_dynamics(init::Float64, iters::Int64, diff::Diffusion, step_size::Float64, times::Vector{Float64})
     out_vec = zeros(iters)
     out_vec[1] = init
     for i in 2:iters
         ξ = rand(Normal(0,step_size))
-        if rand() < 1/(1 + exp.(-2*ξ*drift(out_vec[i-1], diff)))
+        if rand() < 1/(1 + exp.(-2*ξ*drift(out_vec[i-1], times[i], diff)))
             out_vec[i] = out_vec[i-1] + ξ
         else
             out_vec[i] = out_vec[i-1] - ξ

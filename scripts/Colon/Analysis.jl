@@ -174,5 +174,5 @@ p4 <- dat_comp %>%
     theme(legend.position = "bottom", text = element_text(size = 10)) + scale_colour_manual(values = cbPalette[1:8]) +
     ylab("h(t)") + xlab("Time (years)") + ylim(0,1) + xlim(0,15)
 plot_grid(p3,p4)
-ggsave($plotsdir("ExtrapColon.pdf"), width = 8, height = 5)
+ggsave($plotsdir("ExtrapColon.pdf"), width = 8, height = 4)
 """
