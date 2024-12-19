@@ -9,11 +9,11 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
         end
     end
     ## Get time points
-    times = extrapolation_times(out, grid, t_start, t_end, n_smp, out["Smp_ω"][k,:])
+    times = extrapolation_times(out, grid, t_start, t_end, n_smp, out["Smp_ω"][k,:], out["Smp_Γ"])
     ## Simulate dynamics
     paths = Vector{Vector{Float64}}()
     for i in 1:n_smp
-        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, out["Smp_σ"][k,i], times))
+        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, out["Smp_σ"][k,i], times[i]))
     end
     output = fill(Inf, length(plot_grid), n_smp)
     for i in 1:n_smp
@@ -40,13 +40,13 @@ function extrapolation_times(out::Dict, grid::Fixed, t_start::Float64, t_end::Fl
     return times
 end
 
-function extrapolation_times(out::Dict, grid::Cts, t_start::Float64, t_end::Float64, n_smp::Int64, ω::Vector{Float64})
+function extrapolation_times(out::Dict, grid::Cts, t_start::Float64, t_end::Float64, n_smp::Int64, ω::Vector{Float64}, Γ::Vector{Float64})
     times = Vector{Vector{Float64}}()
     for i in 1:n_smp
         times_inner = [0.0]
         time_past = copy(t_start)
         while time_past < t_end
-            t_push = rand(Exponential(1/(grid.Γ*ω[i])))
+            t_push = rand(Exponential(1/(Γ[i]*ω[i])))
             push!(times_inner, t_push)
             time_past += t_push
         end

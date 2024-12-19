@@ -88,6 +88,7 @@ mutable struct Storage
     t::Vector{Float64}
     ω::Array{Float64}
     σ::Array{Float64}
+    Γ::Vector{Float64}
     x_smp::Array{Float64}
     v_smp::Array{Float64}
     s_smp::Array{Bool}
@@ -96,6 +97,7 @@ mutable struct Storage
     t_smp::Vector{Float64}
     ω_smp::Array{Float64}
     σ_smp::Array{Float64}
+    Γ_smp::Vector{Float64}
 end
 
 abstract type Variance end
@@ -136,7 +138,17 @@ mutable struct Fixed <: Grid
     step::Float64
 end
 
-mutable struct Cts <: Grid
+abstract type Cts  <: Grid end
+
+mutable struct CtsNB <: Cts
+    α::Float64
+    β::Float64
+    Γ::Float64
+    max_points::Int64
+    max_time::Float64
+end
+
+mutable struct CtsPois <: Cts
     Γ::Float64
     max_points::Int64
     max_time::Float64

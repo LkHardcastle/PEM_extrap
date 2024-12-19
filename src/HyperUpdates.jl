@@ -14,16 +14,33 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
     
 end
 
-function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, grid::Cts)
-    rem_ind = findall(sum.(eachcol(state.s)) .!= 0.0)
-    state.x, state.v, state.s, state.g, state.s_loc = state.x[:,rem_ind], state.v[:,rem_ind], state.s[:,rem_ind], state.g[:,rem_ind], state.s_loc[rem_ind]
-    J_curr = sum(state.s)
+function pois_gen(grid::CtsPois, priors::Prior, state::State)
     Pois_new = []
     weight_vec = []
     for k in axes(state.x,1)
         push!(Pois_new, rand(Poisson((priors.grid.max_time - state.s_loc[1])*priors.grid.Γ*(1 - priors.ω.ω[k]))))
         push!(weight_vec, (1 - priors.ω.ω[k]))
     end
+    return Pois_new, weight_vec
+end
+
+function pois_gen(grid::CtsNB, priors::Prior, state::State)
+    Pois_new = []
+    weight_vec = []
+    # Γ∣J+K ∼ Gamma(α + J + K, β + 1)
+    priors.grid.Γ = rand(Gamma(priors.grid.α + state.J, 1/(priors.grid.β + 1)))
+    for k in axes(state.x,1)
+        push!(Pois_new, rand(Poisson((priors.grid.max_time - state.s_loc[1])*priors.grid.Γ*(1 - priors.ω.ω[k]))))
+        push!(weight_vec, (1 - priors.ω.ω[k]))
+    end
+    return Pois_new, weight_vec
+end
+
+function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, grid::Cts)
+    rem_ind = findall(sum.(eachcol(state.s)) .!= 0.0)
+    state.x, state.v, state.s, state.g, state.s_loc = state.x[:,rem_ind], state.v[:,rem_ind], state.s[:,rem_ind], state.g[:,rem_ind], state.s_loc[rem_ind]
+    J_curr = sum(state.s)
+    Pois_new, weight_vec = pois_gen(grid, priors, state)
     J_new = min(sum(Pois_new), priors.grid.max_points - J_curr)
     weight_vec = weight_vec/sum(weight_vec)
     J_row = rand(Categorical(weight_vec), J_new)

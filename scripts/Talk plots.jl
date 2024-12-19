@@ -168,6 +168,7 @@ $df %>%
     ggplot(aes(x = Time, y = Location, col = Status, group = Location)) + geom_line(size = 0.8) + theme_classic() +
     scale_colour_manual(labels = c("Unthinned", "Thinned"), values = cbPalette[6:7]) + theme(legend.title = element_blank(), legend.position = "bottom", text = element_text(size = 20)) + xlim(5,40) 
     ggsave($plotsdir("Talks","StickyInf.png"), width = 14, height = 4)
+    ggsave($plotsdir("Talks","StickyInf.pdf"), width = 14, height = 5)
 """
 
 
@@ -184,6 +185,7 @@ $df %>%
     scale_colour_manual(values = cbPalette[6:7]) + xlab("theta") + ylab("density") + theme(legend.title = element_blank(), legend.position = "bottom", text = element_text(size = 20)) + 
     geom_vline(xintercept = 0, linetype = "dashed")
     ggsave($plotsdir("Talks","Discretisation.png"), width = 14, height = 4)
+    ggsave($plotsdir("Talks","Discretisation.pdf"), width = 14, height = 5)
 """
 
 
@@ -282,7 +284,8 @@ legend <- grobs[[which(sapply(grobs, function(x) x$name) == "guide-box")]]
 p <- plot_grid(p1,p_extrap, nrow = 1)
 p_ <- plot_grid(p, legend, nrow = 2,  rel_heights = c(1, .1))
 
-ggsave($plotsdir("Talks","Colon.png"), width = 14, height = 6)
+#ggsave($plotsdir("Talks","Colon.png"), width = 14, height = 6)
+ggsave($plotsdir("Talks","Colon.pdf"), width = 14, height = 6)
 """
 
 
@@ -401,21 +404,22 @@ p1 <- dat_diffusion %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 1), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6)]) +
-    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (arbitrary units)") + ylim(0,17)
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(y)") + xlab("Time (arbitrary units)") + ylim(0,17)
 p2 <- dat_diffusion %>%
     pivot_longer(c(Mean, Q1, Q4)) %>%
     subset(Model == "Log-Normal stationary") %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 1), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(7)]) +
-    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (arbitrary units)") + ylim(0,17)
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(y)") + xlab("Time (arbitrary units)") + ylim(0,17)
 p3 <- dat_diffusion %>%
     pivot_longer(c(Mean, Q1, Q4)) %>%
     subset(Model == "Gompertz dynamics") %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 1), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(4)]) +
-    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(t)") + xlab("Time (arbitrary units)") + ylim(0,17)
+    scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(y)") + xlab("Time (arbitrary units)") + ylim(0,17)
 plot_grid(p1,p2,p3,ncol = 3)
 ggsave($plotsdir("Talks","Diffusions.png"), width = 17, height = 4.8)
+ggsave($plotsdir("Talks","Diffusions.pdf"), width = 14, height = 4.5)
 """
