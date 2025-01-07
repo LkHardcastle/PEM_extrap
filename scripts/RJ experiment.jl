@@ -34,7 +34,7 @@ nsmp = 50_000
 Random.seed!(14124)
 grid = [0.5, 1.5, 2.5]
 exp_its = 10
-priors1 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 1.0, Cts(5.0, 100.0, 3.1), [RandomWalk()])
+priors1 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 1.0, CtsPois(5.0, 100.0, 3.1), [RandomWalk()])
 priors2 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.2, 100.0, 3.1), [RandomWalk()])
 priors3 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.2, 100.0, 3.1), [RandomWalk()])
 
@@ -48,7 +48,7 @@ for i in 1:exp_its
     v0 = v0./norm(v0)
     t0 = 0.0
     state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
-    settings = Settings(nits, nsmp, 1_000_000, 1.0, 1.0, 1.0, false, true)
+    settings = Settings(nits, nsmp, 1_000_000, 10.0, 1.0, 1.0, false, true)
     out = pem_sample(state0, dat, priors1, settings)
     push!(J_vec,mean(sum(out["Smp_s"],dims = 2)[1,1,:]))
     h_mat = hcat(h_mat, mean(cts_transform(cumsum(out["Smp_x"], dims = 2), out["Smp_s_loc"], grid), dims = 3)[1,:,1])
@@ -57,6 +57,7 @@ for i in 1:exp_its
     push!(tuning, 0.0)
 end
 
+println("-----------")
 
 tuning_param = [0.01,0.1,0.2,0.5,1.0]
 for σ in tuning_param
@@ -66,7 +67,7 @@ for σ in tuning_param
         v0 = v0./norm(v0)
         t0 = 0.0
         state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
-        settings = Settings(nits, nsmp, 1_000_000, 1.0, 5.0, 1.0, false, true)
+        settings = Settings(nits, nsmp, 1_000_000, 10.0, 5.0, 1.0, false, true)
         out = pem_sample(state0, dat, priors2, settings)
         push!(J_vec,mean(out["Smp_J"]))
         h_mat = hcat(h_mat, mean(cts_transform(cumsum(out["Smp_x"], dims = 2), out["Smp_s_loc"], grid), dims = 3)[1,:,1])
@@ -75,6 +76,7 @@ for σ in tuning_param
         push!(tuning, σ)
     end
 end
+println("-----------")
 for σ in tuning_param
     for i in 1:exp_its
         priors3 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, σ, 100.0, 3.1), [RandomWalk()])
@@ -128,7 +130,7 @@ nsmp = 50_000
 Random.seed!(14124)
 grid = [0.5, 1.5, 2.5]
 exp_its = 10
-priors1 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 1.0, Cts(5.0, 100.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 1.0, CtsPois(5.0, 100.0, 3.2), [RandomWalk()])
 priors2 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.2, 100.0, 3.2), [RandomWalk()])
 priors3 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.2, 100.0, 3.2), [RandomWalk()])
 
@@ -168,7 +170,7 @@ for i in 1:exp_its
     v0 = v0./norm(v0)
     t0 = 0.0
     state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
-    settings = Settings(nits, nsmp, 1_000_000, 1.0, 1.0, 1.0, false, true)
+    settings = Settings(nits, nsmp, 1_000_000, 3.0, 1.0, 1.0, false, true)
     out = pem_sample(state0, dat, priors1, settings)
     push!(J_vec,mean(sum(out["Smp_s"],dims = 2)[1,1,:]))
     h_mat = hcat(h_mat, mean(cts_transform(cumsum(out["Smp_x"], dims = 2), out["Smp_s_loc"], grid), dims = 3)[1,:,1])
@@ -186,7 +188,7 @@ for σ in tuning_param
         v0 = v0./norm(v0)
         t0 = 0.0
         state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
-        settings = Settings(nits, nsmp, 1_000_000, 1.0, 5.0, 1.0, false, true)
+        settings = Settings(nits, nsmp, 1_000_000, 3.0, 5.0, 1.0, false, true)
         out = pem_sample(state0, dat, priors2, settings)
         push!(J_vec,mean(out["Smp_J"]))
         h_mat = hcat(h_mat, mean(cts_transform(cumsum(out["Smp_x"], dims = 2), out["Smp_s_loc"], grid), dims = 3)[1,:,1])
@@ -231,8 +233,8 @@ nsmp = 500_000
 
 Random.seed!(14124)
 grid = [0.5, 1.5, 2.5]
-exp_its = 1
-priors1 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 1.0, Cts(5.0, 100.0, 3.2), [RandomWalk()])
+exp_its = 10
+priors1 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 1.0, CtsPois(5.0, 100.0, 3.2), [RandomWalk()])
 priors2 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.2, 100.0, 3.2), [RandomWalk()])
 priors3 = BasicPrior(0.2, FixedV([0.2]), FixedW([0.5]), 0.0, RJ(5.0, 0.2, 100.0, 3.2), [RandomWalk()])
 
@@ -360,7 +362,7 @@ dat %>%
     geom_hline(data = filter(dat, Exp == "Colon data", Param == "h2"), aes(yintercept = -1.57), linetype = "dashed") + 
     geom_hline(data = filter(dat, Exp == "Colon data", Param == "h3"), aes(yintercept = -1.96), linetype = "dashed") + 
     geom_hline(data = filter(dat, Exp == "Colon data", Param == "J"), aes(yintercept = 10.8), linetype = "dashed") + ylab("Estimate") + xlab("Tuning parameter")
-    ggsave($plotsdir("RJ_exp.pdf"), width = 8, height = 10.5)
+    #ggsave($plotsdir("RJ_exp.pdf"), width = 8, height = 10.5)
 """
 
 R"""
