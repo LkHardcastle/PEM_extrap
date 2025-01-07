@@ -92,20 +92,70 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
-nits = 150000
-nsmp = 20000
+nits = 150_000
+nsmp = 10000
 settings = Settings(nits, nsmp, 1_000_000, 1.0,0.5, 0.5, false, true)
 
 
-priors1 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [0.1], [0.9]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [0.9], [0.1]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [1.0], [10.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [1.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), Beta([0.4], [1.0], [9.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), Beta([0.4], [3.0], [7.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), Beta([0.4], [5.0], [5.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), Beta([0.4], [7.0], [3.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
 Random.seed!(9102)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
 @time out3 = pem_sample(state0, dat, priors3, settings)
 @time out4 = pem_sample(state0, dat, priors4, settings)
+
+x1, DIC1 = get_DIC(out1, dat)
+x2, DIC2 = get_DIC(out2, dat)
+x3, DIC3 = get_DIC(out3, dat)
+x4, DIC4 = get_DIC(out4, dat)
+plot(x1)
+plot!(x2)
+plot!(x3)
+plot!(x4)
+
+histogram(x1, fillalpha = 0.2)
+histogram!(x2, fillalpha = 0.2)
+histogram!(x3, fillalpha = 0.2)
+histogram(x4, fillalpha = 0.2)
+
+DIC1
+mean(x1[findall(.!isnan.(x1))][2_000:end]) + 0.5*var(x1[findall(.!isnan.(x1))][2_000:end])
+0.5*sqrt(var(x1[findall(.!isnan.(x1))][2_000:end]))
+mean(x1[findall(.!isnan.(x1))][2_000:end]) + 0.5*sqrt(var(x1[findall(.!isnan.(x1))][2_000:end]))
+DIC2
+mean(x2[findall(.!isnan.(x2))][2_000:end]) + 0.5*var(x2[findall(.!isnan.(x2))][2_000:end])
+0.5*sqrt(var(x2[findall(.!isnan.(x2))][2_000:end]))
+mean(x2[findall(.!isnan.(x2))][2_000:end]) + 0.5*sqrt(var(x2[findall(.!isnan.(x2))][2_000:end]))
+DIC3
+mean(x3[findall(.!isnan.(x3))][2_000:end]) + 0.5*var(x3[findall(.!isnan.(x3))][2_000:end])
+0.5*sqrt(var(x3[findall(.!isnan.(x3))][2_000:end]))
+mean(x3[findall(.!isnan.(x3))][2_000:end]) + 0.5*sqrt(var(x3[findall(.!isnan.(x3))][2_000:end]))
+DIC4
+mean(x4[findall(.!isnan.(x4))][2_000:end]) + 0.5*var(x4[findall(.!isnan.(x4))][2_000:end])
+0.5*sqrt(var(x4[findall(.!isnan.(x4))][2_000:end]))
+mean(x4[findall(.!isnan.(x4))][2_000:end]) + 0.5*sqrt(var(x4[findall(.!isnan.(x4))][2_000:end]))
+
+
+
+histogram(out1["Smp_σ"][1,:])
+histogram!(out2["Smp_σ"][1,:], fillalpha = 0.5)
+histogram!(out3["Smp_σ"][1,:], fillalpha = 0.5)
+histogram!(out4["Smp_σ"][1,:], fillalpha = 0.5)
+
+plot(log.(out1["Smp_σ"][1,:]))
+plot!(out2["Smp_σ"][1,:])
+plot!(out3["Smp_σ"][1,:])
+plot!(out4["Smp_σ"][1,:])
+
+plot(out1["Smp_ω"][1,:])
+plot!(out2["Smp_ω"][1,:])
+plot!(out3["Smp_ω"][1,:])
+plot!(out4["Smp_ω"][1,:])
+
+plot(test_smp[1,1200,:])
 
 Random.seed!(1237)
 grid = sort(unique(out1["Smp_s_loc"][cumsum(out1["Smp_s"],dims = 1)[1,:,:] .> 0.0]))
@@ -225,20 +275,19 @@ dat4 = cbind(dat4, "a = 5")
 colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_sigma <- rbind(dat1, dat2, dat3, dat4)
 """
-histogram(out1["Smp_J"])
 
 R"""
 dat5 = data.frame($df5)
-dat5 = cbind(dat5, "(0.1,0.9)")
+dat5 = cbind(dat5, "(1,9)")
 colnames(dat5) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat6 = data.frame($df6)
-dat6 = cbind(dat6, "(0.9,0.1)")
+dat6 = cbind(dat6, "(3,7)")
 colnames(dat6) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat7 = data.frame($df7)
-dat7 = cbind(dat7, "(1,10)")
+dat7 = cbind(dat7, "(5,5)")
 colnames(dat7) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat8 = data.frame($df8)
-dat8 = cbind(dat8, "(10,1)")
+dat8 = cbind(dat8, "(7,3)")
 colnames(dat8) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_beta <- rbind(dat5, dat6, dat7, dat8)
 """

@@ -1,7 +1,7 @@
 using DrWatson
 @quickactivate "PEM_extrap"
 # For src
-using DataStructures, LinearAlgebra, Distributions, Random, Optim, Roots, SpecialFunctions
+using DataStructures, LinearAlgebra, Distributions, Random, Optim, Roots, SpecialFunctions, Statistics
 using Plots, CSV, DataFrames, RCall, Interpolations
 
 include(srcdir("Sampler.jl"))
@@ -36,15 +36,17 @@ nsmp = 20000
 settings = Settings(nits, nsmp, 1_000_000, 1.0,0.5, 0.5, false, true)
 
 
-priors1 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, Cts(10.0, 50.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, Cts(10.0, 50.0, 3.2), [GaussLangevin(-1.0,1.0)])
-priors3 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, Cts(10.0, 50.0, 3.2), [GammaLangevin(0.5,2)])
-priors4 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, Cts(10.0, 50.0, 3.2), [GompertzBaseline(0.5)])
+priors1 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [GaussLangevin(-1.0,1.0)])
+priors3 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [GammaLangevin(0.5,2)])
+priors4 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [GompertzBaseline(0.5)])
 Random.seed!(9102)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
 @time out3 = pem_sample(state0, dat, priors3, settings)
 @time out4 = pem_sample(state0, dat, priors4, settings)
+
+x1, x2 = get_DIC(out1, dat)
 
 Random.seed!(1237)
 grid = collect(0.02:0.02:3.198)

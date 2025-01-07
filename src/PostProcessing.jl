@@ -72,3 +72,44 @@ function pem_survival(λ::Matrix{Float64}, times::Vector{Float64})
     t_ = times[2:end] .- times[1:(end -1)]
     return cumprod(exp.(.- t_'.*λ'), dims = 2)'
 end
+
+function get_DIC(out, dat::PEMData)
+    deviance = zeros(size(out["Smp_x"],3))
+    for i in 1:size(out["Smp_x"],3)
+        J = out["Smp_J"][i]
+        θ = cumsum(out["Smp_x"][:,1:J,i],dims = 2)
+        s_loc = out["Smp_s_loc"][1:J,i]
+        L = size(dat.UQ, 2)
+        W = zeros(L,J)
+        δ = zeros(L,J)
+        d = zeros(Int, length(dat.y))
+        for i in eachindex(dat.y)
+            if isnothing(findfirst(s_loc .> dat.y[i]))
+                d[i] = J
+            else
+                d[i] = findfirst(s_loc .> dat.y[i])
+            end
+        end
+        for l in 1:L
+            yl = dat.y[findall(dat.grp .== l)]
+            dl = d[findall(dat.grp .== l)]
+            δl = dat.cens[findall(dat.grp .== l)]
+            for j in 1:J
+                if j == 1
+                    sj1 = 0.0
+                else
+                    sj1 = s_loc[j-1]
+                end
+                W[l,j] = sum(yl[findall(dl .== j)]) .- length(findall(dl .== j))*sj1 + length(findall(dl .> j))*(s_loc[j] - sj1)
+                δ[l,j] = length(intersect(findall(δl .== 1), findall(dl .== j)))
+            end
+        end
+        deviance[i] = 2*sum(exp.(θ).*W .- δ.*θ) 
+    end
+    DIC = mean(deviance[findall(.!isnan.(deviance))]) + 0.5*var(deviance[findall(.!isnan.(deviance))])
+    return deviance, DIC
+end
+
+function get_meansurv(out, dat::PEMData)
+
+end
