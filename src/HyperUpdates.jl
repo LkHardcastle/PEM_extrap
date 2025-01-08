@@ -110,7 +110,7 @@ function variance_update!(state::State, priors::Prior, σ::PC, k::Int64)
     active_j = filter(idx -> idx[1] == k, state.active)
     if length(active_j) > 1
         popfirst!(active_j)
-        log_prop_dens = sum(logpdf.(Normal(0,σ_prop), state.x[active_j])) + log_exp_logpdf(σ_prop, priors.σ.a[k])
+        log_prop_dens = sum(logpdf.(Normal(0,σ_prop), state.x[active_j])) + log_exp_logpdf(log(σ_prop), priors.σ.a[k])
         log_new_dens = sum(logpdf.(Normal(0,priors.σ.σ[k]), state.x[active_j])) + log_exp_logpdf(log(priors.σ.σ[k]), priors.σ.a[k])
         α = min(1, exp(log_prop_dens - log_new_dens))
         acc = 0
