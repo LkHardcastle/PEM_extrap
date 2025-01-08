@@ -166,26 +166,59 @@ test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], gri
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df5 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
+m1 = get_meansurv(out1["Smp_x"], out1["Smp_s_loc"], out1["Smp_J"], [1])
+m2 = get_meansurv(reshape(extrap1,1,size(extrap1,1),size(extrap1,2)), stack(fill(breaks_extrap,size(extrap1,2))), fill(size(breaks_extrap,1),size(extrap1,2)), [1])
+quantile(m1 .+ m2, 0.025)
+quantile(m1 .+ m2, 0.975)
+median(m1)
+median(m2)
+median(m1 .+ m2)
+
 extrap1 = barker_extrapolation(out2, priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
 test_smp = cts_transform(cumsum(out2["Smp_x"], dims = 2), out2["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df6 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+m1 = get_meansurv(out2["Smp_x"], out2["Smp_s_loc"], out2["Smp_J"], [1])
+m2 = get_meansurv(reshape(extrap1,1,size(extrap1,1),size(extrap1,2)), stack(fill(breaks_extrap,size(extrap1,2))), fill(size(breaks_extrap,1),size(extrap1,2)), [1])
+quantile(m1 .+ m2, 0.025)
+quantile(m1 .+ m2, 0.975)
+median(m1)
+median(m2)
+median(m1 .+ m2)
 
 extrap1 = barker_extrapolation(out3, priors3.diff[1], priors3.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
 test_smp = cts_transform(cumsum(out3["Smp_x"], dims = 2), out3["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df7 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
+m1 = get_meansurv(out3["Smp_x"], out3["Smp_s_loc"], out3["Smp_J"], [1])
+m2 = get_meansurv(reshape(extrap1,1,size(extrap1,1),size(extrap1,2)), stack(fill(breaks_extrap,size(extrap1,2))), fill(size(breaks_extrap,1),size(extrap1,2)), [1])
+quantile(m1 .+ m2, 0.025)
+quantile(m1 .+ m2, 0.975)
+median(m1)
+median(m2)
+median(m1 .+ m2)
+
 extrap1 = barker_extrapolation(out4, priors4.diff[1], priors4.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
 test_smp = cts_transform(cumsum(out4["Smp_x"], dims = 2), out4["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df8 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+m1 = get_meansurv(out4["Smp_x"], out4["Smp_s_loc"], out4["Smp_J"], [1])
+m2 = get_meansurv(reshape(extrap1,1,size(extrap1,1),size(extrap1,2)), stack(fill(breaks_extrap,size(extrap1,2))), fill(size(breaks_extrap,1),size(extrap1,2)), [1])
+quantile(m1 .+ m2, 0.025)
+quantile(m1 .+ m2, 0.975)
+median(m1)
+median(m2)
+median(m1 .+ m2)
 
 CSV.write(datadir("ColonSmps","Beta1_1.csv"), df5)
 CSV.write(datadir("ColonSmps","Beta5_5.csv"), df6)
 CSV.write(datadir("ColonSmps","Beta1_10.csv"), df7)
 CSV.write(datadir("ColonSmps","Beta10_1.csv"), df8)
 
+extrap1
 
 Random.seed!(9102)
 df = CSV.read(datadir("colon.csv"), DataFrame)

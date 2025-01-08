@@ -106,10 +106,26 @@ function get_DIC(out, dat::PEMData)
         end
         deviance[i] = 2*sum(exp.(θ).*W .- δ.*θ) 
     end
-    DIC = mean(deviance[findall(.!isnan.(deviance))]) + 0.5*var(deviance[findall(.!isnan.(deviance))])
+    DIC = mean(deviance[findall(.!isnan.(deviance))][1_000:end]) + 0.5*var(deviance[findall(.!isnan.(deviance))][1_000:end])
     return deviance, DIC
 end
 
-function get_meansurv(out, dat::PEMData)
-
+function get_meansurv(smp_x, smp_s_loc, smp_J, cov)
+    mean_surv = zeros(size(smp_x,3))
+    for i in axes(smp_x)[3]
+        J = smp_J[i]
+        θ = cumsum(smp_x[:,1:J,i],dims = 2)
+        s_loc = smp_s_loc[1:J,i]
+        θ_ = cov*θ
+        mean_surv[i] = 0.0
+        for j in 1:J
+            if j == 1
+                sj1 = 0.0
+            else
+                sj1 = s_loc[j-1]
+            end
+            mean_surv[i] += exp(log(exp(-sj1*exp(θ_[j])) - exp(-s_loc[j]*exp(θ_[j]))) - θ_[j])
+        end
+    end
+    return mean_surv
 end
