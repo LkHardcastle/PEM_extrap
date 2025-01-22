@@ -353,5 +353,6 @@ p4 <- dat_beta %>%
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5)
 plot_grid(p1,p2,p3,p4, nrow = 2)
+plot_grid(p2,p4)
 #ggsave($plotsdir("Priors_sen.pdf"), width = 8, height = 6)
 """
