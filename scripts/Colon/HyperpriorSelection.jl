@@ -45,7 +45,7 @@ priors4 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [4.0], [6.0]),
 priors5 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [5.0], [5.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [drift_])
 priors6 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [6.0], [4.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [drift_])
 priors7 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [7.0], [3.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [drift_])
-priors8 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [1.0], [1.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [drift_])
+#priors8 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [1.0], [1.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [drift_])
 
 # Save all models for plotting
 Random.seed!(9102)
@@ -56,8 +56,7 @@ Random.seed!(9102)
 @time out5 = pem_sample(state0, dat, priors5, settings)
 @time out6 = pem_sample(state0, dat, priors6, settings)
 @time out7 = pem_sample(state0, dat, priors7, settings)
-@time out8 = pem_sample(state0, dat, priors8, settings)
-
+#@time out8 = pem_sample(state0, dat, priors8, settings)
 
 DIC = Vector{Float64}()
 push!(DIC, get_DIC(out1, dat)[3])
@@ -67,7 +66,7 @@ push!(DIC, get_DIC(out4, dat)[3])
 push!(DIC, get_DIC(out5, dat)[3])
 push!(DIC, get_DIC(out6, dat)[3])
 push!(DIC, get_DIC(out7, dat)[3])
-push!(DIC, get_DIC(out8, dat)[3])
+#push!(DIC, get_DIC(out8, dat)[3])
 DIC
 DIC1 = Vector{Float64}()
 push!(DIC1, get_DIC(out1, dat)[4])
@@ -77,7 +76,7 @@ push!(DIC1, get_DIC(out4, dat)[4])
 push!(DIC1, get_DIC(out5, dat)[4])
 push!(DIC1, get_DIC(out6, dat)[4])
 push!(DIC1, get_DIC(out7, dat)[4])
-push!(DIC1, get_DIC(out8, dat)[4])
+#push!(DIC1, get_DIC(out8, dat)[4])
 DIC1
 DIC .- DIC1
 DIC2 = Vector{Float64}()
@@ -88,7 +87,7 @@ push!(DIC2, get_DIC(out4, dat)[2])
 push!(DIC2, get_DIC(out5, dat)[2])
 push!(DIC2, get_DIC(out6, dat)[2])
 push!(DIC2, get_DIC(out7, dat)[2])
-push!(DIC2, get_DIC(out8, dat)[2])
+#push!(DIC2, get_DIC(out8, dat)[2])
 DIC2
 
 #CSV.write(datadir("ColonSmps","RWBeta.csv"), DataFrame(DIC = DIC))
