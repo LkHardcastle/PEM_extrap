@@ -85,15 +85,15 @@ end
 
 function sampler_stop(state::State, dyn::Dynamics, settings::Settings)
     if dyn.ind >= settings.max_ind
-        println("Stopping for max_iter")
+        println("Stopping for max_iter");println("Final time: ");println(state.t)
         return true
     end
     if dyn.smp_ind >= settings.max_smp
-        println("Stopping for max_smp")
+        println("Stopping for max_smp");println("Final time: ");println(state.t)
         return true
     end
     if state.t >= settings.max_time
-        println("Stopping for max_time")
+        println("Stopping for max_time");println("Final time: ");println(state.t)
         return true
     end
     return false

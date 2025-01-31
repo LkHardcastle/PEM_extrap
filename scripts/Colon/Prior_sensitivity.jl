@@ -280,7 +280,7 @@ CSV.write(datadir("ColonSmps","BetaUn2_2.csv"), df10)
 CSV.write(datadir("ColonSmps","BetaUn3_3.csv"), df11)
 CSV.write(datadir("ColonSmps","BetaUn_10_10.csv"), df12)
 
-Random.seed!(9102)
+Random.seed!(3453)
 df = CSV.read(datadir("colon.csv"), DataFrame)
 y = df.years
 maximum(y)
@@ -295,21 +295,25 @@ v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
 nits = 50000
-nsmp = 10000
+nsmp = 10
 settings = Settings(nits, nsmp, 1_000_000, 1.0,0.5, 0.5, false, true)
-seq = 0.1:0.1:10
-plot(seq, pdf.(Gamma(5,1),seq))
+seq = 0.1:0.1:50
 
 
-priors1 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(5.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 150.0, 3.2), [RandomWalk()])
 priors2 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(10.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(10.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(10.0, 2.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(5.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(2.5, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
 @time out3 = pem_sample(state0, dat, priors3, settings)
 @time out4 = pem_sample(state0, dat, priors4, settings)
+
+histogram(out1["Smp_J"])
+histogram!(out2["Smp_J"])
+histogram(out3["Smp_J"])
+histogram!(out4["Smp_J"])
 
 Random.seed!(1237)
 grid = sort(unique(out1["Smp_s_loc"][cumsum(out1["Smp_s"],dims = 1)[1,:,:] .> 0.0]))
@@ -361,16 +365,16 @@ df12 = CSV.read(datadir("ColonSmps","BetaNB10_1.csv"), DataFrame)
 
 R"""
 dat1 = data.frame($df9)
-dat1 = cbind(dat1, "(5,1)")
+dat1 = cbind(dat1, "P - 10")
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat2 = data.frame($df10)
-dat2 = cbind(dat2, "(10,1)")
+dat2 = cbind(dat2, "NB - 10, 1")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat3 = data.frame($df11)
-dat3 = cbind(dat3, "(5,1/2)")
+dat3 = cbind(dat3, "NB - 5, .5")
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat4 = data.frame($df12)
-dat4 = cbind(dat4, "(10,2)")
+dat4 = cbind(dat4, "NB - 2.5, .25")
 colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_sigma <- rbind(dat1, dat2, dat3, dat4)
 """
