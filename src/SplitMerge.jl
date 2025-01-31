@@ -11,9 +11,9 @@ function merge_time(state::State, j::CartesianIndex, priors::Prior)
 end
 
 function split_rate(state::State, priors::Prior, k::Int64)
-    rate = priors.p_split*(priors.ω.ω[k]/(1 - priors.ω.ω[k]))*(sqrt(2*pi*priors.σ.σ[k]^2))^-1
-    J = 2*sphere_area(size(state.active,1) - 1)/(sphere_area(size(state.active,1))*(size(state.active,1)))
-    return rate*J
+    rate = log(priors.p_split) + log(priors.ω.ω[k]) - log(1 - priors.ω.ω[k]) - 0.5*log(2*pi*priors.σ.σ[k]^2)
+    J = log(2) + log(sphere_area(size(state.active,1) - 1)) - log(sphere_area(size(state.active,1))*(size(state.active,1)))
+    return exp(rate + J)
 end
 
 function sphere_area(d::Int64)
@@ -90,7 +90,7 @@ function split_time!(state::State, times::Times, priors::Prior)
     if priors.p_split > 0.0
         test_time = []
         for k in axes(state.x,1)
-            rate = (size(findall(state.g[k,:]),1))*split_rate(state, priors, k)
+            rate = size(findall(state.g[k,:]),1)*split_rate(state, priors, k)
             push!(test_time, rand(Exponential(1/rate)) + state.t)
         end
         times.next_split = minimum(test_time)

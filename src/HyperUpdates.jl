@@ -28,7 +28,8 @@ function pois_gen(grid::CtsNB, priors::Prior, state::State)
     Pois_new = []
     weight_vec = []
     # Γ∣J+K ∼ Gamma(α + J + K, β + 1)
-    priors.grid.Γ = rand(Gamma(priors.grid.α + state.J, 1/(priors.grid.β + 1)))
+    #priors.grid.Γ = rand(Gamma(state.J + priors.grid.α, 1/(priors.grid.β + 1)))
+    priors.grid.Γ = rand(Gamma(sum(state.s) + priors.grid.α, priors.ω.ω[1]/(priors.grid.β + 1)))
     for k in axes(state.x,1)
         push!(Pois_new, rand(Poisson((priors.grid.max_time - state.s_loc[1])*priors.grid.Γ*(1 - priors.ω.ω[k]))))
         push!(weight_vec, (1 - priors.ω.ω[k]))
@@ -137,5 +138,6 @@ end
 
 function weight_update!(state::State, priors::Prior, ω::Beta, k::Int64)
     active_j = filter(idx -> idx[1] == k, state.active)
-    priors.ω.ω[k] = rand(Distributions.Beta(priors.ω.a[k] + size(active_j,1) - 1, priors.ω.b[k] + prod(size(state.s,2)) - size(active_j,1) + 1))
+    #priors.ω.ω[k] = rand(Distributions.Beta(priors.ω.a[k] + size(active_j,1) - 1, priors.ω.b[k] + prod(size(state.s,2)) - size(active_j,1) + 1))
+    priors.ω.ω[k] = rand(Distributions.Beta(priors.ω.a[k] + size(active_j,1) - 1, priors.ω.b[k] + size(state.s,2) - size(active_j,1)))
 end

@@ -16,12 +16,12 @@ library(cowplot)
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 """
 
-Random.seed!(9102)
+Random.seed!(4564)
 df = CSV.read(datadir("colon.csv"), DataFrame)
 y = df.years
 maximum(y)
 n = length(y)
-breaks = collect(0.1:0.1:3.1)
+breaks = collect(0.01:0.1:3.01)
 p = 1
 sum(y .== 3.0)
 cens = df.status
@@ -31,43 +31,61 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
-nits = 150000
+nits = 500000
 nsmp = 20000
-settings = Settings(nits, nsmp, 1_000_000, 1.0,0.5, 0.5, false, true)
+settings = Settings(nits, nsmp, 1_000_000, 1.0,4.0, 0.5, false, true)
 
 
-priors1 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [GaussLangevin(-1.0,1.0)])
-priors3 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [GammaLangevin(0.5,2)])
-priors4 = BasicPrior(1.0, PC([0.2], [2], [0.5], Inf), Beta([0.4], [10.0], [10.0]), 1.0, CtsPois(10.0, 50.0, 3.2), [GompertzBaseline(0.5)])
+priors1 = BasicPrior(1.0, PC([0.1], [2], [0.5], Inf), Beta([0.4], [1/3], [1/3]), 1.0, CtsPois(10.0, 50.0, 3.05), [RandomWalk()])
+priors2 = BasicPrior(1.0, PC([0.1], [2], [0.5], Inf), Beta([0.4], [1/3], [1/3]), 1.0, CtsPois(10.0, 50.0, 3.05), [GaussLangevin(log(0.2),1.0)])
+priors3 = BasicPrior(1.0, PC([0.1], [2], [0.5], Inf), Beta([0.4], [1/3], [1/3]), 1.0, CtsPois(10.0, 50.0, 3.05), [GammaLangevin(2,7)])
+priors4 = BasicPrior(1.0, PC([0.1], [2], [0.5], Inf), Beta([0.4], [1/3], [1/3]), 1.0, CtsPois(10.0, 50.0, 3.05), [GompertzBaseline(0.5)])
 Random.seed!(9102)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
 @time out3 = pem_sample(state0, dat, priors3, settings)
 @time out4 = pem_sample(state0, dat, priors4, settings)
 
+histogram(out1["Smp_ω"][1,10_000:end])
+plot!(out2["Smp_ω"][1,10_000:end])
+plot(out3["Smp_ω"][1,10_000:end])
+plot(out4["Smp_ω"][1,10_000:end])
+
+histogram(out1["Smp_σ"][1,10_000:end])
+histogram(out2["Smp_σ"][1,10_000:end])
+histogram(out3["Smp_σ"][1,10_000:end])
+histogram(out4["Smp_σ"][1,10_000:end])
+
+plot(sum(out1["Smp_s"], dims = 2)[1,1,1:1_000])
+histogram((out1["Smp_J"]), normalize = true)
+plot!(2 .*pdf.(Poisson(30.5),0:60))
+
+plot(scatter(sum(out1["Smp_s"], dims = 2)[1,1,:], out1["Smp_J"], alpha = 0.05))
+histogram(sum(out1["Smp_s"], dims = 2)[1,1,:])
+plot(scatter(out1["Smp_ω"][1,1:1_000], sum(out1["Smp_s"], dims = 2)[1,1,1:1_000]))
+
 x1, x2 = get_DIC(out1, dat)
 
 Random.seed!(1237)
-grid = collect(0.02:0.02:3.198)
-breaks_extrap = collect(3.2:0.02:15)
-extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], grid)
+grid = collect(0.02:0.02:3.05)
+breaks_extrap = collect(3.05:0.02:15)
+extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)[:,floor(Int,0.5*nsmp):end]
+test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], grid)[:,:,floor(Int,0.5*nsmp):end]
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df5 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
-extrap1 = barker_extrapolation(out2, priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out2["Smp_x"], dims = 2), out2["Smp_s_loc"], grid)
+extrap1 = barker_extrapolation(out2, priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)[:,floor(Int,0.5*nsmp):end]
+test_smp = cts_transform(cumsum(out2["Smp_x"], dims = 2), out2["Smp_s_loc"], grid)[:,:,floor(Int,0.5*nsmp):end]
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df6 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
-extrap1 = barker_extrapolation(out3, priors3.diff[1], priors3.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out3["Smp_x"], dims = 2), out3["Smp_s_loc"], grid)
+extrap1 = barker_extrapolation(out3, priors3.diff[1], priors3.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)[:,floor(Int,0.5*nsmp):end]
+test_smp = cts_transform(cumsum(out3["Smp_x"], dims = 2), out3["Smp_s_loc"], grid)[:,:,floor(Int,0.5*nsmp):end]
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df7 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
-extrap1 = barker_extrapolation(out4, priors4.diff[1], priors4.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out4["Smp_x"], dims = 2), out4["Smp_s_loc"], grid)
+extrap1 = barker_extrapolation(out4, priors4.diff[1], priors4.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)[:,floor(Int,0.5*nsmp):end]
+test_smp = cts_transform(cumsum(out4["Smp_x"], dims = 2), out4["Smp_s_loc"], grid)[:,:,floor(Int,0.5*nsmp):end]
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df8 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
