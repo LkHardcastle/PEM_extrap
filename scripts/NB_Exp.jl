@@ -34,7 +34,7 @@ nits = 500000
 nsmp = 10_000
 settings = Settings(nits, nsmp, 1_000_000, 0.2,0.5, 0.5, false, true)
 
-priors1 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsPois(10.0, 150.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, PC([0.5],[0.1],[0.1],Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 150.0, 3.2), [RandomWalk()])
 priors2 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(10.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
 priors3 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(5.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
 priors4 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(2.5, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
@@ -44,6 +44,12 @@ Random.seed!(24562)
 @time out2 = pem_sample(state0, dat, priors2, settings)
 @time out3 = pem_sample(state0, dat, priors3, settings)
 @time out4 = pem_sample(state0, dat, priors4, settings)
+
+plot(log.(out1["Sk_σ"][1,:]), out1["Sk_x"][1,3,:], alpha = 0.05)
+plot(scatter(log.(out1["Smp_σ"][1,:]), out1["Smp_x"][1,3,:], alpha = 0.05))
+plot(out1["Sk_x"][1,3,:]./out1["Sk_σ"][1,:])
+plot!(out1["Sk_σ"][1,:])
+
 
 Random.seed!(1237)
 grid = sort(unique(out1["Smp_s_loc"][cumsum(out1["Smp_s"],dims = 1)[1,:,:] .> 0.0]))
