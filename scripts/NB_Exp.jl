@@ -33,13 +33,12 @@ state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, find
 nits = 500000
 nsmp = 10_000
 settings = Settings(nits, nsmp, 1_000_000, 0.2,0.5, 0.5, false, true)
-seq = 0.1:0.1:50
 
+priors1 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsPois(10.0, 150.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(10.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(5.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(2.5, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
 
-priors1 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 150.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(10.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(5.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(2.5, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
@@ -75,10 +74,10 @@ CSV.write(datadir("ColonSmps","BetaNB12.csv"), df10)
 CSV.write(datadir("ColonSmps","BetaNB13.csv"), df11)
 CSV.write(datadir("ColonSmps","BetaNB14.csv"), df12)
 
-priors1 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(5.0, 150.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(5.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(2.5, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(1.25, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsPois(5.0, 150.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(5.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(2.5, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(1.25, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
@@ -114,10 +113,10 @@ CSV.write(datadir("ColonSmps","BetaNB22.csv"), df10)
 CSV.write(datadir("ColonSmps","BetaNB23.csv"), df11)
 CSV.write(datadir("ColonSmps","BetaNB24.csv"), df12)
 
-priors1 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(20.0, 150.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(20.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(10.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(5.0, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsPois(20.0, 150.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(20.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(10.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(5.0, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
 
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
@@ -155,10 +154,10 @@ CSV.write(datadir("ColonSmps","BetaNB33.csv"), df11)
 CSV.write(datadir("ColonSmps","BetaNB34.csv"), df12)
 
 
-priors1 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(1.0, 150.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(1.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(0.2, 0.2, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, PC([0.05], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(0.1, 0.1, 10.0, 150.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsPois(1.0, 150.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(1.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(0.2, 0.2, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(0.1, 0.1, 10.0, 150.0, 3.2), [RandomWalk()])
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
@@ -305,28 +304,32 @@ p1 <- dat_1 %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3)
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) +
+    geom_hline(yintercept = 0.2)
 p2 <- dat_2 %>%
     subset(Time < 3.1) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7,2)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3)
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) +
+    geom_hline(yintercept = 0.2)
 p3 <- dat_3 %>%
     subset(Time < 3.1) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5)
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) +
+    geom_hline(yintercept = 0.2)
 p4 <- dat_4 %>%
     subset(Time < 3.1) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5)
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) +
+    geom_hline(yintercept = 0.2)
 plot_grid(p1,p2,p3,p4)
 #ggsave($plotsdir("Priors_sen.pdf"), width = 8, height = 6)
 """

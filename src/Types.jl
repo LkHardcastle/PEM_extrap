@@ -119,6 +119,12 @@ mutable struct InvGamma <: Variance
     b::Vector{Float64}
 end
 
+mutable struct Unif <: Variance
+    σ::Vector{Float64}
+    h::Vector{Float64}
+    ind::Float64
+end
+
 abstract type Weight end
 
 mutable struct FixedW <: Weight
