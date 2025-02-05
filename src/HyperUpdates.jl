@@ -111,10 +111,10 @@ function variance_update!(state::State, priors::Prior, σ::PC, k::Int64, dyn::Dy
     active_j = filter(idx -> idx[1] == k, state.active)
     if length(active_j) > 1
         popfirst!(active_j)
-        σ_old = priors.σ.σ[k]
-        log_new_dens = U_eval(state, 0.0, dyn, priors)[1] + log_exp_logpdf(log(priors.σ.σ[k]), priors.σ.a[k])
+        σ_old = copy(priors.σ.σ[k])
+        log_new_dens = -U_new!(state, dyn, priors)[1] + log_exp_logpdf(log(priors.σ.σ[k]), priors.σ.a[k])
         priors.σ.σ[k] = copy(σ_prop)
-        log_prop_dens = U_eval(state, 0.0, dyn, priors)[1] + log_exp_logpdf(log(σ_prop), priors.σ.a[k])
+        log_prop_dens = -U_new!(state, dyn, priors)[1] + log_exp_logpdf(log(σ_prop), priors.σ.a[k])
         priors.σ.σ[k] = copy(σ_old)
         α = min(1, exp(log_prop_dens - log_new_dens))
         acc = 0
@@ -157,7 +157,7 @@ end
 
 
 function log_exp_logpdf(logσ::Float64,a::Float64)
-    return logσ - exp(logσ)*a - exp(logσ)
+    return logσ - exp(logσ)*a
 end
 
 function weight_update!(state::State, priors::Prior, ω::FixedW, k::Int64)

@@ -30,14 +30,14 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
-nits = 10000
-nsmp = 5_000
-settings = Settings(nits, nsmp, 1_000_000, 0.2,0.5, 0.5, false, true)
+nits = 200_000
+nsmp = 10_000
+settings = Settings(nits, nsmp, 1_000_000, 1.0, 2.0, 0.5, false, true)
 
-priors1 = BasicPrior(1.0, PC([0.1],[2], [0.1], Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 150.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(10.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(5.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(2.5, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 150.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(10.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(5.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(2.5, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
 
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
@@ -45,30 +45,27 @@ Random.seed!(24562)
 @time out3 = pem_sample(state0, dat, priors3, settings)
 @time out4 = pem_sample(state0, dat, priors4, settings)
 
-plot(scatter(log.(out1["Sk_σ"][1,:]), out1["Sk_x"][1,3,:].*out1["Sk_σ"][1,:]))
-
-plot(out1["Smp_x"][1,3,:].*out1["Smp_σ"][1,:])
 Random.seed!(1237)
 grid = sort(unique(out1["Smp_s_loc"][cumsum(out1["Smp_s"],dims = 1)[1,:,:] .> 0.0]))
 grid = grid[1:10:length(grid)]
 breaks_extrap = collect(3.2:0.02:15)
 extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out1["Smp_θ"], dims = 2), out1["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df9 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out2, priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out2["Smp_x"], dims = 2), out2["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out2["Smp_θ"], dims = 2), out2["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df10 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out3, priors3.diff[1], priors3.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out3["Smp_x"], dims = 2), out3["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out3["Smp_θ"], dims = 2), out3["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df11 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out4, priors4.diff[1], priors4.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out4["Smp_x"], dims = 2), out4["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out4["Smp_θ"], dims = 2), out4["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df12 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
@@ -77,10 +74,10 @@ CSV.write(datadir("ColonSmps","BetaNB12.csv"), df10)
 CSV.write(datadir("ColonSmps","BetaNB13.csv"), df11)
 CSV.write(datadir("ColonSmps","BetaNB14.csv"), df12)
 
-priors1 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsPois(5.0, 150.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(5.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(2.5, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(1.25, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(5.0, 150.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(5.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(2.5, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(1.25, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
@@ -92,22 +89,22 @@ grid = sort(unique(out1["Smp_s_loc"][cumsum(out1["Smp_s"],dims = 1)[1,:,:] .> 0.
 grid = grid[1:10:length(grid)]
 breaks_extrap = collect(3.2:0.02:15)
 extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out1["Smp_θ"], dims = 2), out1["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df9 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out2, priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out2["Smp_x"], dims = 2), out2["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out2["Smp_θ"], dims = 2), out2["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df10 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out3, priors3.diff[1], priors3.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out3["Smp_x"], dims = 2), out3["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out3["Smp_θ"], dims = 2), out3["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df11 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out4, priors4.diff[1], priors4.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out4["Smp_x"], dims = 2), out4["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out4["Smp_θ"], dims = 2), out4["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df12 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
@@ -116,10 +113,10 @@ CSV.write(datadir("ColonSmps","BetaNB22.csv"), df10)
 CSV.write(datadir("ColonSmps","BetaNB23.csv"), df11)
 CSV.write(datadir("ColonSmps","BetaNB24.csv"), df12)
 
-priors1 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsPois(20.0, 150.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(20.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(10.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(5.0, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(20.0, 150.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(20.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(10.0, 0.5, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(5.0, 0.25, 10.0, 150.0, 3.2), [RandomWalk()])
 
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
@@ -132,22 +129,22 @@ grid = sort(unique(out1["Smp_s_loc"][cumsum(out1["Smp_s"],dims = 1)[1,:,:] .> 0.
 grid = grid[1:10:length(grid)]
 breaks_extrap = collect(3.2:0.02:15)
 extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out1["Smp_θ"], dims = 2), out1["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df9 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out2, priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out2["Smp_x"], dims = 2), out2["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out2["Smp_θ"], dims = 2), out2["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df10 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out3, priors3.diff[1], priors3.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out3["Smp_x"], dims = 2), out3["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out3["Smp_θ"], dims = 2), out3["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df11 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out4, priors4.diff[1], priors4.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out4["Smp_x"], dims = 2), out4["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out4["Smp_θ"], dims = 2), out4["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df12 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
@@ -157,10 +154,10 @@ CSV.write(datadir("ColonSmps","BetaNB33.csv"), df11)
 CSV.write(datadir("ColonSmps","BetaNB34.csv"), df12)
 
 
-priors1 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsPois(1.0, 150.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(1.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(0.2, 0.2, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, InvGamma([0.5],[0.1],[0.1]), FixedW([0.5]), 1.0, CtsNB(0.1, 0.1, 10.0, 150.0, 3.2), [RandomWalk()])
+priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(1.0, 150.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(1.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(0.2, 0.2, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(0.1, 0.1, 10.0, 150.0, 3.2), [RandomWalk()])
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
@@ -172,22 +169,22 @@ grid = sort(unique(out1["Smp_s_loc"][cumsum(out1["Smp_s"],dims = 1)[1,:,:] .> 0.
 grid = grid[1:10:length(grid)]
 breaks_extrap = collect(3.2:0.02:15)
 extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out1["Smp_θ"], dims = 2), out1["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df9 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out2, priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out2["Smp_x"], dims = 2), out2["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out2["Smp_θ"], dims = 2), out2["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df10 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out3, priors3.diff[1], priors3.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out3["Smp_x"], dims = 2), out3["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out3["Smp_θ"], dims = 2), out3["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df11 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 extrap1 = barker_extrapolation(out4, priors4.diff[1], priors4.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out4["Smp_x"], dims = 2), out4["Smp_s_loc"], grid)
+test_smp = cts_transform(cumsum(out4["Smp_θ"], dims = 2), out4["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df12 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
@@ -213,28 +210,6 @@ df13 = CSV.read(datadir("ColonSmps","BetaNB41.csv"), DataFrame)
 df14 = CSV.read(datadir("ColonSmps","BetaNB42.csv"), DataFrame)
 df15 = CSV.read(datadir("ColonSmps","BetaNB43.csv"), DataFrame)
 df16 = CSV.read(datadir("ColonSmps","BetaNB44.csv"), DataFrame)
-
-
-seq = 0.1:0.1:50
-plot(seq, pdf.(Gamma(20,1),seq))
-seq = 0.1:0.1:50
-plot!(seq, pdf.(Gamma(10,2),seq))
-seq = 0.1:0.1:50
-plot!(seq, pdf.(Gamma(5,4),seq))
-
-seq = 0.1:0.1:50
-plot(seq, pdf.(Gamma(10,1),seq))
-seq = 0.1:0.1:50
-plot!(seq, pdf.(Gamma(5,2),seq))
-seq = 0.1:0.1:50
-plot!(seq, pdf.(Gamma(2.5,4),seq))
-
-seq = 0.1:0.1:50
-plot(seq, pdf.(Gamma(1,1),seq))
-seq = 0.1:0.1:50
-plot!(seq, pdf.(Gamma(0.2,5),seq))
-seq = 0.1:0.1:50
-plot!(seq, pdf.(Gamma(0.1,10),seq))
 
 R"""
 dat1 = data.frame($df1)

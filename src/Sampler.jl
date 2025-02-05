@@ -141,13 +141,15 @@ end
 
 function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
     if settings.skel
-        out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)], 
+        out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_θ" => storage.x[:,:,1:(dyn.ind-1)].*reshape(storage.σ[:,1:(dyn.ind-1)], size(storage.σ[:,1:(dyn.ind-1)],1), 1, size(storage.σ[:,1:(dyn.ind-1)],2)), 
+                    "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)], 
                     "Sk_ω" => storage.ω[:,1:(dyn.ind-1)], "Sk_σ" => storage.σ[:,1:(dyn.ind-1)], "Sk_Γ" => storage.Γ[1:(dyn.ind-1)], "Sk_J" => storage.J[1:(dyn.ind-1)], "Sk_s_loc" => storage.s_loc[:,1:(dyn.ind-1)],
-                    "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
+                    "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_θ" => storage.x_smp[:,:,1:(dyn.smp_ind-1)].*reshape(storage.σ_smp[:,1:(dyn.smp_ind-1)], size(storage.σ_smp[:,1:(dyn.smp_ind-1)],1), 1, size(storage.σ_smp[:,1:(dyn.smp_ind-1)],2)), 
+                    "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
                     "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_Γ" => storage.Γ_smp[1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
     else
-        out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
+        out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_θ" => storage.x_smp[:,:,1:(dyn.smp_ind-1)].*reshape(storage.σ_smp[:,1:(dyn.smp_ind-1)], size(storage.σ_smp[:,1:(dyn.smp_ind-1)],1), 1, size(storage.σ_smp[:,1:(dyn.smp_ind-1)],2)), "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
                     "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_Γ" => storage.Γ_smp[1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
 
