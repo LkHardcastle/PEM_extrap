@@ -267,12 +267,28 @@ dat2 = data.frame($df14)
 dat2 = cbind(dat2, "NB - 1, 1")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat3 = data.frame($df15)
-dat3 = cbind(dat3, "NB - 10, .5")
+dat3 = cbind(dat3, "NB - .2, .5")
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat4 = data.frame($df16)
-dat4 = cbind(dat4, "NB - 5, .25")
+dat4 = cbind(dat4, "NB - .1, .25")
 colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_4 <- rbind(dat1, dat2, dat3, dat4)
+"""
+
+R"""
+dat1 = data.frame($df4)
+dat1 = cbind(dat1, "NB - 2.5, .25")
+colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat2 = data.frame($df8)
+dat2 = cbind(dat2, "NB - 1.25, .25")
+colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
+dat3 = data.frame($df12)
+dat3 = cbind(dat3, "NB - 5, .25")
+colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
+dat4 = data.frame($df16)
+dat4 = cbind(dat4, "NB - 1, .25")
+colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat_all <- rbind(dat1, dat2, dat3, dat4)
 """
 
 R"""
@@ -308,6 +324,16 @@ p4 <- dat_4 %>%
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) +
     geom_hline(yintercept = 0.2)
-plot_grid(p1,p2,p3,p4)
+
+p5 <- dat_all %>%
+    subset(Time < 3.1) %>%
+    pivot_longer(c(Mean, LCI, UCI),) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) 
+
+plot_grid(p1,p2,p3,p4, p5)
 #ggsave($plotsdir("Priors_sen.pdf"), width = 8, height = 6)
 """
+
