@@ -37,6 +37,19 @@ function pois_gen(grid::CtsNB, priors::Prior, state::State)
     return Pois_new, weight_vec
 end
 
+function pois_gen(grid::CtsNBmix, priors::Prior, state::State)
+    Pois_new = []
+    weight_vec = []
+    # Γ∣J+K ∼ Gamma(α + J + K, β + 1)
+    error("Update indicators here")
+    priors.grid.Γ = rand(Gamma(sum(state.s) + priors.grid.α, priors.ω.ω[1]/(priors.grid.β + 1)))
+    for k in axes(state.x,1)
+        push!(Pois_new, rand(Poisson((priors.grid.max_time - state.s_loc[1])*priors.grid.Γ*(1 - priors.ω.ω[k]))))
+        push!(weight_vec, (1 - priors.ω.ω[k]))
+    end
+    return Pois_new, weight_vec
+end
+
 function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, grid::Cts)
     rem_ind = findall(sum.(eachcol(state.s)) .!= 0.0)
     state.x, state.v, state.s, state.g, state.s_loc = state.x[:,rem_ind], state.v[:,rem_ind], state.s[:,rem_ind], state.g[:,rem_ind], state.s_loc[rem_ind]

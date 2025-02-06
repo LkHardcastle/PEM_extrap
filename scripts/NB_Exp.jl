@@ -155,9 +155,9 @@ CSV.write(datadir("ColonSmps","BetaNB34.csv"), df12)
 
 
 priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(1.0, 150.0, 3.2), [RandomWalk()])
-priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(1.0, 1.0, 10.0, 150.0, 3.2), [RandomWalk()])
-priors3 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(0.2, 0.2, 10.0, 150.0, 3.2), [RandomWalk()])
-priors4 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(0.1, 0.1, 10.0, 150.0, 3.2), [RandomWalk()])
+priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(0.5, 0.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors3 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(1/3, 0.0, 10.0, 150.0, 3.2), [RandomWalk()])
+priors4 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsNB(0.01, 0.01, 10.0, 150.0, 3.2), [RandomWalk()])
 Random.seed!(24562)
 @time out1 = pem_sample(state0, dat, priors1, settings)
 @time out2 = pem_sample(state0, dat, priors2, settings)
@@ -264,31 +264,47 @@ dat1 = data.frame($df13)
 dat1 = cbind(dat1, "P - 1")
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat2 = data.frame($df14)
-dat2 = cbind(dat2, "NB - 1, 1")
+dat2 = cbind(dat2, "NB - Jeffrey's")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat3 = data.frame($df15)
-dat3 = cbind(dat3, "NB - .2, .5")
+dat3 = cbind(dat3, "NB - Neutral")
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat4 = data.frame($df16)
-dat4 = cbind(dat4, "NB - .1, .25")
+dat4 = cbind(dat4, "NB - Non-Inf")
 colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_4 <- rbind(dat1, dat2, dat3, dat4)
 """
 
 R"""
 dat1 = data.frame($df4)
-dat1 = cbind(dat1, "NB - 2.5, .25")
+dat1 = cbind(dat1, "NB - (10) 2.5, .25")
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat2 = data.frame($df8)
-dat2 = cbind(dat2, "NB - 1.25, .25")
+dat2 = cbind(dat2, "NB - (5) 1.25, .25")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat3 = data.frame($df12)
-dat3 = cbind(dat3, "NB - 5, .25")
+dat3 = cbind(dat3, "NB - (20) 5, .25")
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat4 = data.frame($df16)
-dat4 = cbind(dat4, "NB - 1, .25")
+dat4 = cbind(dat4, "NB - (1) .01, .01")
 colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_all <- rbind(dat1, dat2, dat3, dat4)
+"""
+
+R"""
+dat1 = data.frame($df1)
+dat1 = cbind(dat1, "P - 10")
+colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat2 = data.frame($df5)
+dat2 = cbind(dat2, "P - 5")
+colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
+dat3 = data.frame($df9)
+dat3 = cbind(dat3, "P - 20")
+colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
+dat4 = data.frame($df13)
+dat4 = cbind(dat4, "P - 1")
+colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat_p <- rbind(dat1, dat2, dat3, dat4)
 """
 
 R"""
@@ -333,7 +349,29 @@ p5 <- dat_all %>%
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) 
 
-plot_grid(p1,p2,p3,p4, p5)
+p6 <- dat_p %>%
+    subset(Time < 3.1) %>%
+    pivot_longer(c(Mean, LCI, UCI),) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) 
+plot_grid(p1,p2,p3,p4)
+plot_grid(p5,p6)
 #ggsave($plotsdir("Priors_sen.pdf"), width = 8, height = 6)
 """
 
+plot(out1["Sk_t"],out1["Sk_x"][1,10,:])
+
+plot(out1["Sk_t"],out1["Sk_θ"][1,10,:])
+
+plot(out1["Sk_θ"][1,10,:], log.(out1["Sk_σ"][1,:]))
+ylabel!("σ");xlabel!("Centred θ")
+plot(out1["Sk_x"][1,10,:], log.(out1["Sk_σ"][1,:]))
+ylabel!("σ");xlabel!("Non-centred θ")
+
+plot(out1["Sk_θ"][1,2,:], log.(out1["Sk_σ"][1,:]))
+plot(out1["Sk_x"][1,2,:], log.(out1["Sk_σ"][1,:]))
+
+plot(scatter(out1["Sk_θ"][1,1,:], out1["Sk_θ"][1,2,:]))
+plot(scatter(out1["Sk_x"][1,1,:], out1["Sk_x"][1,2,:]))
