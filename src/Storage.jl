@@ -11,6 +11,7 @@ function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors:
                         fill(Inf, size(state.x,1), settings.max_ind + 1),
                         fill(Inf, size(state.x,1), settings.max_ind + 1),
                         zeros(settings.max_ind+ 1),
+                        zeros(settings.max_ind+ 1),
                         fill(Inf,size(state.x, 1),size(state.x, 2), settings.max_smp + 1),
                         fill(Inf,size(state.v, 1),size(state.v, 2), settings.max_smp + 1), 
                         fill(false,size(state.s, 1),size(state.s, 2), settings.max_smp + 1),
@@ -19,6 +20,7 @@ function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors:
                         zeros(settings.max_smp + 1),
                         fill(Inf, size(state.x, 1), settings.max_smp + 1),
                         fill(Inf, size(state.x, 1), settings.max_smp + 1),
+                        zeros(settings.max_smp + 1),
                         zeros(settings.max_smp + 1))
     store_state!(state, storage, dyn, priors; skel = settings.skel)
     return storage
@@ -34,6 +36,7 @@ function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors:
                         fill(Inf, size(state.x,1), settings.max_ind + 1),
                         fill(Inf, size(state.x,1), settings.max_ind + 1),
                         zeros(settings.max_ind+ 1),
+                        zeros(settings.max_ind+ 1),
                         fill(Inf,size(state.x, 1),grid.max_points, settings.max_smp + 1),
                         fill(Inf,size(state.v, 1),grid.max_points, settings.max_smp + 1), 
                         fill(false,size(state.s, 1),grid.max_points, settings.max_smp + 1),
@@ -42,6 +45,7 @@ function storage_start!(state::State, settings::Settings, dyn::Dynamics, priors:
                         zeros(settings.max_smp + 1),
                         fill(Inf, size(state.x, 1), settings.max_smp + 1),
                         fill(Inf, size(state.x, 1), settings.max_smp + 1),
+                        zeros(settings.max_smp + 1),
                         zeros(settings.max_smp + 1))
     store_state!(state, storage, dyn, priors; skel = settings.skel)
     return storage
@@ -62,6 +66,7 @@ function store_state!(state::State, storage::Storage, dyn::Dynamics, priors::Pri
     storage.ω[:,dyn.ind] = copy(priors.ω.ω)
     storage.σ[:,dyn.ind] = copy(priors.σ.σ)
     storage.Γ[dyn.ind] = copy(priors.grid.Γ)
+    storage.γ[dyn.ind] = copy(priors.grid.γ)
     dyn.ind += 1
 end
 
@@ -86,6 +91,7 @@ function store_smps!(state::State, storage::Storage, dyn::Dynamics, times::Times
         storage.ω_smp[:,dyn.smp_ind] = copy(priors.ω.ω)
         storage.σ_smp[:,dyn.smp_ind] = copy(priors.σ.σ) 
         storage.Γ_smp[dyn.smp_ind] = copy(priors.grid.Γ)
+        storage.γ_smp[dyn.smp_ind] = copy(priors.grid.γ)
         storage.J_smp[dyn.smp_ind] = J_old
         storage.s_loc_smp[range, dyn.smp_ind] = s_loc_old
         dyn.smp_ind += 1

@@ -11,7 +11,7 @@ function merge_time(state::State, j::CartesianIndex, priors::Prior)
 end
 
 function split_rate(state::State, priors::Prior, k::Int64)
-    rate = log(priors.p_split) + log(priors.ω.ω[k]) - log(1 - priors.ω.ω[k]) - 0.5*log(2*pi*priors.σ.σ[k]^2)
+    rate = log(priors.p_split) + log(priors.ω.ω[k]) - log(1 - priors.ω.ω[k]) - 0.5*log(2*pi)
     J = log(2) + log(sphere_area(size(state.active,1) - 1)) - log(sphere_area(size(state.active,1))*(size(state.active,1)))
     return exp(rate + J)
 end

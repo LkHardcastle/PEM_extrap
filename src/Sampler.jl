@@ -8,6 +8,24 @@ include("Extrapolation.jl")
 include("RJ.jl")
 include("Metropolis.jl")
 
+function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Settings, test_times)
+    out1 = pem_sample(state0, dat, priors, settings)
+    out2 = pem_sample(state0, dat, priors, settings)
+    test_smp1 = cts_transform(cumsum(out1["Smp_θ"], dims = 2), out1["Smp_s_loc"], test_times)
+    test_smp2 = cts_transform(cumsum(out2["Smp_θ"], dims = 2), out2["Smp_s_loc"], test_times)
+    rhat_ = []
+    ess_ = []
+    for i in eachindex(test_times)
+        diag = MCMCDiagnosticTools.ess_rhat(vcat(test_smp1[1,i,:], test_smp2[1,i,:]))
+        push!(ess_, diag[1])
+        push!(rhat_, diag[2])
+    end
+    diag = MCMCDiagnosticTools.ess_rhat(vcat(out1["Smp_σ"][1,:], out2["Smp_σ"][1,:]))
+    push!(ess_, diag[1])
+    push!(rhat_, diag[2])
+    return out1, out2, rhat_, ess_
+end
+
 function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settings)
     ### Setup
     state = copy(state0)
@@ -141,14 +159,17 @@ end
 
 function sampler_end(storage::Storage, dyn::Dynamics, settings::Settings)
     if settings.skel
-        out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)], 
-                    "Sk_ω" => storage.ω[:,1:(dyn.ind-1)], "Sk_σ" => storage.σ[:,1:(dyn.ind-1)], "Sk_Γ" => storage.Γ[1:(dyn.ind-1)], "Sk_J" => storage.J[1:(dyn.ind-1)], "Sk_s_loc" => storage.s_loc[:,1:(dyn.ind-1)],
-                    "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
-                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_Γ" => storage.Γ_smp[1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
+        out = Dict("Sk_x" => storage.x[:,:,1:(dyn.ind-1)], "Sk_θ" => storage.x[:,:,1:(dyn.ind-1)].*reshape(storage.σ[:,1:(dyn.ind-1)], size(storage.σ[:,1:(dyn.ind-1)],1), 1, size(storage.σ[:,1:(dyn.ind-1)],2)), 
+                    "Sk_v" => storage.v[:,:,1:(dyn.ind-1)], "Sk_s" => storage.s[:,:,1:(dyn.ind-1)], "Sk_t" => storage.t[1:(dyn.ind-1)], 
+                    "Sk_ω" => storage.ω[:,1:(dyn.ind-1)], "Sk_σ" => storage.σ[:,1:(dyn.ind-1)], "Sk_Γ" => storage.Γ[1:(dyn.ind-1)], "Sk_γ" => storage.γ[1:(dyn.ind-1)], "Sk_J" => storage.J[1:(dyn.ind-1)], "Sk_s_loc" => storage.s_loc[:,1:(dyn.ind-1)],
+                    "Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_θ" => storage.x_smp[:,:,1:(dyn.smp_ind-1)].*reshape(storage.σ_smp[:,1:(dyn.smp_ind-1)], size(storage.σ_smp[:,1:(dyn.smp_ind-1)],1), 1, size(storage.σ_smp[:,1:(dyn.smp_ind-1)],2)), 
+                    "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
+                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_Γ" => storage.Γ_smp[1:(dyn.smp_ind-1)], "Smp_γ" => storage.γ_smp[1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]), "Eval" => dyn.sampler_eval) 
     else
-        out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
-                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_Γ" => storage.Γ_smp[1:(dyn.smp_ind-1)], "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
+        out = Dict("Smp_x" => storage.x_smp[:,:,1:(dyn.smp_ind-1)], "Smp_θ" => storage.x_smp[:,:,1:(dyn.smp_ind-1)].*reshape(storage.σ_smp[:,1:(dyn.smp_ind-1)], size(storage.σ_smp[:,1:(dyn.smp_ind-1)],1), 1, size(storage.σ_smp[:,1:(dyn.smp_ind-1)],2)), "Smp_v" => storage.v_smp[:,:,1:(dyn.smp_ind-1)], "Smp_s" => storage.s_smp[:,:,1:(dyn.smp_ind-1)], 
+                    "Smp_t" => storage.t_smp[1:(dyn.smp_ind-1)], "Smp_ω" => storage.ω_smp[:,1:(dyn.smp_ind-1)], "Smp_σ" => storage.σ_smp[:,1:(dyn.smp_ind-1)], "Smp_Γ" => storage.Γ_smp[1:(dyn.smp_ind-1)], "Smp_γ" => storage.γ_smp[1:(dyn.smp_ind-1)],
+                    "Smp_J" => storage.J_smp[1:(dyn.smp_ind-1)], "Smp_s_loc" => storage.s_loc_smp[:,1:(dyn.smp_ind-1)],
                     "Smp_trans" => transform_smps(storage.x_smp[:,:,1:(dyn.smp_ind-1)]),"Eval" => dyn.sampler_eval) 
 
     end

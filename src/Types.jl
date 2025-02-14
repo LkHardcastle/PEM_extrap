@@ -89,6 +89,7 @@ mutable struct Storage
     ω::Array{Float64}
     σ::Array{Float64}
     Γ::Vector{Float64}
+    γ::Vector{Float64}
     x_smp::Array{Float64}
     v_smp::Array{Float64}
     s_smp::Array{Bool}
@@ -98,6 +99,7 @@ mutable struct Storage
     ω_smp::Array{Float64}
     σ_smp::Array{Float64}
     Γ_smp::Vector{Float64}
+    γ_smp::Vector{Float64}
 end
 
 abstract type Variance end
@@ -150,18 +152,53 @@ mutable struct CtsNB <: Cts
     α::Float64
     β::Float64
     Γ::Float64
+    γ::Int64
+    max_points::Int64
+    max_time::Float64
+end
+
+mutable struct CtsNB2 <: Cts
+    α::Float64
+    β::Float64
+    a::Float64
+    b::Float64
+    Γ::Float64
+    γ::Int64
+    max_points::Int64
+    max_time::Float64
+end
+
+mutable struct CtsNBmix <: Cts
+    α1::Float64
+    β1::Float64
+    α2::Float64
+    β2::Float64
+    γ::Int64
+    Γ::Float64
     max_points::Int64
     max_time::Float64
 end
 
 mutable struct CtsPois <: Cts
     Γ::Float64
+    γ::Int64
+    max_points::Int64
+    max_time::Float64
+end
+
+mutable struct CtsPoisRE <: Cts
+    Γ::Float64
+    μ::Float64
+    σ::Float64
+    γ::Int64
+    h::Float64
     max_points::Int64
     max_time::Float64
 end
 
 mutable struct RJ <: Grid
     Γ::Float64
+    γ::Int64
     σ::Float64
     max_points::Int64
     max_time::Float64
