@@ -74,11 +74,11 @@ function pem_survival(λ::Matrix{Float64}, times::Vector{Float64})
 end
 
 function get_DIC(out, dat::PEMData)
-    deviance = zeros(size(out["Smp_x"],3))
-    n_param = zeros(size(out["Smp_x"],3))
-    for i in 1_000:size(out["Smp_x"],3)
+    deviance = zeros(size(out["Smp_θ"],3))
+    n_param = zeros(size(out["Smp_θ"],3))
+    for i in 1_000:size(out["Smp_θ"],3)
         J = out["Smp_J"][i]
-        θ = cumsum(out["Smp_x"][:,1:J,i],dims = 2)
+        θ = cumsum(out["Smp_θ"][:,1:J,i],dims = 2)
         s_loc = out["Smp_s_loc"][1:J,i]
         L = size(dat.UQ, 2)
         W = zeros(L,J)
@@ -106,7 +106,7 @@ function get_DIC(out, dat::PEMData)
             end
         end
         deviance[i] = 2*sum(exp.(θ).*W .- δ.*θ) 
-        n_param[i] = length(findall(out["Smp_x"][:,1:J,i] .!= 0.0))
+        n_param[i] = length(findall(out["Smp_θ"][:,1:J,i] .!= 0.0))
     end
     DIC = mean(deviance[findall(.!isnan.(deviance))][1_000:end]) + 0.5*var(deviance[findall(.!isnan.(deviance))][1_000:end])
     dev_new = mean(deviance[findall(.!isnan.(deviance))][1_000:end]) + mean(n_param[1_000:end])
@@ -133,3 +133,16 @@ function get_meansurv(smp_x, smp_s_loc, smp_J, cov)
     end
     return mean_surv
 end
+
+function r_hat(x::Vector{Vector{Float64}})
+    xbar = mean.(x)
+    μhat = mean(reduce(vcat,x))
+    s2i = var.(x)
+    s2 = mean(s2i)
+    B = (1/(size(x,1) - 1))*sum((xbar .- μhat).^2)
+    σ2 = s2*(size(x[1],1)-1)/size(x[1],1) + B
+    return sqrt(σ2/s2)
+end
+
+mean(reduce(vcat,[[1,2],[3,4]]))
+size([[1,2],[3,4]])

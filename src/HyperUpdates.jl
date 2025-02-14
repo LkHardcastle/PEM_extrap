@@ -37,15 +37,48 @@ function pois_gen(grid::CtsNB, priors::Prior, state::State)
     return Pois_new, weight_vec
 end
 
-function pois_gen(grid::CtsNBmix, priors::Prior, state::State)
+function pois_gen(grid::CtsNB2, priors::Prior, state::State)
     Pois_new = []
     weight_vec = []
     # Γ∣J+K ∼ Gamma(α + J + K, β + 1)
-    error("Update indicators here")
+    priors.grid.β = rand(Gamma(priors.grid.a, priors.grid.Γ + priors.grid.b))
     priors.grid.Γ = rand(Gamma(sum(state.s) + priors.grid.α, priors.ω.ω[1]/(priors.grid.β + 1)))
     for k in axes(state.x,1)
         push!(Pois_new, rand(Poisson((priors.grid.max_time - state.s_loc[1])*priors.grid.Γ*(1 - priors.ω.ω[k]))))
         push!(weight_vec, (1 - priors.ω.ω[k]))
+    end
+    return Pois_new, weight_vec
+end
+
+function pois_gen(grid::CtsPoisRE, priors::Prior, state::State)
+    Pois_new = []
+    weight_vec = []
+    # Γ∣J+K ∼ Gamma(α + J + K, β + 1)
+    Γ_prop = exp(log(priors.grid.Γ) + rand(Normal(0.0,priors.grid.h)))
+    A = sum(state.s)*(log(Γ_prop) - log(priors.grid.Γ)) - priors.ω.ω[1]*(Γ_prop - priors.grid.Γ) + logpdf(Normal(priors.grid.μ,priors.grid.σ),Γ_prop) - logpdf(Normal(priors.grid.μ,priors.grid.σ),priors.grid.Γ)
+    if rand() < min(1,exp(A))
+        priors.grid.Γ = copy(Γ_prop)
+    end
+    for k in axes(state.x,1)
+        push!(Pois_new, rand(Poisson((priors.grid.max_time - state.s_loc[1])*priors.grid.Γ*(1 - priors.ω.ω[k]))))
+        push!(weight_vec, (1 - priors.ω.ω[k]))
+    end
+    return Pois_new, weight_vec
+end
+
+function pois_gen(grid::CtsNBmix, priors::Prior, state::State)
+    Pois_new = []
+    weight_vec = []
+    # Γ∣J+K ∼ Gamma(α + J + K, β + 1)
+    #error("Update indicators here")
+    priors.grid.Γ = priors.grid.γ*rand(Gamma(sum(state.s) + priors.grid.α1, priors.ω.ω[1]/(priors.grid.β1 + 1))) + (1-priors.grid.γ)*rand(Gamma(sum(state.s) + priors.grid.α2, priors.ω.ω[1]/(priors.grid.β2 + 1)))
+    for k in axes(state.x,1)
+        push!(Pois_new, rand(Poisson((priors.grid.max_time - state.s_loc[1])*priors.grid.Γ*(1 - priors.ω.ω[k]))))
+        push!(weight_vec, (1 - priors.ω.ω[k]))
+    end
+    A =  logpdf(Gamma(sum(state.s) + priors.grid.α2, priors.ω.ω[1]/(priors.grid.β2 + 1)), priors.grid.Γ) - logpdf(Gamma(sum(state.s) + priors.grid.α1, priors.ω.ω[1]/(priors.grid.β1 + 1)), priors.grid.Γ)
+    if rand() < min(1, exp(priors.grid.γ*A - (1-priors.grid.γ)*A))
+        priors.grid.γ = mod(priors.grid.γ + 1, 2)
     end
     return Pois_new, weight_vec
 end
