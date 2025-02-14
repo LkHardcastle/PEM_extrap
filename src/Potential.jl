@@ -66,7 +66,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
     # L x J matrix
     U_ind = reverse(cumsum(reverse(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
     # Convert to p x J matrix
-    U_ind = dat.UQ*U_ind
+    U_ind = (dat.UQ*U_ind).*priors.σ.σ
     ∇U_out = U_ind[state.active]
     Σθ = cumsum(state.x, dims = 2).*priors.σ.σ
     μθ = Vector{Vector{Float64}}()
@@ -88,7 +88,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
     # L x J matrix
     U_ind = reverse(cumsum(reverse(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
     # Convert to p x J matrix
-    U_ind = dat.UQ*U_ind
+    U_ind = (dat.UQ*U_ind).*priors.σ.σ
     ∇U_out = U_ind[state.active]
     Σθ = cumsum(state.x, dims = 2).*priors.σ.σ
     μθ = Vector{Vector{Float64}}()
@@ -101,6 +101,17 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
             ∇U_out[i] += prior_EM(state, μθ[state.active[i][1]], ∂μθ[state.active[i][1]], priors, state.active[i])
     end
     return ∇U_out
+end
+
+function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
+    AV_calc!(state, dyn)
+    out = sum(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ), dims = 2)
+    out .+= ∇σp(priors.σ)
+    return vec(out)
+end
+
+function ∇σp(σ::PC)
+    return σ.a.*σ.σ .- 1
 end
 
 ############ Random Walk

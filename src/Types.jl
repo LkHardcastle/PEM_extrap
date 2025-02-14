@@ -237,6 +237,7 @@ mutable struct BasicPrior <: Prior
     p_split::Float64
     grid::Grid
     diff::Vector{Diffusion}
+    v::Vector{Float64}
 end
 
 mutable struct EulerMaruyama <: Prior
@@ -246,6 +247,7 @@ mutable struct EulerMaruyama <: Prior
     p_split::Float64
     grid::Grid
     diff::Vector{Diffusion}
+    v::Vector{Float64}
 end
 
 struct PEMData
@@ -260,7 +262,9 @@ struct PEMData
     UQ::Matrix{Float64}
 end
 
-struct Settings
+abstract type Settings end
+
+struct Exact <: Settings
     max_ind::Int64
     max_smp::Int64
     max_time::Int64
@@ -269,6 +273,18 @@ struct Settings
     r_rate::Float64
     verbose::Bool
     skel::Bool
+end
+
+struct Splitting <: Settings
+    max_ind::Int64
+    max_smp::Int64
+    max_time::Int64
+    smp_rate::Float64
+    h_rate::Float64
+    r_rate::Float64
+    verbose::Bool
+    skel::Bool
+    δ::Float64
 end
 
 ### Functions
