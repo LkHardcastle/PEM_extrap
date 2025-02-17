@@ -31,13 +31,13 @@ end
 function get_smps(out::Dict, typeof, k::Int)
     if typeof == "Sk"
         n_smp = size(out["Sk_t"],1)
-        Σθ = cumsum(out["Sk_x"], dims = 2)
+        Σθ = cumsum(out["Sk_θ"], dims = 2)
         ω = out["Sk_ω"][k,:]
         Γ = out["Sk_Γ"]
         σ = out["Sk_σ"][k,:]
     elseif typeof == "Smp"
         n_smp = size(out["Smp_t"],1)
-        Σθ = cumsum(out["Smp_x"], dims = 2)
+        Σθ = cumsum(out["Smp_θ"], dims = 2)
         ω = out["Smp_ω"][k,:]
         Γ = out["Smp_Γ"]
         σ = out["Smp_σ"][k,:]

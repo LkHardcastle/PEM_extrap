@@ -285,6 +285,7 @@ struct Splitting <: Settings
     verbose::Bool
     skel::Bool
     δ::Float64
+    thin::Float64
 end
 
 ### Functions

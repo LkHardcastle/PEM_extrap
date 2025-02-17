@@ -126,9 +126,40 @@ function update!(state::State, t::Float64, priors::Prior)
     if t < 0.0
         error("Time travel")
     end
-    state.x += state.v*t
     priors.σ.σ = exp.(log.(priors.σ.σ) .+ priors.v*t)
     state.t += t
+    t_push = 0.0
+    finish = false
+    while !finish
+        # Find next split time
+        # Update split time
+        split_time = rand(Exponential(1/(size(findall(state.g),1)*split_rate(state, priors, 1)*priors.p_split)))
+        # Find next merge time 
+        merge_curr = Inf 
+        if priors.p_split > 0.0 
+            j_curr = CartesianIndex(0,0)
+            for j in state.active
+                if j[2] > 1 
+                    merge_cand = merge_time(state, j, priors)
+                    if merge_cand < merge_curr
+                        merge_curr = copy(merge_cand)
+                        j_curr = CartesianIndex(j[1],j[2])
+                    end
+                end
+            end
+        end
+        # Update 
+        t_new, event = findmin([t - t_push, split_time, merge_curr])
+        state.x += state.v*t_new
+        t_push += t_new
+        if event == 1
+            finish = true
+        elseif event == 2
+            split!(state, priors)
+        else
+            merge!(state, j_curr)
+        end
+    end
 end
 
 function event!(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, times::Times, settings::Settings)

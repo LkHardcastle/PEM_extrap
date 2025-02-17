@@ -36,7 +36,7 @@ nsmp = 10_000
 settings1 = Exact(nits, nsmp, 1_000_000, 1.0, 10.0, 0.5, false, true)
 nits = 300_000
 nsmp = 1_000
-settings2 = Splitting(nits, nsmp, 1_000_000, 1.0, 0.0, 0.1, false, true, 0.005)
+settings2 = Splitting(nits, nsmp, 1_000_000, 1.0, 0.0, 0.1, false, true, 0.005, 1.0)
 
 priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 0.0, CtsPois(5.0, 5.0, 150.0, 3.2), [RandomWalk()], [0.0])
 priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 0.0, CtsPois(5.0, 5.0, 150.0, 3.2), [RandomWalk()], [0.1])
@@ -53,7 +53,7 @@ df = CSV.read(datadir("colon.csv"), DataFrame)
 y = df.years
 maximum(y)
 n = length(y)
-breaks = collect(0.25:0.25:3.25)
+breaks = collect(0.2:0.2:3.2)
 p = 1
 cens = df.status
 covar = fill(1.0, 1, n)
@@ -62,23 +62,24 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
-nits = 20_000
-nsmp = 10_000
-settings1 = Exact(nits, nsmp, 1_000_000, 1.0, 10.0, 0.5, false, true)
-nits = 300_000
+nits = 100_000
+nsmp = 100_000
+settings1 = Exact(nits, nsmp, 1_000_000, 1.0, 10.0, 0.1, false, true)
+nits = 100_000
 nsmp = 1_000
-settings2 = Splitting(nits, nsmp, 1_000_000, 1.0, 0.0, 0.1, false, true, 0.005)
+settings2 = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.01, 10.0)
 
-priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 0.0, CtsPois(5.0, 5.0, 150.0, 3.2), [RandomWalk()], [0.0])
-priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 0.0, CtsPois(5.0, 5.0, 150.0, 3.2), [RandomWalk()], [0.1])
+priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(5.0, 5.0, 150.0, 3.2), [RandomWalk()], [0.0])
+priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(5.0, 5.0, 150.0, 3.2), [RandomWalk()], [0.1])
 
 Random.seed!(24562)
-test_times = collect(0.1:0.5:3.1)
+test_times = collect(0.1:0.5:3.0)
 @time out1 = pem_fit(state0, dat, priors1, settings1, test_times)
 Random.seed!(24562)
 @time out2 = pem_fit(state0, dat, priors2, settings2, test_times)
 
-
+histogram(unique(out1[1]["Smp_s_loc"]))
+histogram(unique(out2[1]["Sk_s_loc"]))
 
 plot(out2[1]["Sk_θ"][1,1,:])
 plot(out2[1]["Sk_σ"][1,:])
@@ -86,6 +87,10 @@ plot(out1[3])
 plot!(out2[3])
 plot!(out3[3])
 
+plot(out1[1]["Smp_Γ"])
+plot(out2[1]["Sk_Γ"])
+plot(out1[1]["Smp_ω"][1,:])
+plot(out2[1]["Sk_ω"][1,:])
 out1[3]
 out2[3]
 out3[3]
@@ -94,6 +99,8 @@ plot(out1[4])
 plot!(out2[4])
 plot!(out3[4])
 
+histogram(out1[1]["Smp_x"][1,2,:])
+histogram(out2[1]["Sk_x"][1,2,:])
 plot(out1[1]["Sk_x"][1,2,:], log.(out1[1]["Sk_σ"][1,:]))
 plot(out2[1]["Sk_x"][1,2,:], log.(out2[1]["Sk_σ"][1,:]))
 plot!(out3[1]["Sk_x"][1,2,:], log.(out3[1]["Sk_σ"][1,:]))
@@ -108,7 +115,7 @@ plot(out1[1]["Sk_t"],out1[1]["Sk_θ"][1,2,:])
 plot!(out2[1]["Sk_t"],out2[1]["Sk_θ"][1,2,:])
 
 plot(out1[1]["Sk_t"], log.(out1[1]["Sk_σ"][1,:]))
-plot(out2[1]["Sk_t"], log.(out2[1]["Sk_σ"][1,:]))
+plot!(out2[1]["Sk_t"], log.(out2[1]["Sk_σ"][1,:]))
 plot(out2[2]["Sk_t"], log.(out2[2]["Sk_σ"][1,:]))
 plot(out3[1]["Sk_t"], log.(out3[1]["Sk_σ"][1,:]))
 plot(out3[2]["Sk_t"], log.(out3[2]["Sk_σ"][1,:]))
@@ -117,24 +124,33 @@ histogram(out1[1]["Smp_x"][1,10,:], alpha = 0.1, normalize = true)
 histogram!(out2[1]["Sk_x"][1,10,1:200:end], alpha = 0.1, normalize = true)
 
 histogram(out1[1]["Smp_σ"][1,:], alpha = 0.1, normalize = true)
-histogram(out2[1]["Sk_σ"][1,:], alpha = 0.1, normalize = true)
-
+histogram(out2[2]["Sk_σ"][1,:], alpha = 0.1, normalize = true)
+plot(out2[1]["Sk_σ"][1,:])
+plot(out2[2]["Sk_σ"][1,:])
 plot(out2[1]["Sk_σ"][1,1:15_000],out2[1]["Sk_x"][1,1,1:15_000])
 histogram!(out2[1]["Sk_x"][1,2,1:200:end], alpha = 0.1, normalize = true)
+
+histogram(out1[1]["Smp_J"], alpha = 0.1, normalize = true)
+histogram!(out2[1]["Sk_J"][1:100:end], alpha = 0.1, normalize = true)
 
 Random.seed!(1237)
 grid = sort(unique(out1[1]["Smp_s_loc"][cumsum(out1[1]["Smp_s"],dims = 1)[1,:,:] .> 0.0]))
 #grid = grid[1:10:length(grid)]
-breaks_extrap = collect(3.2:0.02:15)
+breaks_extrap = collect(3.02:0.02:15)
 extrap1 = barker_extrapolation(out1[1], priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1; typeof = "Smp")
 test_smp = cts_transform(cumsum(out1[1]["Smp_θ"], dims = 2), out1[1]["Smp_s_loc"], grid)
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df1 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
-extrap1 = barker_extrapolation(out2[1], priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
-test_smp = cts_transform(cumsum(out2[1]["Sk_θ"], dims = 2), out2[1]["Sk_s_loc"], grid)
-s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
+grid = sort(unique(out2[2]["Sk_s_loc"][cumsum(out2[2]["Sk_s"],dims = 1)[1,:,:] .> 0.0]))
+#grid = grid[1:10:length(grid)]
+extrap1 = barker_extrapolation(out2[2], priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)
+test_smp = cts_transform(cumsum(out2[2]["Sk_θ"][:,:,1:10:end], dims = 2), out2[2]["Sk_s_loc"][:,:,1:10:end], grid)
+s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, 1:10:99999))
 df2 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+plot(test_smp[1,1,:])
+plot(log.(out2[1]["Sk_σ"][1,1:10:end]),test_smp[1,100,:])
 
 R"""
 dat1 = data.frame($df1)
@@ -144,13 +160,14 @@ dat2 = data.frame($df2)
 dat2 = cbind(dat2, "Splitting")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat_1 <- rbind(dat1, dat2)
+dat_1$Model
 """
 
 R"""
 p1 <- dat_1 %>%
-    #subset(Time < 3.1) %>%
-    pivot_longer(c(Mean, LCI, UCI),) %>%
-    ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
+    subset(Time < 3.0) %>%
+    pivot_longer(c(Mean, LCI, UCI)) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") #+ ylim(0,0.5) + xlim(0,3) 

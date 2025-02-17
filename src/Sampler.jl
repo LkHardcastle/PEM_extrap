@@ -140,21 +140,28 @@ function sampler_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, 
 end
 
 function split_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, settings::Splitting)
+    if settings.h_rate > 0.0
+        grid_update!(state, dyn, dat, priors, priors.grid)
+    end
     if rand() < 1 - exp(-settings.r_rate*settings.δ*0.5)
         refresh!(state, dat, dyn, priors)
     end
-    if rand() < 1 - exp(-settings.h_rate*settings.δ*0.5)
-        grid_update!(state, dyn, dat, priors, priors.grid)
-    end
     update!(state, settings.δ*0.5, priors)
+    for i in 1:(settings.thin-1)
+        λ = max(0, dot(vcat(state.v[state.active], priors.v), vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors))))
+        if rand() < 1 - exp(-settings.δ*λ)
+            flip!(state, dat, dyn, priors, settings)
+        end
+        update!(state, settings.δ, priors)
+        if rand() < 1 - exp(-settings.r_rate*settings.δ)
+            refresh!(state, dat, dyn, priors)
+        end
+    end
     λ = max(0, dot(vcat(state.v[state.active], priors.v), vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors))))
     if rand() < 1 - exp(-settings.δ*λ)
         flip!(state, dat, dyn, priors, settings)
     end
     update!(state, settings.δ*0.5, priors)
-    if rand() < 1 - exp(-settings.h_rate*settings.δ*0.5)
-        grid_update!(state, dyn, dat, priors, priors.grid)
-    end
     if rand() < 1 - exp(-settings.r_rate*settings.δ*0.5)
         refresh!(state, dat, dyn, priors)
     end
