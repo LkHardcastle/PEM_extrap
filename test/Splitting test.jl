@@ -38,7 +38,7 @@ nits = 300_000
 nsmp = 1_000
 settings2 = Splitting(nits, nsmp, 1_000_000, 1.0, 0.0, 0.1, false, true, 0.005, 1.0)
 
-priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 0.0, CtsPois(5.0, 5.0, 150.0, 3.2), [RandomWalk()], [0.0])
+priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 0.0, CtsPois(5.0, 5.0, 150.0, 3.2), [RandomWalk()], [])
 priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 0.0, CtsPois(5.0, 5.0, 150.0, 3.2), [RandomWalk()], [0.1])
 
 Random.seed!(24562)
@@ -160,7 +160,6 @@ dat2 = data.frame($df2)
 dat2 = cbind(dat2, "Splitting")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat_1 <- rbind(dat1, dat2)
-dat_1$Model
 """
 
 R"""

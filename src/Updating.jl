@@ -157,7 +157,7 @@ function update!(state::State, t::Float64, priors::Prior)
         elseif event == 2
             split!(state, priors)
         else
-            merge!(state, j_curr)
+            merge!(state, j_curr, priors)
         end
     end
 end
@@ -172,7 +172,7 @@ function event!(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, times:
     if dyn.next_event == 2
         # Merge 
         #if priors.p_split > rand()
-        merge!(state, times.next_merge_index)
+        merge!(state, times.next_merge_index, priors)
         split_time!(state, times, priors)
         merge_time!(state, times, priors)
         #end
