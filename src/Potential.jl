@@ -29,16 +29,16 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     ∂μθ = drift_deriv_t(Σθ[j,:], priors.diff[j])
     active_j = filter(idx -> idx[1] == j, state.active)
     for k in active_j
-        if k != active_j[1]
+        #if k != active_j[1]
             U_ -= logpdf(Normal(0.0, 1), state.x[k] + state.v[k]*t)
             #U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)*priors.σ.σ[k[1]]))
             ∂U_ += state.v[k]*(state.x[k] + state.v[k]*t) 
             #error("Here")
             #∂U_ += -2*priors.σ.σ[k[1]]*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]*priors.σ.σ[k[1]]) + 1)
-        else
-            U_ -= logpdf(Normal(0.0, priors.σ0*priors.σ.σ[j]), state.x[k] + state.v[k]*t)
-            ∂U_ += (state.v[k]/((priors.σ0*priors.σ.σ[j])^2))*(state.x[k] + state.v[k]*t)
-        end
+        #else
+            #U_ -= logpdf(Normal(0.0, priors.σ0*priors.σ.σ[j]), state.x[k] + state.v[k]*t)
+            #∂U_ += (state.v[k]/((priors.σ0*priors.σ.σ[j])^2))*(state.x[k] + state.v[k]*t)
+        #end
     end
     return U_, ∂U_
 end
@@ -106,6 +106,7 @@ end
 function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
     AV_calc!(state, dyn)
     out = sum(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ), dims = 2)
+    #out[:,1] = out[:,1] .-  state.x[:,1] ./ (priors.σ0.*priors.σ.σ).^2
     out .+= ∇σp(priors.σ)
     return vec(out)
 end
@@ -219,11 +220,12 @@ function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin, G
 end
 
 function prior_add(state::State, priors::Prior, k::CartesianIndex)
-    if k[2] == 1
-        return state.x[k]/((priors.σ0*priors.σ.σ[k])^2)
-    else
-        return state.x[k]
-    end
+    return state.x[k]
+    #if k[2] == 1
+    #    return state.x[k]/((priors.σ0*priors.σ.σ[k])^2)
+    #else
+    #    return state.x[k]
+    #end
 end
 
 function prior_EM(state::State, μθ, ∂μθ, priors::EulerMaruyama, k::CartesianIndex)
