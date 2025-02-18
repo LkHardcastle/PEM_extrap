@@ -108,6 +108,9 @@ function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
     out = sum(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ), dims = 2)
     #out[:,1] = out[:,1] .-  state.x[:,1] ./ (priors.σ0.*priors.σ.σ).^2
     out .+= ∇σp(priors.σ)
+    if prod(size(out)) == 0.0
+        out = ∇σp(priors.σ)
+    end
     return vec(out)
 end
 
