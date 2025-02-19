@@ -73,7 +73,9 @@ nsmp = 1_000
 settings2 = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 50.0)
 
 priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 150.0, 3.2), [RandomWalk()], [])
+priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 150.0, 3.2), [GaussLangevin(0.0,1.0)], [])
 priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 150.0, 3.2), [RandomWalk()], [0.1])
+priors2 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 150.0, 3.2), [GaussLangevin(0.0,1.0)], [0.1])
 
 Random.seed!(3463)
 test_times = collect(0.1:0.5:3.0)
@@ -134,8 +136,8 @@ histogram(out1[1]["Smp_θ"][1,2,:], alpha = 0.5, normalize = true, bins = -2:0.1
 histogram!(out2[1]["Sk_θ"][1,2,:], alpha = 0.5, normalize = true, bins = -2:0.1:2)
 
 
-histogram(log.(out1[1]["Smp_σ"][1,:]), alpha = 0.5, normalize = true, bins = -2:0.1:1)
-histogram!(log.(out2[2]["Sk_σ"][1,:]), alpha = 0.5, normalize = true, bins = -2:0.1:1)
+histogram(log.(out1[1]["Smp_σ"][1,:]), alpha = 0.5, normalize = true, bins = -2:0.1:5)
+histogram!(log.(out2[2]["Sk_σ"][1,:]), alpha = 0.5, normalize = true, bins = -2:0.1:5)
 plot!(collect(0:0.1:2), (cdf.(Exponential(0.5),0.1:0.1:2.1) .-cdf.(Exponential(0.5),0:0.1:2)).*10)
 
 plot(out1[1]["Sk_σ"][1,:])
@@ -203,7 +205,7 @@ R"""
 p1 <- dat_1 %>%
     subset(Time < 3.0) %>%
     pivot_longer(c(Mean, LCI, UCI)) %>%
-    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    ggplot(aes(x = Time, y = log(value), col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") #+ ylim(0,0.5) + xlim(0,3) 
