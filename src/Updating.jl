@@ -45,7 +45,7 @@ end
 
 function flip!(state::ECMC2, dat::PEMData, dyn::Dynamics, priors::Prior, settings::Splitting)
     ### Calculate gradient
-    U_grad = vcat(∇U(state, dat, dyn, priors),∇σ(state, dat, dyn, priors))
+    U_grad = vcat(∇U(state, dat, dyn, priors),∇σ(state, dat, dyn, priors, priors.σ))
     v_hold = vcat(state.v[state.active], priors.v)
     v_hold -= 2*dot(v_hold, U_grad)*U_grad/norm(U_grad)^2
     U_grad = U_grad/norm(U_grad)
@@ -89,7 +89,7 @@ end
 
 function ortho_update!(state::ECMC2, dat::PEMData, dyn::Dynamics, priors::Prior, settings::Splitting)
     #U_grad = ∇U(state, dat, dyn, priors)
-    U_grad = vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors))
+    U_grad = vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors, priors.σ))
     v_hold = vcat(state.v[state.active], priors.v)
     U_grad = U_grad/norm(U_grad)
     #v_perp = state.v[state.active] - dot(state.v[state.active], U_grad)*U_grad
@@ -122,11 +122,19 @@ function update!(state::State, t::Float64)
     state.t += t
 end
 
+function update_σ(σ::Variance, v::Vector{Float64}, t::Float64)
+    return exp.(log.(σ.σ) .+ v*t)
+end
+
+function update_σ(σ::FixedV, v::Vector{Float64}, t::Float64)
+    return σ.σ
+end
+
 function update!(state::State, t::Float64, priors::Prior)
     if t < 0.0
         error("Time travel")
     end
-    priors.σ.σ = exp.(log.(priors.σ.σ) .+ priors.v*t)
+    priors.σ.σ = update_σ(priors.σ, priors.v, t)
     state.t += t
     t_push = 0.0
     finish = false

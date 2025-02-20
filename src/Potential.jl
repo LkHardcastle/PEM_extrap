@@ -109,7 +109,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
     return ∇U_out
 end
 
-function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
+function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior, σ::Union{PC, InvGamma})
     AV_calc!(state, dyn)
     out = sum(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ), dims = 2)
     #out[:,1] = out[:,1] .-  state.x[:,1] ./ (priors.σ0.*priors.σ.σ).^2
@@ -128,6 +128,10 @@ function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
         out[k] += ∇σ_drift(state.x[k,:].*priors.σ.σ[k], μθ[k], ∂μθ[k], priors.σ.σ, k, priors.diff[k])
     end
     return vec(out)
+end
+
+function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior, σ::FixedV)
+    return []
 end
 
 function ∇σp(σ::PC)

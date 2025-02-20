@@ -148,7 +148,7 @@ function split_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, da
     end
     update!(state, settings.δ*0.5, priors)
     for i in 1:(settings.thin-1)
-        λ = max(0, dot(vcat(state.v[state.active], priors.v), vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors))))
+        λ = max(0, dot(vcat(state.v[state.active], priors.v), vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors, priors.σ))))
         if rand() < 1 - exp(-settings.δ*λ)
             flip!(state, dat, dyn, priors, settings)
         end
@@ -157,7 +157,7 @@ function split_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, da
             refresh!(state, dat, dyn, priors)
         end
     end
-    λ = max(0, dot(vcat(state.v[state.active], priors.v), vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors))))
+    λ = max(0, dot(vcat(state.v[state.active], priors.v), vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors, priors.σ))))
     if rand() < 1 - exp(-settings.δ*λ)
         flip!(state, dat, dyn, priors, settings)
     end
