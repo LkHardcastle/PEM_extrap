@@ -53,7 +53,7 @@ function split!(state::State, priors::EulerMaruyama)
     j = findall(state.g[k,:])[rand(DiscreteUniform(1,size(findall(state.g[k,:]),1)))]
     Σθ = cumsum(state.x, dims = 2)
     μθ = drift_U(Σθ[k,:], priors.diff[k])
-    p = exp(logpdf(Normal(μθ[j-1]*priors.σ.σ[k]^2 , priors.σ.σ[k]),state.x[k,j]) - logpdf(Normal(0.0, priors.σ.σ[k]), 0.0))
+    p = exp(logpdf(Normal(μθ[j-1]*priors.σ.σ[k]^2 , 1.0),state.x[k,j]) - logpdf(Normal(0.0, 1.0), 0.0))
     acc = rand(Bernoulli(p))
     if acc
         state.s[k,j] = true
