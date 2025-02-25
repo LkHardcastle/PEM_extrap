@@ -358,7 +358,6 @@ param_names <- c(
     )
 
 dat %>%
-    subset(Mean_est > 1.0) %>%
     ggplot(aes(x = as.factor(Tuning), y = 0.5*Mean_est, fill = Sampler)) + geom_boxplot() +
     theme_classic() + facet_wrap(Param ~ Exp, scales = "free", nrow = 4, labeller = labeller(Param = param_names)) +
     theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position = "bottom") 

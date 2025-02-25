@@ -144,7 +144,7 @@ function update!(state::State, t::Float64, priors::Prior)
         split_time = rand(Exponential(1/(size(findall(state.g),1)*split_rate(state, priors, 1)*priors.p_split)))
         # Find next merge time 
         merge_curr = Inf 
-        if priors.p_split > 0.0 
+        if size(state.active,1) > 2 && priors.p_split > 0.0 
             j_curr = CartesianIndex(0,0)
             for j in state.active
                 if j[2] > 1 

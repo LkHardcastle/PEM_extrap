@@ -73,13 +73,13 @@ function pem_survival(λ::Matrix{Float64}, times::Vector{Float64})
     return cumprod(exp.(.- t_'.*λ'), dims = 2)'
 end
 
-function get_DIC(out, dat::PEMData)
-    deviance = zeros(size(out["Smp_θ"],3))
-    n_param = zeros(size(out["Smp_θ"],3))
-    for i in 1_000:size(out["Smp_θ"],3)
-        J = out["Smp_J"][i]
-        θ = cumsum(out["Smp_θ"][:,1:J,i],dims = 2)
-        s_loc = out["Smp_s_loc"][1:J,i]
+function get_DIC(out, dat::PEMData, burn::Int64)
+    deviance = zeros(size(out["Sk_θ"],3))
+    n_param = zeros(size(out["Sk_θ"],3))
+    for i in burn:size(out["Sk_θ"],3)
+        J = out["Sk_J"][i]
+        θ = cumsum(out["Sk_θ"][:,1:J,i],dims = 2)
+        s_loc = out["Sk_s_loc"][1:J,i]
         L = size(dat.UQ, 2)
         W = zeros(L,J)
         δ = zeros(L,J)
@@ -106,11 +106,11 @@ function get_DIC(out, dat::PEMData)
             end
         end
         deviance[i] = 2*sum(exp.(θ).*W .- δ.*θ) 
-        n_param[i] = length(findall(out["Smp_θ"][:,1:J,i] .!= 0.0))
+        n_param[i] = length(findall(out["Sk_θ"][:,1:J,i] .!= 0.0))
     end
-    DIC = mean(deviance[findall(.!isnan.(deviance))][1_000:end]) + 0.5*var(deviance[findall(.!isnan.(deviance))][1_000:end])
-    dev_new = mean(deviance[findall(.!isnan.(deviance))][1_000:end]) + mean(n_param[1_000:end])
-    dev_bar = mean(deviance[findall(.!isnan.(deviance))][1_000:end])
+    DIC = mean(deviance[findall(.!isnan.(deviance))][burn:end]) + 0.5*var(deviance[findall(.!isnan.(deviance))][burn:end])
+    dev_new = mean(deviance[findall(.!isnan.(deviance))][burn:end]) + mean(n_param[burn:end])
+    dev_bar = mean(deviance[findall(.!isnan.(deviance))][burn:end])
     return deviance, DIC, dev_new, dev_bar
 end
 
