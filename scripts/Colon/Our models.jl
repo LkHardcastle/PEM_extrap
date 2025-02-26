@@ -358,6 +358,7 @@ grid = collect(0.02:0.02:3.05)
 breaks_extrap = collect(3.05:0.02:15)
 extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)[:,floor(Int,0.5*nsmp):end]
 test_smp = cts_transform(cumsum(out1["Smp_x"], dims = 2), out1["Smp_s_loc"], grid)[:,:,floor(Int,0.5*nsmp):end]
+extrap1 = barker_extrapolation(out1, priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1)[:,floor(Int,0.5*nsmp):end]
 s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df5 = DataFrame(hcat(vcat(grid, breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 

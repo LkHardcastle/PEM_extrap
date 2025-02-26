@@ -114,6 +114,60 @@ function get_DIC(out, dat::PEMData, burn::Int64)
     return deviance, DIC, dev_new, dev_bar
 end
 
+function get_WAIC(out, dat::PEMData, burn::Int64)
+    lhood = zeros(size(dat.y,1), size(out["Sk_θ"],3))
+    for j in burn:size(out["Sk_θ"],3)
+        J = out["Sk_J"][j]
+        θ = vec(cumsum(out["Sk_θ"][:,1:J,j],dims = 2))
+        s_loc = out["Sk_s_loc"][1:J,j]
+        Δ = vcat(s_loc[1] ,s_loc[2:end] .- s_loc[1:(end - 1)])
+        St = exp.(cumsum(-exp.(θ).*Δ, dims = 2))
+        for i in eachindex(dat.y)
+            d = Inf
+            if isnothing(findfirst(s_loc .> dat.y[i]))
+                d = J
+            else
+                d = findfirst(s_loc .> dat.y[i])
+            end
+            if d > 1
+                lhood[i,j] = exp(dat.cens[i]*θ[d] - St[d-1] - exp(θ[d])*(dat.y[i] - s_loc[d-1]))
+            else
+                lhood[i,j] = exp(dat.cens[i]*θ[d] - exp(θ[d])*dat.y[i])
+            end
+        end
+    end
+    WAIC = -2*(sum(log.(mean(lhood[:,burn:end], dims = 2))) - sum(var(log.(lhood[:,burn:end]), dims = 2)))
+    pWAIC = sum(var(log.(lhood[:,burn:end]), dims = 2))
+    return WAIC, pWAIC
+end
+
+function get_llhood(out, dat::PEMData, burn::Int64)
+    lhood = zeros(size(dat.y,1), size(out["Sk_θ"],3))
+    for j in burn:size(out["Sk_θ"],3)
+        J = out["Sk_J"][j]
+        θ = vec(cumsum(out["Sk_θ"][:,1:J,j],dims = 2))
+        s_loc = out["Sk_s_loc"][1:J,j]
+        Δ = vcat(s_loc[1] ,s_loc[2:end] .- s_loc[1:(end - 1)])
+        St = exp.(cumsum(-exp.(θ).*Δ, dims = 2))
+        for i in eachindex(dat.y)
+            d = Inf
+            if isnothing(findfirst(s_loc .> dat.y[i]))
+                d = J
+            else
+                d = findfirst(s_loc .> dat.y[i])
+            end
+            if d > 1
+                lhood[i,j] = exp(dat.cens[i]*θ[d] - St[d-1] - exp(θ[d])*(dat.y[i] - s_loc[d-1]))
+            else
+                lhood[i,j] = exp(dat.cens[i]*θ[d] - exp(θ[d])*dat.y[i])
+            end
+        end
+    end
+    return log.(lhood[:, burn:size(out["Sk_θ"],3)])
+end
+
+
+
 function get_meansurv(smp_x, smp_s_loc, smp_J, cov)
     mean_surv = zeros(size(smp_x,3))
     for i in axes(smp_x)[3]
@@ -129,6 +183,22 @@ function get_meansurv(smp_x, smp_s_loc, smp_J, cov)
                 sj1 = s_loc[j-1]
             end
             mean_surv[i] += exp(log(exp(-sj1*exp(θ_[j])) - exp(-s_loc[j]*exp(θ_[j]))) - θ_[j])
+        end
+    end
+    return mean_surv
+end
+
+function get_meansurv(haz, s_loc, cov)
+    mean_surv = zeros(size(haz,2))
+    for i in axes(haz,2)
+        for j in axes(haz, 1)
+            if j == 1
+                sj1 = 0.0
+            else
+                sj1 = s_loc[j-1]
+            end
+            #mean_surv[i] += exp(log(exp(-sj1*exp(haz[j,i])) - exp(-s_loc[j]*exp(haz[j,i]))) - haz[j,i])
+            mean_surv[i] += (s_loc[j] - sj1)*exp(-sj1*exp(haz[j,i]))
         end
     end
     return mean_surv
