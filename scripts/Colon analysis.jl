@@ -265,8 +265,8 @@ plot_grid(p1,p2,p3,p4, nrow = 2)
 #ggsave($plotsdir("CovariateColon.pdf"), width = 8, height = 6)
 """
 
-## TODO - For optimal models re-run for Gauss/Gamma/Gompertz
-## TODO - Report mean survival for optimal Poisson/NB model for each set of priors
+## For optimal models re-run for Gauss/Gamma/Gompertz
+## Report mean survival for optimal Poisson/NB model for each set of priors
 
 Random.seed!(2352)
 df = CSV.read(datadir("colon.csv"), DataFrame)
@@ -290,6 +290,8 @@ test_times = collect(0.2:0.2:3.0)
 priors = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(7.0, 1.0, 100.0, 3.1), [RandomWalk()], [0.1])
 out1 = pem_fit(state0, dat, priors, settings, test_times)
 println(out1[3]);println(out1[4])
+
+median(get_meansurv(out1[1]["Sk_x"],out1[1]["Sk_s_loc"],out1[1]["Sk_J"],[1]))
 
 priors = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(7.0, 1.0, 100.0, 3.1), [GaussLangevin(log(0.2),1.0)], [0.1])
 out2 = pem_fit(state0, dat, priors, settings, test_times)
@@ -316,7 +318,7 @@ println(out8[3]);println(out8[4])
 
 m_obs = []
 m_total = []
-breaks_extrap = collect(3.15:0.02:15)
+breaks_extrap = collect(3.12:0.02:15)
 grid = sort(unique(out1[1]["Sk_s_loc"][cumsum(out1[1]["Sk_s"],dims = 1)[1,:,:] .> 0.0]))
 grid = vcat(0.0001, grid[1:5:length(grid)])
 test_smp = cts_transform(cumsum(out1[1]["Sk_θ"], dims = 2), out1[1]["Sk_s_loc"], grid)
@@ -326,6 +328,9 @@ s1 = vcat(view(exp.(test_smp), 1, :, :), view(exp.(extrap1), :, :))
 df1 = DataFrame(hcat(vcat(grid,breaks_extrap), median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 push!(m_obs, mean(get_meansurv(test_smp[1,:,:], grid, [1])))
 push!(m_total, mean(get_meansurv(log.(s1), vcat(grid,breaks_extrap), [1])))
+quantile(get_meansurv(test_smp[1,:,:], grid, [1]), 0.025)
+quantile(get_meansurv(test_smp[1,:,:], grid, [1]), 0.975)
+median(get_meansurv(test_smp[1,:,:], grid, [1]))
 
 grid = sort(unique(out2[1]["Sk_s_loc"][cumsum(out2[1]["Sk_s"],dims = 1)[1,:,:] .> 0.0]))
 grid = vcat(0.0001, grid[1:5:length(grid)])
@@ -467,3 +472,46 @@ plot_grid(p1,p2,p3,p4, nrow = 2)
 
 ## TODO - Run comparators and compare mean survival/hazards
 
+df1 = CSV.read(datadir("ColonSmps","spline.csv"), DataFrame)
+df2 = CSV.read(datadir("ColonSmps","spline_ext.csv"), DataFrame)
+df3 = CSV.read(datadir("ColonSmps","DSM.csv"), DataFrame)
+df4 = CSV.read(datadir("ColonSmps","PW.csv"), DataFrame)
+
+R"""
+dat1 = data.frame($df1)
+dat1 = cbind(dat1, "Spline - no external")
+colnames(dat1) <- c("Col","Time","Mean","LCI","UCI","Model") 
+dat2 = data.frame($df2)
+dat2 = cbind(dat2, "Spline - external")
+colnames(dat2) <- c("Col","Time","Mean","LCI","UCI","Model") 
+dat2 = rbind(dat1, dat2)
+dat3 = data.frame($df3)
+colnames(dat3) <- c("Col", "Time", "Model", "Mean")  
+dat3 = bind_rows(dat2,dat3)
+dat3 <- dat3[,c(1,2,3,5,6)]
+dat4 = data.frame($df4)
+dat4 = cbind(dat4, "Independent PWEXP")
+colnames(dat4) <- c("Col","Time","Mean","UCI","LCI","Model") 
+dat_2 <- bind_rows(dat4,dat3)
+"""
+
+R"""
+head(dat_2)
+"""
+
+R"""
+p1 <- dat_2 %>%
+    subset(Time < 3.1) %>%
+    pivot_longer(cols = Mean:LCI) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7,1,2)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) 
+p2 <- dat_2 %>%
+    pivot_longer(cols = Mean:UCI) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7,1,2)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,2) + xlim(0,15)
+plot_grid(p1,p2)
+"""

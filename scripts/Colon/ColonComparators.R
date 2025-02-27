@@ -114,7 +114,7 @@ pw_out <- df.hazard1 %>%
             LCI = quantile(hazards, 0.025))
 
 
-# Kearns
+# DSM
 
 library("KFAS")
 library("discSurv")
@@ -122,7 +122,7 @@ library("discSurv")
 colons <- arrange(colons, years)
 colons$eventtime <- as.integer(colons$years*12) + 1
 ltcolons <- lifeTable(as.data.frame(colons), timeColumn = "eventtime", eventColumn = "status")
-ltHaz <- data.frame(hazKM = ltcolons$Output$hazard, Time = (seq(1:length(ltcolons$Output[,1]))-0.5)/12,
+ltHaz <- data.frame(hazKM = ltcolons$Output$hazard, Time = (seq(1:length(ltcolons$Output[,1]))-0.5),
                     AtRisk = ltcolons$Output$atRisk, Events = ltcolons$Output$events)
 # Final month
 follow_up <- max(colons$eventtime)
@@ -142,7 +142,7 @@ colnames(logTime) <- c("Time","Events","AtRisk","Hazard")
 # First get equi-spaced in log-time
 MyMin <- log(min(ltHaz$Time))
 MyMax <- log(max(ltHaz$Time))
-MyNum <- follow_up # Number of points we want
+MyNum <- 20 # Number of points we want
 logTime$Time <- MyMin+(MyMax-MyMin)/MyNum*(index(logTime)-1)
 # Now exponentiate
 logTime$Time <- exp(logTime$Time)
