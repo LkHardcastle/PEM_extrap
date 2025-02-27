@@ -1,7 +1,6 @@
-function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::Float64, t_end::Float64, plot_grid::Vector{Float64}, k::Int64)
+function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::Float64, t_end::Float64, plot_grid::Vector{Float64}, k::Int64; typeof = "Sk")
     ## Get end points
-    n_smp = size(out["Smp_t"],1)
-    Σθ = cumsum(out["Smp_x"], dims = 2)
+    n_smp, Σθ, ω, Γ, σ = get_smps(out, typeof, k)
     initial = Σθ[k,end,:]
     if sum(isinf.(initial)) > 0.0
         for i in 1:n_smp
@@ -9,11 +8,11 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
         end
     end
     ## Get time points
-    times = extrapolation_times(out, grid, t_start, t_end, n_smp, out["Smp_ω"][k,:], out["Smp_Γ"])
+    times = extrapolation_times(out, grid, t_start, t_end, n_smp, ω, Γ)
     ## Simulate dynamics
     paths = Vector{Vector{Float64}}()
     for i in 1:n_smp
-        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, out["Smp_σ"][k,i], times[i]))
+        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, σ[i], times[i]))
     end
     output = fill(Inf, length(plot_grid), n_smp)
     for i in 1:n_smp
@@ -27,6 +26,25 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
         end
     end
     return output
+end
+
+function get_smps(out::Dict, typeof, k::Int)
+    if typeof == "Sk"
+        n_smp = size(out["Sk_t"],1)
+        Σθ = cumsum(out["Sk_θ"], dims = 2)
+        ω = out["Sk_ω"][k,:]
+        Γ = out["Sk_Γ"]
+        σ = out["Sk_σ"][k,:]
+    elseif typeof == "Smp"
+        n_smp = size(out["Smp_t"],1)
+        Σθ = cumsum(out["Smp_θ"], dims = 2)
+        ω = out["Smp_ω"][k,:]
+        Γ = out["Smp_Γ"]
+        σ = out["Smp_σ"][k,:]
+    else
+        error("typeof must be one of Sk or Smp")
+    end
+    return n_smp, Σθ, ω, Γ, σ
 end
 
 function extrapolation_times(out::Dict, grid::Fixed, t_start::Float64, t_end::Float64, n_smp::Int64, ω::Vector{Float64})

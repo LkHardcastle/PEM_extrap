@@ -12,7 +12,7 @@ end
 
 function split_rate(state::State, priors::Prior, k::Int64)
     rate = log(priors.p_split) + log(priors.ω.ω[k]) - log(1 - priors.ω.ω[k]) - 0.5*log(2*pi)
-    J = log(2) + log(sphere_area(size(state.active,1) - 1)) - log(sphere_area(size(state.active,1))*(size(state.active,1)))
+    J = log(2) + log(sphere_area(size(state.active,1) + size(priors.v,1) - 1)) - log(sphere_area(size(state.active,1) + size(priors.v,1))*(size(state.active,1) + size(priors.v,1)))
     return exp(rate + J)
 end
 
@@ -32,13 +32,14 @@ function split!(state::State, priors::Prior)
     state.s[k,j] = true
     state.g[k,j] = false
     # Add to state.active
-    a = split_velocity(state)
+    a = split_velocity(state, priors)
     if a == 0.0
         error("Bad split velocity")
     end
     state.active = findall(state.s)
     # New velocities
     state.v[state.active] *= sqrt(1-a^2)
+    priors.v *= sqrt(1-a^2) 
     state.v[k,j] = a
 end
 
@@ -52,13 +53,13 @@ function split!(state::State, priors::EulerMaruyama)
     j = findall(state.g[k,:])[rand(DiscreteUniform(1,size(findall(state.g[k,:]),1)))]
     Σθ = cumsum(state.x, dims = 2)
     μθ = drift_U(Σθ[k,:], priors.diff[k])
-    p = exp(logpdf(Normal(μθ[j-1]*priors.σ.σ[k]^2 , priors.σ.σ[k]),state.x[k,j]) - logpdf(Normal(0.0, priors.σ.σ[k]), 0.0))
+    p = exp(logpdf(Normal(μθ[j-1]*priors.σ.σ[k]^2 , 1.0),state.x[k,j]) - logpdf(Normal(0.0, 1.0), 0.0))
     acc = rand(Bernoulli(p))
     if acc
         state.s[k,j] = true
         state.g[k,j] = false
         # Add to state.active
-        a = split_velocity(state)
+        a = split_velocity(state, priors)
         if a == 0.0
             error("Bad split velocity")
         end
@@ -69,20 +70,22 @@ function split!(state::State, priors::EulerMaruyama)
     end
 end
 
-function split_velocity(state::State)
+function split_velocity(state::State, priors::Prior)
     # Draw new velocity 
-    return sqrt(1 - rand()^(2/size(state.active,1)))*(2*rand(Bernoulli(0.5)) - 1)
+    return sqrt(1 - rand()^(2/(size(state.active,1) + size(priors.v,1))))*(2*rand(Bernoulli(0.5)) - 1)
 end
 
 
-function merge!(state::State, j::CartesianIndex)
+function merge!(state::State, j::CartesianIndex, priors::Prior)
     state.s[j] = false
     state.g[j] = true
     state.v[j] = 0.0
     state.x[j] = 0.0
     # Remove from state.active
     state.active = findall(state.s)
-    state.v[state.active] /= norm(state.v[state.active])
+    nm = norm(vcat(state.v[state.active], priors.v))
+    state.v[state.active] /= nm
+    priors.v /= nm
 end
 
 function split_time!(state::State, times::Times, priors::Prior)

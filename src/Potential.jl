@@ -1,3 +1,8 @@
+# TODO drift_add 
+# TODO ∇σ drifts
+# TODO U_prior update 
+# TODO check drift functions with barker extrapolation
+
 function AV_calc!(state::State, dyn::Dynamics)
     A = cumsum(state.x, dims = 2)
     dyn.A = transpose(dat.UQ)*A
@@ -31,13 +36,14 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     for k in active_j
         if k != active_j[1]
             U_ -= logpdf(Normal(0.0, 1), state.x[k] + state.v[k]*t)
-            #U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)*priors.σ.σ[k[1]]))
+            U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)*priors.σ.σ[k[1]]))
             ∂U_ += state.v[k]*(state.x[k] + state.v[k]*t) 
-            #error("Here")
-            #∂U_ += -2*priors.σ.σ[k[1]]*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]*priors.σ.σ[k[1]]) + 1)
+            ∂U_ += -2*priors.σ.σ[k[1]]*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + priors.σ.σ[k[1]]*state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]*priors.σ.σ[k[1]]) + 1)
         else
-            U_ -= logpdf(Normal(0.0, priors.σ0*priors.σ.σ[j]), state.x[k] + state.v[k]*t)
-            ∂U_ += (state.v[k]/((priors.σ0*priors.σ.σ[j])^2))*(state.x[k] + state.v[k]*t)
+            U_ -= logpdf(Normal(0.0, 1), state.x[k] + state.v[k]*t)
+            ∂U_ += state.v[k]*(state.x[k] + state.v[k]*t)
+            #U_ -= logpdf(Normal(0.0, priors.σ0*priors.σ.σ[j]), state.x[k] + state.v[k]*t)
+            #∂U_ += (state.v[k]/((priors.σ0*priors.σ.σ[j])^2))*(state.x[k] + state.v[k]*t)
         end
     end
     return U_, ∂U_
@@ -66,7 +72,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
     # L x J matrix
     U_ind = reverse(cumsum(reverse(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
     # Convert to p x J matrix
-    U_ind = dat.UQ*U_ind
+    U_ind = (dat.UQ*U_ind).*priors.σ.σ
     ∇U_out = U_ind[state.active]
     Σθ = cumsum(state.x, dims = 2).*priors.σ.σ
     μθ = Vector{Vector{Float64}}()
@@ -77,7 +83,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
     end
     for i in eachindex(∇U_out)
         ∇U_out[i] += prior_add(state, priors, state.active[i])
-        ∇U_out[i] += drift_add(state.x.*priors.σ.σ, μθ[state.active[i][1]], ∂μθ[state.active[i][1]], priors.diff[state.active[i][1]], state.active[i])
+        ∇U_out[i] += drift_add(state.x.*priors.σ.σ, μθ[state.active[i][1]], ∂μθ[state.active[i][1]], priors.diff[state.active[i][1]], state.active[i], priors.σ.σ)
     end
     return ∇U_out
 end
@@ -88,7 +94,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
     # L x J matrix
     U_ind = reverse(cumsum(reverse(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
     # Convert to p x J matrix
-    U_ind = dat.UQ*U_ind
+    U_ind = (dat.UQ*U_ind).*priors.σ.σ
     ∇U_out = U_ind[state.active]
     Σθ = cumsum(state.x, dims = 2).*priors.σ.σ
     μθ = Vector{Vector{Float64}}()
@@ -102,6 +108,58 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
     end
     return ∇U_out
 end
+
+function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::Union{PC, InvGamma})
+    AV_calc!(state, dyn)
+    out = sum(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ), dims = 2)
+    out .+= ∇σp(priors.σ)
+    if prod(size(out)) == 0.0
+        out = ∇σp(priors.σ)
+    end
+    Σθ = cumsum(state.x, dims = 2).*priors.σ.σ
+    μθ = Vector{Vector{Float64}}()
+    ∂μθ = Vector{Array{Float64}}()
+    for j in axes(state.x, 1)
+        push!(μθ, drift(Σθ[j,:], 0.0, priors.diff[j]))
+        push!(∂μθ, drift_deriv(Σθ[j,:], priors.diff[j]))
+    end
+    for k in eachindex(priors.σ.σ)
+        out[k] += ∇σ_drift(state.x[k,:].*priors.σ.σ[k], μθ[k], ∂μθ[k], priors.σ.σ, k, priors.diff[k], priors)
+    end
+    return vec(out)
+end
+
+function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::FixedV)
+    return []
+end
+
+function ∇σp(σ::PC)
+    return σ.a.*σ.σ .- 1
+end
+
+function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Vector{Float64}, k, diff::Union{GammaLangevin, GaussLangevin, GompertzBaseline}, priors::BasicPrior)
+    out = 0.0
+    θ = cumsum(x)
+    for j in 2:size(x,1)
+        out += (x[j]*(μθ[j - 1] + σ[k]*θ[j-1]*∂μθ[k, j - 1]))*(tanh(σ[k]*x[j]*μθ[j - 1]) - 1)
+    end
+    return out
+end
+
+function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Vector{Float64}, k, diff::Union{GammaLangevin, GaussLangevin, GompertzBaseline}, priors::EulerMaruyama)
+    out = 0.0
+    θ = cumsum(x)
+    for j in 2:size(x,1)
+        out -= (x[j] - μθ[j - 1]*σ[k]^2)*(σ[k]*∂μθ[k, j - 1] + 2*μθ[j - 1])*σ[k]^2
+    end
+    return out
+end
+
+function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Vector{Float64}, k, diff::RandomWalk, priors::Prior)
+    return 0.0
+end
+
+
 
 ############ Random Walk
 
@@ -121,7 +179,7 @@ function drift_deriv_t(θ, diff::RandomWalk)
     return zeros(size(θ))
 end
 
-function drift_add(x, μθ, ∂μθ, diff::RandomWalk, j::CartesianIndex)
+function drift_add(x, μθ, ∂μθ, diff::RandomWalk, j::CartesianIndex, σ::Vector{Float64})
     return 0.0
 end
 
@@ -193,41 +251,43 @@ end
 
 ##################
 
-function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin, GompertzBaseline}, j::CartesianIndex)
+function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin, GompertzBaseline}, j::CartesianIndex, σ::Vector{Float64})
     if j[2] > 1
-        out = μθ[j[2] - 1]*(tanh(x[j]*μθ[j[2] - 1]) - 1)
+        out = σ[j[1]]*μθ[j[2] - 1]*(tanh(x[j]*μθ[j[2] - 1]) - 1)
     else
         out = 0.0
     end
     if j[2] < size(x,2)
         for k in (j[2] + 1):size(x,2)
-            out += x[j[1], k]*∂μθ[j[2], k - 1]*(tanh(x[j[1], k]*μθ[k - 1]) - 1)
+            out += σ[j[1]]*x[j[1], k]*∂μθ[j[2], k - 1]*(tanh(x[j[1], k]*μθ[k - 1]) - 1)
         end
     end
-    return  out
+    return out
 end
 
 function prior_add(state::State, priors::Prior, k::CartesianIndex)
-    if k[2] == 1
-        return state.x[k]/((priors.σ0*priors.σ.σ[k])^2)
-    else
-        return state.x[k]
-    end
+    return state.x[k]
+    #if k[2] == 1
+    #    return state.x[k]/((priors.σ0*priors.σ.σ[k])^2)
+    #else
+    #    return state.x[k]
+    #end
 end
 
 function prior_EM(state::State, μθ, ∂μθ, priors::EulerMaruyama, k::CartesianIndex)
     # Need to update for GammaLangevin
     if k[2] == 1
-        return state.x[k]/priors.σ0^2
+        return state.x[k]
     else
         if k[2] > 1
-            out = (1/priors.σ.σ[k[1]]^2)*(state.x[k] - μθ[k[2] - 1]*priors.σ.σ[k[1]]^2)
+            out = (state.x[k] - μθ[k[2] - 1]*priors.σ.σ[k[1]]^2)
         else
             out = 0.0
         end
         if k[2] < size(state.x, 2)
             for j in (k[2] + 1):size(state.x,2)
-                out -= (state.x[k[1], j] - μθ[j - 1]*priors.σ.σ[k[1]]^2)*∂μθ[k[2], j - 1]
+                #out -= (state.x[k[1], j] - μθ[j - 1]*priors.σ.σ[k[1]]^2)*∂μθ[k[2], j - 1]
+                out -= (state.x[k[1], j] - μθ[j - 1]*priors.σ.σ[k[1]]^2)*∂μθ[k[2], j - 1]*priors.σ.σ[k[1]]^3
             end
         end
         return out

@@ -32,7 +32,7 @@ t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
 nits = 200_000
 nsmp = 10_000
-settings = Settings(nits, nsmp, 1_000_000, 1.0, 2.0, 0.5, false, true)
+settings = Exact(nits, nsmp, 1_000_000, 1.0, 2.0, 0.5, false, true)
 
 
 priors1 = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(10.0, 150.0, 3.2), [RandomWalk()])

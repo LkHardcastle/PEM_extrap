@@ -63,7 +63,7 @@ function grid_split!(state::State, dyn::Dynamics, priors::Prior)
     # Find new location
     s_new = rand(Uniform(state.s_loc[1], priors.grid.max_time))
     u = rand(Normal(0, priors.grid.σ))
-    state_new = split_state(state, s_new, u)
+    state_new = split_state(state, s_new, u, priors)
     A = log_MHG_ratio(state_new, state, u, state_new.v[findfirst(state_new.s_loc .== s_new)], dyn, priors)
     #println("Split");println(state.J);println(exp(A))
     if rand() < min(1, exp(A))
@@ -73,7 +73,7 @@ function grid_split!(state::State, dyn::Dynamics, priors::Prior)
     dat_update!(state, dyn, dat)
 end
 
-function split_state(state::ECMC2, s_new::Float64, u::Float64)
+function split_state(state::ECMC2, s_new::Float64, u::Float64, priors::Prior)
     # Place new point
     state_new = ECMC2(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active))
     g_new = fill(true, size(state_new.x, 1), 1)
@@ -81,7 +81,7 @@ function split_state(state::ECMC2, s_new::Float64, u::Float64)
     new_point = fill(u, size(state_new.x, 1), 1)
     state_new.s_loc = vcat(state_new.s_loc, s_new)[ind_new]
     state_new.x = hcat(state_new.x, new_point)[:,ind_new]
-    v_new = split_velocity(state_new)
+    v_new = split_velocity(state_new, priors)
     state_new.v[state.active] *= sqrt(1-v_new^2)
     state_new.v = hcat(state_new.v, v_new)[:,ind_new]
     state_new.s = hcat(state_new.s, fill(true, size(new_point)))[:,ind_new]
@@ -96,7 +96,7 @@ function split_state(state::ECMC2, s_new::Float64, u::Float64)
 end
 
 
-function split_state(state::RWM, s_new::Float64, u::Float64)
+function split_state(state::RWM, s_new::Float64, u::Float64, priors::Prior)
     # Place new point
     state_new = RWM(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.step_size), copy(state.acc))
     g_new = fill(true, size(state_new.x, 1), 1)
@@ -104,7 +104,7 @@ function split_state(state::RWM, s_new::Float64, u::Float64)
     new_point = fill(u, size(state_new.x, 1), 1)
     state_new.s_loc = vcat(state_new.s_loc, s_new)[ind_new]
     state_new.x = hcat(state_new.x, new_point)[:,ind_new]
-    v_new = split_velocity(state_new)
+    v_new = split_velocity(state_new, priors)
     state_new.v[state.active] *= sqrt(1-v_new^2)
     state_new.v = hcat(state_new.v, v_new)[:,ind_new]
     state_new.s = hcat(state_new.s, fill(true, size(new_point)))[:,ind_new]

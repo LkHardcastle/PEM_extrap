@@ -8,7 +8,7 @@ include("Extrapolation.jl")
 include("RJ.jl")
 include("Metropolis.jl")
 
-function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Settings, test_times)
+function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Exact, test_times)
     out1 = pem_sample(state0, dat, priors, settings)
     out2 = pem_sample(state0, dat, priors, settings)
     test_smp1 = cts_transform(cumsum(out1["Smp_θ"], dims = 2), out1["Smp_s_loc"], test_times)
@@ -26,7 +26,50 @@ function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Settings,
     return out1, out2, rhat_, ess_
 end
 
-function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settings)
+function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Splitting, test_times)
+    out1 = pem_sample(state0, dat, priors, settings)
+    out2 = pem_sample(state0, dat, priors, settings)
+    test_smp1 = cts_transform(cumsum(out1["Sk_θ"], dims = 2), out1["Sk_s_loc"], test_times)
+    test_smp2 = cts_transform(cumsum(out2["Sk_θ"], dims = 2), out2["Sk_s_loc"], test_times)
+    rhat_ = []
+    ess_ = []
+    for i in eachindex(test_times)
+        diag = MCMCDiagnosticTools.ess_rhat(vcat(test_smp1[1,i,:], test_smp2[1,i,:]))
+        push!(ess_, diag[1])
+        push!(rhat_, diag[2])
+    end
+    diag = MCMCDiagnosticTools.ess_rhat(vcat(out1["Sk_σ"][1,:], out2["Sk_σ"][1,:]))
+    push!(ess_, diag[1])
+    push!(rhat_, diag[2])
+    return out1, out2, rhat_, ess_
+end
+
+
+function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Splitting)
+    ### Setup
+    state = copy(state0)
+    times = Times(state, settings, priors)
+    dyn = Dynamics(state, dat)
+    # Set up storage 
+    if settings.skel == false
+        dyn.ind = 2
+    end
+    storage = storage_start!(state, settings, dyn, priors, priors.grid)
+    AV_calc!(state, dyn)
+    println("Starting sampling")
+    while dyn.ind <= settings.max_ind
+        if settings.verbose
+            verbose(dyn, state)
+        end
+        split_inner!(state, dyn, priors, dat, times, settings)
+        store_state!(state, storage, dyn, priors; skel = settings.skel)
+    end
+    out = sampler_end(storage, dyn, settings)
+    println("Final time: ");println(state.t)
+    return out  
+end
+
+function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Exact)
     ### Setup
     state = copy(state0)
     times = Times(state, settings, priors)
@@ -42,7 +85,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
         if settings.verbose
             verbose(dyn, state)
         end
-        sampler_inner!(state, dyn, priors, dat, times)
+        sampler_inner!(state, dyn, priors, dat, times, settings)
         store_state!(state, storage, dyn, priors; skel = settings.skel)
         store_smps!(state, storage, dyn, times, priors)
         stop = sampler_stop(state, dyn, settings)
@@ -54,7 +97,7 @@ function pem_sample(state0::State, dat::PEMData, priors::Prior, settings::Settin
     return out  
 end
 
-function sampler_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
+function sampler_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, settings::Settings)
     ## Evaluate potential at current point to get constants
     Uθt, ∂U = U_new!(state, dyn, priors)
     ## Get next deterministic event and evaluate at that point
@@ -93,7 +136,35 @@ function sampler_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, 
         t_event, t_switch = diffusion_time!(state, priors, dyn, priors.diff[j], t_event + t_switch, 0.0, j)
     end
     update!(state, t_switch + t_event)
-    event!(state, dat, dyn, priors, times)
+    event!(state, dat, dyn, priors, times, settings)
+end
+
+function split_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, settings::Splitting)
+    if settings.h_rate > 0.0
+        grid_update!(state, dyn, dat, priors, priors.grid)
+    end
+    if rand() < 1 - exp(-settings.r_rate*settings.δ*0.5)
+        refresh!(state, dat, dyn, priors)
+    end
+    update!(state, settings.δ*0.5, priors)
+    for i in 1:(settings.thin-1)
+        λ = max(0, dot(vcat(state.v[state.active], priors.v), vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors, priors.σ))))
+        if rand() < 1 - exp(-settings.δ*λ)
+            flip!(state, dat, dyn, priors, settings)
+        end
+        update!(state, settings.δ, priors)
+        if rand() < 1 - exp(-settings.r_rate*settings.δ)
+            refresh!(state, dat, dyn, priors)
+        end
+    end
+    λ = max(0, dot(vcat(state.v[state.active], priors.v), vcat(∇U(state, dat, dyn, priors), ∇σ(state, dat, dyn, priors, priors.σ))))
+    if rand() < 1 - exp(-settings.δ*λ)
+        flip!(state, dat, dyn, priors, settings)
+    end
+    update!(state, settings.δ*0.5, priors)
+    if rand() < 1 - exp(-settings.r_rate*settings.δ*0.5)
+        refresh!(state, dat, dyn, priors)
+    end
 end
 
 function get_time!(dyn::Dynamics, times::Times)

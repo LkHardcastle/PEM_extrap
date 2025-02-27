@@ -1,4 +1,9 @@
-function sampler_inner!(state::RWM, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times)
+function sampler_inner!(state::RWM, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, settings::Settings)
+    metropolis_step!(state, dyn, priors, dat)
+    grid_update!(state, dyn, dat, priors, priors.grid)
+end
+
+function split_inner!(state::RWM, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, settings::Settings)
     metropolis_step!(state, dyn, priors, dat)
     grid_update!(state, dyn, dat, priors, priors.grid)
 end

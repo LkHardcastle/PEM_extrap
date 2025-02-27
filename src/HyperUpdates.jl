@@ -1,6 +1,6 @@
 
 function hyper_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior)
-    if rand() < 0.5
+    if rand() < 0.9
         for k in axes(state.x,1)
             variance_update!(state, priors, priors.σ, k, dyn)
             weight_update!(state, priors, priors.ω, k)
