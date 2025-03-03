@@ -17,7 +17,7 @@ library(coda)
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 """
 
-######## Run models for different Poisson intensitites
+######## Run models for different Poisson intensities
 ######## Select best model comprimising between minimising LOOCIC and appearance of curve
 
 Random.seed!(2352)
@@ -25,7 +25,7 @@ df = CSV.read(datadir("colon.csv"), DataFrame)
 y = df.years
 maximum(y)
 n = length(y)
-breaks = vcat(0.05,collect(0.26:0.25:3.01))
+breaks = vcat(0.01,collect(0.26:0.25:3.01))
 p = 1
 cens = df.status
 covar = fill(1.0, 1, n)
@@ -34,7 +34,7 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
-nits = 8_000
+nits = 10_000
 nsmp = 10
 
 settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.01, 50.0)
@@ -48,8 +48,8 @@ loo_est = []
 for Γ_ in test_Gamma
     x0, v0, s0 = init_params(p, dat)
     v0 = v0./norm(v0)
-    priors = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(Γ_, 1.0, 100.0, 3.1), [RandomWalk()], [0.1])
-    out = pem_fit(state0, dat, priors, settings, test_times)
+    priors = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(Γ_, 1.0, 100.0, 3.1), [RandomWalk()], [0.1], 2.0)
+    @time out = pem_fit(state0, dat, priors, settings, test_times)
     println(out[3]);println(out[4])
     push!(WAIC, get_WAIC(out[1], dat, 1_000)[1])
     push!(WAIC, get_WAIC(out[2], dat, 1_000)[1])
@@ -64,11 +64,11 @@ for Γ_ in test_Gamma
 end 
 
 plot(scatter(Gamma_used, WAIC))
-plot(scatter(Gamma_used, -2*loo_est))
+scatter!(Gamma_used, -2*loo_est)
 
 x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
-priors = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(7.0, 1.0, 100.0, 3.1), [RandomWalk()], [0.1])
+priors = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(7.0, 1.0, 100.0, 3.1), [RandomWalk()], [0.1], 2)
 out = pem_fit(state0, dat, priors, settings, test_times)
 
 grid = sort(unique(out[1]["Sk_s_loc"][cumsum(out[1]["Sk_s"],dims = 1)[1,:,:] .> 0.0]))
@@ -96,7 +96,7 @@ df = CSV.read(datadir("colon.csv"), DataFrame)
 y = df.years
 maximum(y)
 n = length(y)
-breaks = vcat(0.05,collect(0.26:0.25:3.01))
+breaks = vcat(0.01,collect(0.26:0.25:3.01))
 p = 1
 cens = df.status
 covar = fill(1.0, 1, n)
@@ -273,7 +273,7 @@ df = CSV.read(datadir("colon.csv"), DataFrame)
 y = df.years
 maximum(y)
 n = length(y)
-breaks = vcat(0.05,collect(0.26:0.25:3.01))
+breaks = vcat(0.01,collect(0.26:0.25:3.01))
 p = 1
 cens = df.status
 covar = fill(1.0, 1, n)
