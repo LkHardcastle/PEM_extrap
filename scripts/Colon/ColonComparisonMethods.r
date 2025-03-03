@@ -104,7 +104,7 @@ pw_out <- df.hazard1 %>%
 St_all <- get_Surv(Collapsing_Model, time = seq(0.01, 15, by = 0.01))
 meanSt_obs <- colSums(St_all[1:310,]*0.01)
 meanSt_all <- colSums(St_all*0.01)
-mean(meanSt)
+mean(meanSt_all)
 mean(meanSt_obs)
 quantile(meanSt_obs, c(0.025,0.975))
 quantile(meanSt_all, c(0.025,0.975))

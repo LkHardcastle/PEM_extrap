@@ -203,7 +203,7 @@ $df %>%
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.4, col = cbPalette[6], linetype = "dashed") + 
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.12, col = cbPalette[4], linetype = "dashed") + 
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.7, col = cbPalette[7], linetype = "dashed")
-    ggsave($plotsdir("Talks","Extrap.png"), width = 12, height = 5)
+    #ggsave($plotsdir("Talks","Extrap.png"), width = 12, height = 5)
 """
 
 
@@ -420,6 +420,6 @@ p3 <- dat_diffusion %>%
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(4)]) +
     scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(y)") + xlab("Time (arbitrary units)") + ylim(0,17)
 plot_grid(p1,p2,p3,ncol = 3)
-ggsave($plotsdir("Talks","Diffusions.png"), width = 17, height = 4.8)
+#ggsave($plotsdir("Talks","Diffusions.png"), width = 17, height = 4.8)
 ggsave($plotsdir("Talks","Diffusions.pdf"), width = 14, height = 4.5)
 """

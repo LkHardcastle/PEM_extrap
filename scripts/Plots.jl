@@ -32,8 +32,8 @@ $df %>%
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.4, col = cbPalette[6], linetype = "dashed") + 
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.12, col = cbPalette[4], linetype = "dashed") + 
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.7, col = cbPalette[7], linetype = "dashed")
-    ggsave($plotsdir("Extrap.png"), width = 9, height = 4)
-    ggsave($plotsdir("Extrap.pdf"), width = 14, height = 6)
+    #ggsave($plotsdir("Extrap.png"), width = 9, height = 4)
+    #ggsave($plotsdir("Extrap.pdf"), width = 14, height = 6)
 """
 
 R"""
@@ -56,7 +56,7 @@ $df %>%
     annotate("segment", x = 2.5, y = 0.08, xend = 3, yend = 0.08, col = cbPalette[4], linetype = "dashed") +
     annotate("segment", x = 3, y = 0.05, xend = 3.5, yend = 0.05, col = cbPalette[4], linetype = "dashed") + 
     annotate("segment", x = 3.5, y = 0.02, xend = 4, yend = 0.02, col = cbPalette[4], linetype = "dashed")
-    ggsave($plotsdir("PWEXP.pdf"), width = 14, height = 6)
+    #ggsave($plotsdir("PWEXP.pdf"), width = 14, height = 6)
 """
 
 

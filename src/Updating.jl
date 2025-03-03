@@ -40,6 +40,9 @@ function flip!(state::ECMC2, dat::PEMData, dyn::Dynamics, priors::Prior, setting
             ortho_update!(state, dat, dyn, priors, settings)
             state.b = false
         end
+    else
+        priors.v = v_hold[(end - size(priors.v,1) + 1):end]
+        state.v[state.active] = v_hold[1:size(state.active,1)]
     end
 end
 
@@ -63,6 +66,9 @@ function flip!(state::ECMC2, dat::PEMData, dyn::Dynamics, priors::Prior, setting
             ortho_update!(state, dat, dyn, priors, settings)
             state.b = false
         end
+    else
+        priors.v = v_hold[(end - size(priors.v,1) + 1):end]
+        state.v[state.active] = v_hold[1:size(state.active,1)]
     end
 end
 
@@ -144,7 +150,7 @@ function update!(state::State, t::Float64, priors::Prior)
         split_time = rand(Exponential(1/(size(findall(state.g),1)*split_rate(state, priors, 1)*priors.p_split)))
         # Find next merge time 
         merge_curr = Inf 
-        if size(state.active,1) > 2 && priors.p_split > 0.0 
+        if size(state.active,1) > priors.J_min && priors.p_split > 0.0 
             j_curr = CartesianIndex(0,0)
             for j in state.active
                 if j[2] > 1 

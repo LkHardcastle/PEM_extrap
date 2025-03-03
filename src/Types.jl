@@ -238,6 +238,7 @@ mutable struct BasicPrior <: Prior
     grid::Grid
     diff::Vector{Diffusion}
     v::Vector{Float64}
+    J_min::Int64
 end
 
 mutable struct EulerMaruyama <: Prior
@@ -248,6 +249,7 @@ mutable struct EulerMaruyama <: Prior
     grid::Grid
     diff::Vector{Diffusion}
     v::Vector{Float64}
+    J_min::Int64
 end
 
 struct PEMData

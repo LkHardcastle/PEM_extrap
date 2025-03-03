@@ -38,27 +38,27 @@ var0 = [0.001, 0.01, 0.05, 0.1, 0.25, 0.5]
 Random.seed!(2482)
 Barker1 = Vector{Vector{Float64}}()
 for i in eachindex(var0)
-    priors = BasicPrior(1.0, FixedV([i]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.2), [GaussLangevin(2.0,2.0)], [])
+    priors = BasicPrior(1.0, FixedV([i]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.2), [GaussLangevin(2.0,2.0)], [], 1.0)
     out1 = pem_fit(state0, dat, priors, settings, test_times)
     push!(Barker1, (sum(out1[1]["Sk_s"][1,:,:], dims = 2)/length(out1[1]["Sk_s"][1,5,:]))[2:end])
 end
 
 EM1 = Vector{Vector{Float64}}()
 for i in eachindex(var0)
-    priors = EulerMaruyama(1.0, FixedV([i]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.2), [GaussLangevin(2.0,2.0)], [])
+    priors = EulerMaruyama(1.0, FixedV([i]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.2), [GaussLangevin(2.0,2.0)], [], 1.0)
     out1 = pem_fit(state0, dat, priors, settings, test_times)
     push!(EM1, (sum(out1[1]["Sk_s"][1,:,:], dims = 2)/length(out1[1]["Sk_s"][1,5,:]))[2:end])
 end
 
 Barker2 = Vector{Vector{Float64}}()
 for i in eachindex(var0)
-    priors = BasicPrior(1.0, FixedV([i]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.2), [GaussLangevin(2.0,0.2)], [])
+    priors = BasicPrior(1.0, FixedV([i]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.2), [GaussLangevin(2.0,0.2)], [], 1.0)
     out1 = pem_fit(state0, dat, priors, settings, test_times)
     push!(Barker2, (sum(out1[1]["Sk_s"][1,:,:], dims = 2)/length(out1[1]["Sk_s"][1,5,:]))[2:end])
 end
 EM2 = Vector{Vector{Float64}}()
 for i in eachindex(var0)
-    priors = EulerMaruyama(1.0, FixedV([i]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.2), [GaussLangevin(2.0,0.2)], [])
+    priors = EulerMaruyama(1.0, FixedV([i]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.2), [GaussLangevin(2.0,0.2)], [], 1.0)
     out1 = pem_fit(state0, dat, priors, settings, test_times)
     push!(EM2, (sum(out1[1]["Sk_s"][1,:,:], dims = 2)/length(out1[1]["Sk_s"][1,5,:]))[2:end])
 end
@@ -73,6 +73,8 @@ dfem1.Method .= "Euler-Maruyama"
 
 df1 = vcat(dfb1,dfem1)
 
+CSV.write(datadir("ParamExp1.csv"), df1)
+
 dfb2 = DataFrame(Barker2, :auto)
 rename!(dfb2, Symbol.(var0))
 dfb2.Method .= "Barker"
@@ -81,6 +83,8 @@ dfem2 = DataFrame(EM2, :auto)
 rename!(dfem2, Symbol.(var0))
 dfem2.Method .= "Euler-Maruyama"
 df2 = vcat(dfb2,dfem2)
+
+CSV.write(datadir("ParamExp2.csv"), df2)
 
 R"""
 $df1 %>%

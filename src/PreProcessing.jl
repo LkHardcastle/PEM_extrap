@@ -6,7 +6,7 @@ function init_params(p::Int64, dat::PEMData, v_abs::Vector{Float64})
 end
 
 function init_params(p::Int64, dat::PEMData)
-    x0 = rand(Normal(0.0,0.1), dat.p, size(dat.W,2))
+    x0 = rand(Normal(0.0,1.0), dat.p, size(dat.W,2))
     v0 = rand(Normal(0,1),size(x0))
     s0 = fill(true, dat.p, size(dat.W,2))
     return x0, v0, s0
