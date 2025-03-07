@@ -84,8 +84,8 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
     μθ = Vector{Vector{Float64}}()
     ∂μθ = Vector{Array{Float64}}()
     for j in axes(state.x, 1)
-        push!(μθ, drift(Σθ[j,:], 0.0, priors.diff[j]))
-        push!(∂μθ, drift_deriv(Σθ[j,:], priors.diff[j]))
+        push!(μθ, drift(Σθ[j,:], state.s_loc, priors.diff[j]))
+        push!(∂μθ, drift_deriv(Σθ[j,:], state.s_loc, priors.diff[j]))
     end
     for i in eachindex(∇U_out)
         ∇U_out[i] += prior_add(state, priors, state.active[i])
@@ -108,8 +108,8 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
     μθ = Vector{Vector{Float64}}()
     ∂μθ = Vector{Array{Float64}}()
     for j in axes(state.x, 1)
-        push!(μθ, drift(Σθ[j,:], 0.0, priors.diff[j]))
-        push!(∂μθ, drift_deriv(Σθ[j,:], priors.diff[j]))
+        push!(μθ, drift(Σθ[j,:], state.s_loc, priors.diff[j]))
+        push!(∂μθ, drift_deriv(Σθ[j,:], state.s_loc, priors.diff[j]))
     end
     for i in eachindex(∇U_out)
             ∇U_out[i] += prior_EM(state, μθ[state.active[i][1]], ∂μθ[state.active[i][1]], priors, state.active[i])
@@ -130,8 +130,8 @@ function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::Uni
     μθ = Vector{Vector{Float64}}()
     ∂μθ = Vector{Array{Float64}}()
     for j in axes(state.x, 1)
-        push!(μθ, drift(Σθ[j,:], 0.0, priors.diff[j]))
-        push!(∂μθ, drift_deriv(Σθ[j,:], priors.diff[j]))
+        push!(μθ, drift(Σθ[j,:], state.s_loc, priors.diff[j]))
+        push!(∂μθ, drift_deriv(Σθ[j,:], state.s_loc, priors.diff[j]))
     end
     for k in eachindex(priors.σ.σ)
         out[k] += ∇σ_drift(state.x[k,:].*priors.σ.σ[k], μθ[k], ∂μθ[k], priors.σ.σ, k, priors.diff[k], priors)
@@ -182,7 +182,7 @@ function drift_U(θ, diff::RandomWalk)
     return zeros(size(θ))
 end
 
-function drift_deriv(θ, diff::RandomWalk)
+function drift_deriv(θ, t, diff::RandomWalk)
     return zeros(size(θ,1), size(θ,1))
 end
 
@@ -204,7 +204,7 @@ function drift_U(θ, diff::GaussLangevin)
     return -0.5.*(θ .- diff.μ)./diff.σ^2
 end
 
-function drift_deriv(θ, diff::GaussLangevin)
+function drift_deriv(θ, t, diff::GaussLangevin)
     return fill(-1/(2*diff.σ^2), size(θ,1), size(θ,1))
 end
 
@@ -221,24 +221,26 @@ end
 
 ###### GammaLangevin
 
+# Should change this so the tapering function is input as part of the drift....
+
 function drift(θ, t, diff::GammaLangevin)
-    return 0.5*(diff.α .- diff.β.*exp.(θ))
+    return 0.5*(diff.α.*max.(min.(1,t./diff.c),1/diff.c) .- diff.β.*exp.(θ).*max.(min.(1,t./diff.c),1/diff.c))
 end
 
 function drift_U(θ, diff::GammaLangevin)
     return zeros(size(θ))
 end
 
-function drift_deriv(θ, diff::GammaLangevin)
+function drift_deriv(θ, t, diff::GammaLangevin)
     out = fill(Inf, size(θ,1), size(θ,1))
     for i in 1:size(θ, 1)
-        out[i,:] = -0.5.*diff.β.*exp.(θ)
+        out[i,:] = -0.5.*diff.β.*exp.(θ).*max.(min.(1,t./diff.c),1/diff.c)
     end
     return out
 end
 
 function drift_deriv_t(θ, diff::GammaLangevin)
-    return -0.5.*diff.β.*exp.(θ)
+    return -0.5.*diff.β.*exp.(θ).*max.(min.(1,t./diff.c),1/diff.c)
 end
 
 ############ Gompertz
@@ -251,7 +253,7 @@ function drift_U(θ, diff::GompertzBaseline)
     return fill(diff.α, size(θ))
 end
 
-function drift_deriv(θ, diff::GompertzBaseline)
+function drift_deriv(θ, t, diff::GompertzBaseline)
     return zeros(size(θ,1), size(θ,1))
 end
 

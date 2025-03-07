@@ -223,6 +223,7 @@ end
 mutable struct GammaLangevin <: Diffusion
     α::Float64
     β::Float64
+    c::Float64
 end
 
 mutable struct GompertzBaseline <: Diffusion

@@ -1,4 +1,4 @@
-function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::Float64, t_end::Float64, plot_grid::Vector{Float64}, k::Int64; typeof = "Sk")
+function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::Float64, t_end::Float64, plot_grid::Vector{Float64}, k::Int64, step_size::Float64; typeof = "Sk")
     ## Get end points
     n_smp, Σθ, ω, Γ, σ = get_smps(out, typeof, k)
     initial = Σθ[k,end,:]
@@ -8,11 +8,11 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
         end
     end
     ## Get time points
-    times = extrapolation_times(out, grid, t_start, t_end, n_smp, ω, Γ)
+    times = extrapolation_times(out, grid, t_start, t_end, n_smp, ω.*(σ./step_size), Γ)
     ## Simulate dynamics
     paths = Vector{Vector{Float64}}()
     for i in 1:n_smp
-        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, σ[i], times[i]))
+        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, step_size, times[i]))
     end
     output = fill(Inf, length(plot_grid), n_smp)
     for i in 1:n_smp
