@@ -145,11 +145,12 @@ function get_llhood(out, dat::PEMData, burn::Int64)
     lhood = zeros(size(dat.y,1), size(out["Sk_θ"],3))
     for j in burn:size(out["Sk_θ"],3)
         J = out["Sk_J"][j]
-        θ = vec(cumsum(out["Sk_θ"][:,1:J,j],dims = 2))
+        θ = cumsum(out["Sk_θ"][:,1:J,j],dims = 2)
         s_loc = out["Sk_s_loc"][1:J,j]
         Δ = vcat(s_loc[1] ,s_loc[2:end] .- s_loc[1:(end - 1)])
-        St = exp.(cumsum(-exp.(θ).*Δ, dims = 2))
         for i in eachindex(dat.y)
+            θ_ = vec(dat.covar[:,i]'*θ)
+            St = exp.(cumsum(-exp.(θ_).*Δ))
             d = Inf
             if isnothing(findfirst(s_loc .> dat.y[i]))
                 d = J
@@ -157,9 +158,9 @@ function get_llhood(out, dat::PEMData, burn::Int64)
                 d = findfirst(s_loc .> dat.y[i])
             end
             if d > 1
-                lhood[i,j] = exp(dat.cens[i]*θ[d] - St[d-1] - exp(θ[d])*(dat.y[i] - s_loc[d-1]))
+                lhood[i,j] = exp(dat.cens[i]*θ_[d] - St[d-1] - exp(θ_[d])*(dat.y[i] - s_loc[d-1]))
             else
-                lhood[i,j] = exp(dat.cens[i]*θ[d] - exp(θ[d])*dat.y[i])
+                lhood[i,j] = exp(dat.cens[i]*θ_[d] - exp(θ[d])*dat.y[i])
             end
         end
     end
