@@ -87,7 +87,7 @@ mutable struct Storage
     J::Vector{Int64}
     t::Vector{Float64}
     ω::Array{Float64}
-    σ::Array{Float64}
+    σ::Vector{Float64}
     Γ::Vector{Float64}
     γ::Vector{Float64}
     x_smp::Array{Float64}
@@ -97,7 +97,7 @@ mutable struct Storage
     J_smp::Vector{Int64}
     t_smp::Vector{Float64}
     ω_smp::Array{Float64}
-    σ_smp::Array{Float64}
+    σ_smp::Vector{Float64}
     Γ_smp::Vector{Float64}
     γ_smp::Vector{Float64}
 end
@@ -105,25 +105,25 @@ end
 abstract type Variance end
 
 mutable struct FixedV <: Variance
-    σ::Vector{Float64}
+    σ::Float64
 end
 
 mutable struct PC <: Variance
-    σ::Vector{Float64}
-    a::Vector{Float64}
-    h::Vector{Float64}
+    σ::Float64
+    a::Float64
+    h::Float64
     ind::Float64
 end
 
 mutable struct InvGamma <: Variance
-    σ::Vector{Float64}
-    a::Vector{Float64}
-    b::Vector{Float64}
+    σ::Float64
+    a::Float64
+    b::Float64
 end
 
 mutable struct Unif <: Variance
-    σ::Vector{Float64}
-    h::Vector{Float64}
+    σ::Float64
+    h::Float64
     ind::Float64
 end
 

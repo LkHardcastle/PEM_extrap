@@ -129,7 +129,7 @@ function update!(state::State, t::Float64)
 end
 
 function update_σ(σ::Variance, v::Vector{Float64}, t::Float64)
-    return exp.(log.(σ.σ) .+ v*t)
+    return exp.(log.(σ.σ) .+ v.*t)[1]
 end
 
 function update_σ(σ::FixedV, v::Vector{Float64}, t::Float64)

@@ -36,14 +36,12 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     for k in active_j
         if k != active_j[1]
             U_ -= logpdf(Normal(0.0, 1), state.x[k] + state.v[k]*t)
-            U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)*priors.σ.σ[k[1]]))
+            U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)*priors.σ.σ))
             ∂U_ += state.v[k]*(state.x[k] + state.v[k]*t) 
-            ∂U_ += -2*priors.σ.σ[k[1]]*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + priors.σ.σ[k[1]]*state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]*priors.σ.σ[k[1]]) + 1)
+            ∂U_ += -2*priors.σ.σ*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + priors.σ.σ*state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]*priors.σ.σ) + 1)
         else
             U_ -= logpdf(Normal(0.0, 1), state.x[k] + state.v[k]*t)
             ∂U_ += state.v[k]*(state.x[k] + state.v[k]*t)
-            #U_ -= logpdf(Normal(0.0, priors.σ0*priors.σ.σ[j]), state.x[k] + state.v[k]*t)
-            #∂U_ += (state.v[k]/((priors.σ0*priors.σ.σ[j])^2))*(state.x[k] + state.v[k]*t)
         end
     end
     return U_, ∂U_
@@ -56,8 +54,8 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     active_j = filter(idx -> idx[1] == j, state.active)
     for k in active_j
         if k != active_j[1]
-            U_ -= logpdf(Normal(μθ[k[2]-1]*priors.σ.σ[k[1]]^2, priors.σ.σ[k[1]]), state.x[k] + state.v[k]*t)
-            ∂U_ += (1/(priors.σ.σ[k[1]]^2))*(state.x[k] + state.v[k]*t - μθ[k[2]-1]*priors.σ.σ[k[1]]^2)*(state.v[k] - Σv[k[1],k[2] - 1]*∂μθ[k[2]-1]*priors.σ.σ[k[1]]^2) 
+            U_ -= logpdf(Normal(μθ[k[2]-1]*priors.σ.σ^2, priors.σ.σ), state.x[k] + state.v[k]*t)
+            ∂U_ += (1/(priors.σ.σ^2))*(state.x[k] + state.v[k]*t - μθ[k[2]-1]*priors.σ.σ^2)*(state.v[k] - Σv[k[1],k[2] - 1]*∂μθ[k[2]-1]*priors.σ.σ^2) 
         else
             U_ -= logpdf(Normal(0.0, priors.σ0), state.x[k] + state.v[k]*t)
             ∂U_ += (state.v[k]/(priors.σ0^2))*(state.x[k] + state.v[k]*t)
@@ -115,11 +113,10 @@ end
 
 function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::Union{PC, InvGamma})
     AV_calc!(state, dyn, priors)
-    out = sum(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ), dims = 2)
+    out = sum(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ))
     #println(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ))
     #println(out)
-    #println(out)
-    out .+= ∇σp(priors.σ)
+    out += ∇σp(priors.σ)
     if prod(size(out)) == 0.0
         out = ∇σp(priors.σ)
     end
@@ -133,10 +130,10 @@ function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::Uni
         push!(∂μθ, drift_deriv(Σθ[j,:], state.s_loc, priors.diff[j]))
     end
     for k in eachindex(priors.σ.σ)
-        out[k] += ∇σ_drift(state.x[k,:].*priors.σ.σ[k], μθ[k], ∂μθ[k], priors.σ.σ, k, priors.diff[k], priors)
-        out[k] += 2*priors.σ.σ[k]*(state.x[k,1]/priors.σ0)^2
+        out += ∇σ_drift(state.x[k,:].*priors.σ.σ, μθ[k], ∂μθ[k], priors.σ.σ, k, priors.diff[k], priors)
+        out += 2*priors.σ.σ*(state.x[k,1]/priors.σ0)^2
     end
-    return vec(out)
+    return out
 end
 
 function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::FixedV)
@@ -144,27 +141,27 @@ function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::Fix
 end
 
 function ∇σp(σ::PC)
-    return σ.a.*σ.σ .- 1
+    return σ.a*σ.σ - 1
 end
 
-function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Vector{Float64}, k, diff::Union{GammaLangevin, GaussLangevin, GompertzBaseline}, priors::BasicPrior)
+function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Float64, k, diff::Union{GammaLangevin, GaussLangevin, GompertzBaseline}, priors::BasicPrior)
     out = 0.0
     θ = cumsum(x)
     for j in 2:size(x,1)
-        out += (x[j]*(μθ[j - 1] + σ[k]*θ[j-1]*∂μθ[k, j - 1]))*(tanh(σ[k]*x[j]*μθ[j - 1]) - 1)
+        out += (x[j]*(μθ[j - 1] + σ*θ[j-1]*∂μθ[k, j - 1]))*(tanh(σ*x[j]*μθ[j - 1]) - 1)
     end
     return out
 end
 
-function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Vector{Float64}, k, diff::Union{GammaLangevin, GaussLangevin, GompertzBaseline}, priors::EulerMaruyama)
+function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Float64, k, diff::Union{GammaLangevin, GaussLangevin, GompertzBaseline}, priors::EulerMaruyama)
     out = 0.0
     for j in 2:size(x,1)
-        out -= (x[j] - μθ[j - 1]*σ[k]^2)*(σ[k]*∂μθ[k, j - 1] + 2*μθ[j - 1])*σ[k]^2
+        out -= (x[j] - μθ[j - 1]*σ^2)*(σ*∂μθ[k, j - 1] + 2*μθ[j - 1])*σ^2
     end
     return out
 end
 
-function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Vector{Float64}, k, diff::RandomWalk, priors::Prior)
+function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Float64, k, diff::RandomWalk, priors::Prior)
     return 0.0
 end
 
@@ -188,7 +185,7 @@ function drift_deriv_t(θ, diff::RandomWalk)
     return zeros(size(θ))
 end
 
-function drift_add(x, μθ, ∂μθ, diff::RandomWalk, j::CartesianIndex, σ::Vector{Float64})
+function drift_add(x, μθ, ∂μθ, diff::RandomWalk, j::CartesianIndex, σ::Float64)
     return 0.0
 end
 
@@ -262,15 +259,15 @@ end
 
 ##################
 
-function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin, GompertzBaseline}, j::CartesianIndex, σ::Vector{Float64})
+function drift_add(x, μθ, ∂μθ, diff::Union{GaussLangevin, GammaLangevin, GompertzBaseline}, j::CartesianIndex, σ::Float64)
     if j[2] > 1
-        out = σ[j[1]]*μθ[j[2] - 1]*(tanh(x[j]*μθ[j[2] - 1]) - 1)
+        out = σ*μθ[j[2] - 1]*(tanh(x[j]*μθ[j[2] - 1]) - 1)
     else
         out = 0.0
     end
     if j[2] < size(x,2)
         for k in (j[2] + 1):size(x,2)
-            out += σ[j[1]]*x[j[1], k]*∂μθ[j[2], k - 1]*(tanh(x[j[1], k]*μθ[k - 1]) - 1)
+            out += σ*x[j[1], k]*∂μθ[j[2], k - 1]*(tanh(x[j[1], k]*μθ[k - 1]) - 1)
         end
     end
     return out
@@ -291,14 +288,13 @@ function prior_EM(state::State, μθ, ∂μθ, priors::EulerMaruyama, k::Cartesi
         return state.x[k]/(priors.σ0^2)
     else
         if k[2] > 1
-            out = (state.x[k] - μθ[k[2] - 1]*priors.σ.σ[k[1]]^2)
+            out = (state.x[k] - μθ[k[2] - 1]*priors.σ.σ^2)
         else
             out = 0.0
         end
         if k[2] < size(state.x, 2)
             for j in (k[2] + 1):size(state.x,2)
-                #out -= (state.x[k[1], j] - μθ[j - 1]*priors.σ.σ[k[1]]^2)*∂μθ[k[2], j - 1]
-                out -= (state.x[k[1], j] - μθ[j - 1]*priors.σ.σ[k[1]]^2)*∂μθ[k[2], j - 1]*priors.σ.σ[k[1]]^3
+                out -= (state.x[k[1], j] - μθ[j - 1]*priors.σ.σ^2)*∂μθ[k[2], j - 1]*priors.σ.σ^3
             end
         end
         return out
