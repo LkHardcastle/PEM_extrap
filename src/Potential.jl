@@ -1,7 +1,3 @@
-# TODO drift_add 
-# TODO ∇σ drifts
-# TODO U_prior update 
-# TODO check drift functions with barker extrapolation
 
 function AV_calc!(state::State, dyn::Dynamics, priors::Prior)
     x = copy(state.x)
@@ -120,6 +116,9 @@ end
 function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::Union{PC, InvGamma})
     AV_calc!(state, dyn, priors)
     out = sum(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ), dims = 2)
+    #println(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ))
+    #println(out)
+    #println(out)
     out .+= ∇σp(priors.σ)
     if prod(size(out)) == 0.0
         out = ∇σp(priors.σ)
@@ -159,7 +158,6 @@ end
 
 function ∇σ_drift(x::Vector{Float64}, μθ, ∂μθ, σ::Vector{Float64}, k, diff::Union{GammaLangevin, GaussLangevin, GompertzBaseline}, priors::EulerMaruyama)
     out = 0.0
-    θ = cumsum(x)
     for j in 2:size(x,1)
         out -= (x[j] - μθ[j - 1]*σ[k]^2)*(σ[k]*∂μθ[k, j - 1] + 2*μθ[j - 1])*σ[k]^2
     end
