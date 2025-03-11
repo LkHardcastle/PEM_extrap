@@ -210,7 +210,7 @@ mutable struct RandomWalk <: Diffusion
 end
 
 mutable struct GaussLangevin <: Diffusion
-    μ::Float64
+    μ::Function
     σ::Float64
 end
 

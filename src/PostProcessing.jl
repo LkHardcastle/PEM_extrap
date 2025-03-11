@@ -214,6 +214,3 @@ function r_hat(x::Vector{Vector{Float64}})
     σ2 = s2*(size(x[1],1)-1)/size(x[1],1) + B
     return sqrt(σ2/s2)
 end
-
-mean(reduce(vcat,[[1,2],[3,4]]))
-size([[1,2],[3,4]])

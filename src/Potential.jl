@@ -192,11 +192,11 @@ end
 ################ GaussLangevin
 
 function drift(θ, t, diff::GaussLangevin)
-    return -0.5.*(θ .- diff.μ)./diff.σ^2
+    return -0.5.*(θ .- diff.μ(t))./diff.σ^2
 end
 
 function drift_U(θ, diff::GaussLangevin)
-    return -0.5.*(θ .- diff.μ)./diff.σ^2
+    return -0.5.*(θ .- diff.μ(t))./diff.σ^2
 end
 
 function drift_deriv(θ, t, diff::GaussLangevin)
@@ -205,13 +205,6 @@ end
 
 function drift_deriv_t(θ, diff::GaussLangevin)
     return fill(-1/(2*diff.σ^2), size(θ))
-end
-
-################ Gauss Langevin - treatment effect decay
-
-
-function drift(θ, t, diff::TrtDecay)
-    return -t*0.5.*(θ .- diff.μ)./(diff.σ^2)
 end
 
 ###### GammaLangevin
