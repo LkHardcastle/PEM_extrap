@@ -192,19 +192,19 @@ end
 ################ GaussLangevin
 
 function drift(θ, t, diff::GaussLangevin)
-    return -0.5.*(θ .- diff.μ(t))./diff.σ^2
+    return -0.5.*(θ .- diff.μ(t))./diff.σ(t)^2
 end
 
 function drift_U(θ, diff::GaussLangevin)
-    return -0.5.*(θ .- diff.μ(t))./diff.σ^2
+    return -0.5.*(θ .- diff.μ(t))./diff.σ(t)^2
 end
 
 function drift_deriv(θ, t, diff::GaussLangevin)
-    return fill(-1/(2*diff.σ^2), size(θ,1), size(θ,1))
+    return fill(-1/(2*diff.σ(t)^2), size(θ,1), size(θ,1))
 end
 
 function drift_deriv_t(θ, diff::GaussLangevin)
-    return fill(-1/(2*diff.σ^2), size(θ))
+    return fill(-1/(2*diff.σ(t)^2), size(θ))
 end
 
 ###### GammaLangevin

@@ -286,3 +286,92 @@ p5 <- plot_grid(p1,p2,p3,p4, nrow = 2)
 p6 <- plot_grid(p5, leg, nrow = 2, rel_heights = c(0.9, 0.1))
 #ggsave($plotsdir("Paper", "ColonModels.pdf"), width = 14, height = 12)
 """
+
+
+df1 = CSV.read(datadir("TA174Models","GammaNonWanePlaceboSurv.csv"),DataFrame)
+df2 = CSV.read(datadir("TA174Models","GammaNonWaneTreatSurv.csv"),DataFrame)
+df3 = CSV.read(datadir("TA174Models","GammaWanePlaceboSurv.csv"),DataFrame)
+df4 = CSV.read(datadir("TA174Models","GammaWaneTreatSurv.csv"),DataFrame)
+df5 = CSV.read(datadir("TA174Models","GompBasePlaceboSurv.csv"),DataFrame)
+df6 = CSV.read(datadir("TA174Models","GompBaseTreatSurv.csv"),DataFrame)
+df7 = CSV.read(datadir("TA174Models","GompCentPlaceboSurv.csv"),DataFrame)
+df8 = CSV.read(datadir("TA174Models","GompCentTreatSurv.csv"),DataFrame)
+
+R"""
+dat1 = data.frame($df1)
+dat1 = cbind(dat1, "Gamma fixed")
+colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat2 = data.frame($df3)
+dat2 = cbind(dat2, "Gamma - converging")
+colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
+dat3 = data.frame($df5)
+dat3 = cbind(dat3, "Gompertz baseline")
+colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
+dat4 = data.frame($df7)
+dat4 = cbind(dat4, "Gompertz centred")
+colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat_1 <- rbind(dat1, dat2, dat3, dat4)
+"""
+
+R"""
+dat1 = data.frame($df2)
+dat1 = cbind(dat1, "Gamma fixed")
+colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat2 = data.frame($df4)
+dat2 = cbind(dat2, "Gamma - converging")
+colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
+dat3 = data.frame($df6)
+dat3 = cbind(dat3, "Gompertz baseline")
+colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
+dat4 = data.frame($df8)
+dat4 = cbind(dat4, "Gompertz centred")
+colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
+dat_2 <- rbind(dat1, dat2, dat3, dat4)
+"""
+
+
+
+R"""
+p1 <- dat_1 %>%
+    subset(Time < 3.1) %>%
+    pivot_longer(c(Mean, LCI, UCI),) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) + guides(colour = guide_legend(nrow = 1))
+
+leg <- get_legend(p1)
+
+p1 <- dat_1 %>%
+    subset(Time < 5.0) %>%
+    pivot_longer(c(Mean, LCI, UCI),) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("S(y)") + xlab("Time (years)") + ylim(0,1) + xlim(0,5) + geom_vline(xintercept = 4, linetype = "dotted") 
+
+p2 <- dat_2 %>%
+    subset(Time < 5) %>%
+    pivot_longer(c(Mean, LCI, UCI),) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7,2)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("S(y)") + xlab("Time (years)") + ylim(0,1) + xlim(0,5)+ geom_vline(xintercept = 4, linetype = "dotted") 
+
+p3 <- dat_1 %>%
+    pivot_longer(c(Mean, LCI, UCI),) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("S(y)") + xlab("Time (years)") + ylim(0,1.0)+ geom_vline(xintercept = 4, linetype = "dotted") 
+
+p4 <- dat_2 %>%
+    pivot_longer(c(Mean, LCI, UCI),) %>%
+    ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7,2)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("S(y)") + xlab("Time (years)") + ylim(0,1.0) + geom_vline(xintercept = 4, linetype = "dotted") 
+p5 <- plot_grid(p1,p2,p3,p4, nrow = 2)
+p6 <- plot_grid(p5, leg, nrow = 2, rel_heights = c(0.9, 0.1))
+ggsave($plotsdir("Paper", "TA174Survival.pdf"), width = 14, height = 12)
+"""

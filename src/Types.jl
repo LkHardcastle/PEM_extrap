@@ -211,7 +211,7 @@ end
 
 mutable struct GaussLangevin <: Diffusion
     μ::Function
-    σ::Float64
+    σ::Function
 end
 
 mutable struct TrtDecay <: Diffusion
