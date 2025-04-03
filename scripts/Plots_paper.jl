@@ -186,7 +186,7 @@ param_names <- c(
     )
 
 p1 <- dat %>%
-    subset(Exp == "Changepoint") %>%
+    subset(Exp == "Colon data") %>%
     ggplot(aes(x = as.factor(Tuning), y = 0.5*Mean_est, col = Sampler)) + geom_boxplot() +
     theme_classic() + facet_wrap(Param ~ ., scales = "free", nrow = 1, labeller = labeller(Param = param_names)) +
     theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position = "bottom", text = element_text(size = 20)) + ylab(expression("E["*theta*"]")) + xlab("Step size")
@@ -195,17 +195,18 @@ p2 <- $df_param %>%
     ggplot(aes(x = step_size, y = value, col = Method)) + geom_boxplot() +
     theme_classic() + facet_wrap(Exp ~ ., scales = "free", nrow = 1, labeller = labeller(Param = param_names)) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[6:7]) + geom_hline(yintercept = 0.5, linetype = "dotted") + xlab("Step size") + ylab(expression("P["*theta*"=0]"))
-plot_grid(p1,p2, nrow = 2, labels = c("A", "B"), label_size = 30)
-ggsave($plotsdir("Paper","Eff_exp.pdf"), width = 14, height = 12)
-p1 <- dat %>%
-    subset(Exp == "Changepoint") %>%
-    subset(Sampler != "PDMPRJ") %>%
-    subset(Param != "J") %>%
-    ggplot(aes(x = as.factor(Tuning), y = 0.5*Mean_est, col = Sampler)) + geom_boxplot() +
-    theme_classic() + facet_wrap(Param ~ ., scales = "free", nrow = 1, labeller = labeller(Param = param_names)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
-    theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position = "bottom", text = element_text(size = 20)) + ylab(expression("E["*theta*"]")) + xlab("Step size")
-ggsave($plotsdir("Talks","Eff_exp_talk1.png"), p1, width = 14, height = 4.8)
-ggsave($plotsdir("Talks","Eff_exp_talk2.png"), p2, width = 14, height = 4.8)
+#plot_grid(p1,p2, nrow = 2, labels = c("A", "B"), label_size = 30)
+p1
+#ggsave($plotsdir("Paper","Eff_exp.pdf"), width = 14, height = 12)
+#p1 <- dat %>%
+#    subset(Exp == "Changepoint") %>%
+#    subset(Sampler != "PDMPRJ") %>%
+#    subset(Param != "J") %>%
+#    ggplot(aes(x = as.factor(Tuning), y = 0.5*Mean_est, col = Sampler)) + geom_boxplot() +
+#    theme_classic() + facet_wrap(Param ~ ., scales = "free", nrow = 1, labeller = labeller(Param = param_names)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+#    theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position = "bottom", text = element_text(size = 20)) + ylab(expression("E["*theta*"]")) + xlab("Step size")
+#ggsave($plotsdir("Talks","Eff_exp_talk1.png"), p1, width = 14, height = 4.8)
+#ggsave($plotsdir("Talks","Eff_exp_talk2.png"), p2, width = 14, height = 4.8)
 """   
 
 #### Colon hazards ####

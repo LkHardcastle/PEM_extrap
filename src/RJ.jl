@@ -125,8 +125,8 @@ function log_MHG_ratio(state_split::State, state_curr::State, u::Float64, v::Flo
     AV_calc!(state_split, dyn, priors)
     dat_update!(state_split, dyn, dat)
     U2 = U_new!(state_split, dyn, priors)[1] 
-    logpriors = logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_split.J - 1) - 
-                logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_curr.J - 1) #+
+    logpriors = logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_split.J) - 
+                logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_curr.J) #+
     prop_terms = -logpdf(Normal(0, priors.grid.σ), u) #- log(state_split.J - 1)
     J = Jacobian(state_curr, v)
     A = -U2 + U1 + prop_terms + logpriors 
