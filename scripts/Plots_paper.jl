@@ -197,6 +197,15 @@ p2 <- $df_param %>%
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[6:7]) + geom_hline(yintercept = 0.5, linetype = "dotted") + xlab("Step size") + ylab(expression("P["*theta*"=0]"))
 plot_grid(p1,p2, nrow = 2, labels = c("A", "B"), label_size = 30)
 ggsave($plotsdir("Paper","Eff_exp.pdf"), width = 14, height = 12)
+p1 <- dat %>%
+    subset(Exp == "Changepoint") %>%
+    subset(Sampler != "PDMPRJ") %>%
+    subset(Param != "J") %>%
+    ggplot(aes(x = as.factor(Tuning), y = 0.5*Mean_est, col = Sampler)) + geom_boxplot() +
+    theme_classic() + facet_wrap(Param ~ ., scales = "free", nrow = 1, labeller = labeller(Param = param_names)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position = "bottom", text = element_text(size = 20)) + ylab(expression("E["*theta*"]")) + xlab("Step size")
+ggsave($plotsdir("Talks","Eff_exp_talk1.png"), p1, width = 14, height = 4.8)
+ggsave($plotsdir("Talks","Eff_exp_talk2.png"), p2, width = 14, height = 4.8)
 """   
 
 #### Colon hazards ####
@@ -245,6 +254,7 @@ dat_2 <- rbind(dat1, dat2, dat3, dat4)
 R"""
 p1 <- dat_1 %>%
     subset(Time < 3.1) %>%
+    subset(Time > 0.01) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
@@ -255,6 +265,7 @@ leg <- get_legend(p1)
 
 p1 <- dat_1 %>%
     subset(Time < 3.1) %>%
+    subset(Time > 0.01) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
@@ -263,6 +274,7 @@ p1 <- dat_1 %>%
 
 p2 <- dat_2 %>%
     subset(Time < 3.1) %>%
+    subset(Time > 0.01) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
@@ -270,6 +282,7 @@ p2 <- dat_2 %>%
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3)
 
 p3 <- dat_1 %>%
+    subset(Time > 0.01) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
@@ -277,6 +290,7 @@ p3 <- dat_1 %>%
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,2.0)
 
 p4 <- dat_2 %>%
+    subset(Time > 0.01) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
@@ -284,7 +298,7 @@ p4 <- dat_2 %>%
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,2.0) 
 p5 <- plot_grid(p1,p2,p3,p4, nrow = 2)
 p6 <- plot_grid(p5, leg, nrow = 2, rel_heights = c(0.9, 0.1))
-#ggsave($plotsdir("Paper", "ColonModels.pdf"), width = 14, height = 12)
+ggsave($plotsdir("Paper", "ColonModels.pdf"), width = 14, height = 8)
 """
 
 
@@ -344,6 +358,7 @@ leg <- get_legend(p1)
 
 p1 <- dat_1 %>%
     subset(Time < 5.0) %>%
+    subset(Time > 0.01) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
@@ -352,6 +367,7 @@ p1 <- dat_1 %>%
 
 p2 <- dat_2 %>%
     subset(Time < 5) %>%
+    subset(Time > 0.01) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
@@ -359,6 +375,7 @@ p2 <- dat_2 %>%
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("S(y)") + xlab("Time (years)") + ylim(0,1) + xlim(0,5)+ geom_vline(xintercept = 4, linetype = "dotted") 
 
 p3 <- dat_1 %>%
+    subset(Time > 0.01) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
@@ -366,6 +383,7 @@ p3 <- dat_1 %>%
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("S(y)") + xlab("Time (years)") + ylim(0,1.0)+ geom_vline(xintercept = 4, linetype = "dotted") 
 
 p4 <- dat_2 %>%
+    subset(Time > 0.01) %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 

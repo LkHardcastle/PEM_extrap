@@ -190,19 +190,35 @@ function get_meansurv(smp_x, smp_s_loc, smp_J, cov)
 end
 
 function get_meansurv(haz, s_loc, cov)
-    mean_surv = zeros(size(haz,2))
+    #mean_surv = zeros(size(haz,2))
+    #for i in axes(haz,2)
+    #    for j in axes(haz, 1)
+    #        if j == 1
+    #            sj1 = 0.0
+    #        else
+    #            sj1 = s_loc[j-1]
+    #        end
+    #        #mean_surv[i] += exp(log(exp(-sj1*exp(haz[j,i])) - exp(-s_loc[j]*exp(haz[j,i]))) - haz[j,i])
+    #        mean_surv[i] += (s_loc[j] - sj1)*exp(-sj1*exp(haz[j,i]))
+    #    end
+    #end
+    mean_surv1 = zeros(size(haz,2))
     for i in axes(haz,2)
+        s_y = zeros(size(haz,1) + 1)
+        s_y[1] = 1
+        logS_y = 0.0
         for j in axes(haz, 1)
             if j == 1
                 sj1 = 0.0
             else
                 sj1 = s_loc[j-1]
             end
-            #mean_surv[i] += exp(log(exp(-sj1*exp(haz[j,i])) - exp(-s_loc[j]*exp(haz[j,i]))) - haz[j,i])
-            mean_surv[i] += (s_loc[j] - sj1)*exp(-sj1*exp(haz[j,i]))
+            logS_y += exp(haz[j,i])*(s_loc[j] - sj1)
+            s_y[j+1] = exp(-logS_y)
+            mean_surv1[i] += exp(-haz[j,i])*(s_y[j] - s_y[j+1])
         end
     end
-    return mean_surv
+    return mean_surv1
 end
 
 function r_hat(x::Vector{Vector{Float64}})

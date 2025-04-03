@@ -8,7 +8,7 @@ include("Extrapolation.jl")
 include("RJ.jl")
 include("Metropolis.jl")
 
-function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Exact, test_times)
+function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Exact, test_times, burn_in::Int64)
     out1 = pem_sample(state0, dat, priors, settings)
     out2 = pem_sample(state0, dat, priors, settings)
     test_smp1 = cts_transform(cumsum(out1["Smp_θ"], dims = 2), out1["Smp_s_loc"], test_times)
@@ -16,7 +16,7 @@ function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Exact, te
     rhat_ = []
     ess_ = []
     for i in eachindex(test_times)
-        diag = MCMCDiagnosticTools.ess_rhat(vcat(test_smp1[1,i,:], test_smp2[1,i,:]))
+        diag = MCMCDiagnosticTools.ess_rhat(vcat(test_smp1[1,i,burn_in:end], test_smp2[1,i,burn_in:end]))
         push!(ess_, diag[1])
         push!(rhat_, diag[2])
     end
@@ -26,7 +26,7 @@ function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Exact, te
     return out1, out2, rhat_, ess_
 end
 
-function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Splitting, test_times)
+function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Splitting, test_times, burn_in::Int64)
     out1 = pem_sample(state0, dat, priors, settings)
     out2 = pem_sample(state0, dat, priors, settings)
     test_smp1 = cts_transform(cumsum(out1["Sk_θ"], dims = 2), out1["Sk_s_loc"], test_times)
@@ -34,11 +34,11 @@ function pem_fit(state0::State, dat::PEMData, priors::Prior, settings::Splitting
     rhat_ = []
     ess_ = []
     for i in eachindex(test_times)
-        diag = MCMCDiagnosticTools.ess_rhat(vcat(test_smp1[1,i,:], test_smp2[1,i,:]))
+        diag = MCMCDiagnosticTools.ess_rhat(vcat(test_smp1[1,i,burn_in:end], test_smp2[1,i,burn_in:end]))
         push!(ess_, diag[1])
         push!(rhat_, diag[2])
     end
-    diag = MCMCDiagnosticTools.ess_rhat(vcat(out1["Sk_σ"], out2["Sk_σ"]))
+    diag = MCMCDiagnosticTools.ess_rhat(vcat(out1["Sk_σ"][burn_in:end], out2["Sk_σ"][burn_in:end]))
     push!(ess_, diag[1])
     push!(rhat_, diag[2])
     return out1, out2, rhat_, ess_

@@ -9,7 +9,7 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
             grid_split!(state, dyn, priors)
         end
     end
-    AV_calc!(state, dyn)
+    AV_calc!(state, dyn, priors)
     dat_update!(state, dyn, dat)
 end
 
@@ -23,7 +23,7 @@ function grid_merge!(state::State, dyn::Dynamics, priors::Prior)
     if rand() < min(1, exp(-A))
         state.x, state.v, state.s, state.g, state.s_loc, state.t, state.J, state.b, state.active = copy(state_merge.x), copy(state_merge.v), copy(state_merge.s), copy(state_merge.g), copy(state_merge.s_loc), copy(state_merge.t), copy(state_merge.J), copy(state_merge.b), copy(state_merge.active)
     end
-    AV_calc!(state, dyn)
+    AV_calc!(state, dyn, priors)
     dat_update!(state, dyn, dat)
 end
 
@@ -69,7 +69,7 @@ function grid_split!(state::State, dyn::Dynamics, priors::Prior)
     if rand() < min(1, exp(A))
         state.x, state.v, state.s, state.g, state.s_loc, state.t, state.J, state.b, state.active = copy(state_new.x), copy(state_new.v), copy(state_new.s), copy(state_new.g), copy(state_new.s_loc), copy(state_new.t), copy(state_new.J), copy(state_new.b), copy(state_new.active)
     end
-    AV_calc!(state, dyn)
+    AV_calc!(state, dyn, priors)
     dat_update!(state, dyn, dat)
 end
 
@@ -119,10 +119,10 @@ function split_state(state::RWM, s_new::Float64, u::Float64, priors::Prior)
 end
 
 function log_MHG_ratio(state_split::State, state_curr::State, u::Float64, v::Float64, dyn::Dynamics, priors::Prior)
-    AV_calc!(state_curr, dyn)
+    AV_calc!(state_curr, dyn, priors)
     dat_update!(state_curr, dyn, dat)
     U1 = U_new!(state_curr, dyn, priors)[1] 
-    AV_calc!(state_split, dyn)
+    AV_calc!(state_split, dyn, priors)
     dat_update!(state_split, dyn, dat)
     U2 = U_new!(state_split, dyn, priors)[1] 
     logpriors = logpdf(Poisson(priors.grid.Γ*(priors.grid.max_time - state_curr.s_loc[1])*priors.ω.ω[1]), state_split.J - 1) - 

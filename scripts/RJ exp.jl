@@ -44,13 +44,13 @@ h_ess = Vector{Vector{Float64}}()
 
 nits = 10_000
 for i in 1:exp_its
-    priors1 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.1), [RandomWalk()], [])
+    priors1 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.1), [RandomWalk()], [], 2)
     x0, v0, s0 = init_params(p, dat)
     v0 = v0./norm(v0)
     t0 = 0.0
     state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
     settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 30.0)
-    out = pem_fit(state0, dat, priors1, settings, test_times)
+    out = pem_fit(state0, dat, priors1, settings, test_times, 1_000)
     push!(J_vec,mean(sum(out[1]["Sk_s"],dims = 2)[1,1,:]))
     h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"], dims = 2), out[1]["Sk_s_loc"], h_test), dims = 3)[1,:,1])
     push!(J_vec,mean(sum(out[2]["Sk_s"],dims = 2)[1,1,:]))
@@ -67,19 +67,20 @@ end
 println("-----------")
 nits = 100_000
 tuning_param = [0.01,0.1,0.2,0.5,1.0]
+#tuning_param = [0.1]
 for σ in tuning_param
     for i in 1:exp_its
-        priors2 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [])
+        priors2 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [], 2)
         x0, v0, s0 = init_params(p, dat)
         v0 = v0./norm(v0)
         t0 = 0.0
         state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
         settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 3.0)
-        out = pem_fit(state0, dat, priors2, settings, test_times)
-        push!(J_vec,mean(sum(out[1]["Sk_s"][1,1,1:10:end] ,dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][1,1,1:10:end], dims = 2), out[1]["Sk_s_loc"][1,1,1:10:end], h_test), dims = 3)[1,:,1])
-        push!(J_vec,mean(sum(out[2]["Sk_s"],dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][1,1,1:10:end], dims = 2), out[2]["Sk_s_loc"][1,1,1:10:end], h_test), dims = 3)[1,:,1])
+        out = pem_fit(state0, dat, priors2, settings, test_times, 10_000)
+        push!(J_vec,mean(sum(out[1]["Sk_s"][:,:,1:10:end] ,dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][:,:,1:10:end], dims = 2), out[1]["Sk_s_loc"][:,1:10:end], h_test), dims = 3)[1,:,1])
+        push!(J_vec,mean(sum(out[2]["Sk_s"][:,:,1:10:end],dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][:,:,1:10:end], dims = 2), out[2]["Sk_s_loc"][:,1:10:end], h_test), dims = 3)[1,:,1])
         push!(it, 2*i - 1)
         push!(it, 2*i)
         push!(sampler,"PDMPRJ")
@@ -93,17 +94,17 @@ println("-----------")
 nits = 150_000
 for σ in tuning_param
     for i in 1:exp_its
-        priors3 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [])
+        priors3 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [], 2)
         x0, v0, s0 = init_params(p, dat)
         v0 = v0./norm(v0)
         t0 = 0.0
         state0 = RWM(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0), 0.05, 0)
         settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 50.0)
-        out = pem_fit(state0, dat, priors3, settings, test_times)
-        push!(J_vec, mean(sum(out[1]["Sk_s"][1,1,1:15:end],dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][1,1,1:15:end], dims = 2), out[1]["Sk_s_loc"][1,1,1:15:end], h_test), dims = 3)[1,:,1])
-        push!(J_vec,mean(sum(out[2]["Sk_s"],dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][1,1,1:15:end], dims = 2), out[2]["Sk_s_loc"][1,1,1:15:end], h_test), dims = 3)[1,:,1])
+        out = pem_fit(state0, dat, priors3, settings, test_times, 15_000)
+        push!(J_vec,mean(sum(out[1]["Sk_s"][:,:,1:15:end] ,dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][:,:,1:15:end], dims = 2), out[1]["Sk_s_loc"][:,1:15:end], h_test), dims = 3)[1,:,1])
+        push!(J_vec,mean(sum(out[2]["Sk_s"][:,:,1:15:end],dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][:,:,1:15:end], dims = 2), out[2]["Sk_s_loc"][:,1:15:end], h_test), dims = 3)[1,:,1])
         push!(it, 2*i - 1)
         push!(it, 2*i)
         push!(sampler,"MHRJ")
@@ -148,7 +149,7 @@ v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
 nsmp = 1_000
-test_times = collect(0.05:0.05:2.95)
+test_times = [0.5, 1.5, 2.5]
 sampler = []
 J_vec = []
 h_mat = Matrix{Float64}(undef, 3, 0)
@@ -160,17 +161,17 @@ h_ess = Vector{Vector{Float64}}()
 
 nits = 10_000
 for i in 1:exp_its
-    priors1 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.1), [RandomWalk()], [])
+    priors1 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.1), [RandomWalk()], [], 2)
     x0, v0, s0 = init_params(p, dat)
     v0 = v0./norm(v0)
     t0 = 0.0
     state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
     settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 30.0)
-    out = pem_fit(state0, dat, priors1, settings, test_times)
+    out = pem_fit(state0, dat, priors1, settings, test_times, 1_000)
     push!(J_vec,mean(sum(out[1]["Sk_s"],dims = 2)[1,1,:]))
     h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"], dims = 2), out[1]["Sk_s_loc"], h_test), dims = 3)[1,:,1])
     push!(J_vec,mean(sum(out[2]["Sk_s"],dims = 2)[1,1,:]))
-    h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"], dims = 2), out[2]["Sk_s_loc"], h_test), dims = 3)[1,:,1])
+    h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"], dims = 2), out[2]["Sk_s_loc"], h_test), dims = 3)[1,:,1])
     push!(it, 2*i - 1)
     push!(it, 2*i)
     push!(sampler,"PDMP")
@@ -183,19 +184,20 @@ end
 println("-----------")
 nits = 100_000
 tuning_param = [0.01,0.1,0.2,0.5,1.0]
+#tuning_param = [0.1]
 for σ in tuning_param
     for i in 1:exp_its
-        priors2 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [])
+        priors2 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [], 2)
         x0, v0, s0 = init_params(p, dat)
         v0 = v0./norm(v0)
         t0 = 0.0
         state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
         settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 3.0)
-        out = pem_fit(state0, dat, priors2, settings, test_times)
-        push!(J_vec,mean(sum(out[1]["Sk_s"][1,1,1:10:end] ,dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][1,1,1:10:end], dims = 2), out[1]["Sk_s_loc"][1,1,1:10:end], h_test), dims = 3)[1,:,1])
-        push!(J_vec,mean(sum(out[2]["Sk_s"],dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][1,1,1:10:end], dims = 2), out[2]["Sk_s_loc"][1,1,1:10:end], h_test), dims = 3)[1,:,1])
+        out = pem_fit(state0, dat, priors2, settings, test_times, 10_000)
+        push!(J_vec,mean(sum(out[1]["Sk_s"][:,:,1:10:end] ,dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][:,:,1:10:end], dims = 2), out[1]["Sk_s_loc"][:,1:10:end], h_test), dims = 3)[1,:,1])
+        push!(J_vec,mean(sum(out[2]["Sk_s"][:,:,1:10:end],dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][:,:,1:10:end], dims = 2), out[2]["Sk_s_loc"][:,1:10:end], h_test), dims = 3)[1,:,1])
         push!(it, 2*i - 1)
         push!(it, 2*i)
         push!(sampler,"PDMPRJ")
@@ -209,17 +211,17 @@ println("-----------")
 nits = 150_000
 for σ in tuning_param
     for i in 1:exp_its
-        priors3 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [])
+        priors3 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [], 2)
         x0, v0, s0 = init_params(p, dat)
         v0 = v0./norm(v0)
         t0 = 0.0
         state0 = RWM(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0), 0.05, 0)
         settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 50.0)
-        out = pem_fit(state0, dat, priors3, settings, test_times)
-        push!(J_vec, mean(sum(out[1]["Sk_s"][1,1,1:15:end],dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][1,1,1:15:end], dims = 2), out[1]["Sk_s_loc"][1,1,1:15:end], h_test), dims = 3)[1,:,1])
-        push!(J_vec,mean(sum(out[2]["Sk_s"],dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][1,1,1:15:end], dims = 2), out[2]["Sk_s_loc"][1,1,1:15:end], h_test), dims = 3)[1,:,1])
+        out = pem_fit(state0, dat, priors3, settings, test_times, 15_000)
+        push!(J_vec,mean(sum(out[1]["Sk_s"][:,:,1:15:end] ,dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][:,:,1:15:end], dims = 2), out[1]["Sk_s_loc"][:,1:15:end], h_test), dims = 3)[1,:,1])
+        push!(J_vec,mean(sum(out[2]["Sk_s"][:,:,1:15:end],dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][:,:,1:15:end], dims = 2), out[2]["Sk_s_loc"][:,1:15:end], h_test), dims = 3)[1,:,1])
         push!(it, 2*i - 1)
         push!(it, 2*i)
         push!(sampler,"MHRJ")
@@ -229,6 +231,7 @@ for σ in tuning_param
         push!(h_ess, out[4])
     end
 end
+
 
 df = DataFrame(Sampler = sampler, Iter = it, Tuning = tuning, J = J_vec,  h1 = h_mat[1,:], h2 = h_mat[2,:], h3 = h_mat[3,:])
 ess2 = copy(h_ess)
@@ -260,19 +263,20 @@ exp_its = 5
 h_test = [0.5, 1.5, 2.5]
 h_ess = Vector{Vector{Float64}}()
 
+
 nits = 10_000
 for i in 1:exp_its
-    priors1 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.1), [RandomWalk()], [])
+    priors1 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.1), [RandomWalk()], [], 2)
     x0, v0, s0 = init_params(p, dat)
     v0 = v0./norm(v0)
     t0 = 0.0
     state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
     settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 30.0)
-    out = pem_fit(state0, dat, priors1, settings, test_times)
+    out = pem_fit(state0, dat, priors1, settings, test_times, 1_000)
     push!(J_vec,mean(sum(out[1]["Sk_s"],dims = 2)[1,1,:]))
     h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"], dims = 2), out[1]["Sk_s_loc"], h_test), dims = 3)[1,:,1])
     push!(J_vec,mean(sum(out[2]["Sk_s"],dims = 2)[1,1,:]))
-    h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"], dims = 2), out[2]["Sk_s_loc"], h_test), dims = 3)[1,:,1])
+    h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"], dims = 2), out[2]["Sk_s_loc"], h_test), dims = 3)[1,:,1])
     push!(it, 2*i - 1)
     push!(it, 2*i)
     push!(sampler,"PDMP")
@@ -285,19 +289,20 @@ end
 println("-----------")
 nits = 100_000
 tuning_param = [0.01,0.1,0.2,0.5,1.0]
+#tuning_param = [0.1]
 for σ in tuning_param
     for i in 1:exp_its
-        priors2 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [])
+        priors2 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [], 2)
         x0, v0, s0 = init_params(p, dat)
         v0 = v0./norm(v0)
         t0 = 0.0
         state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
         settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 3.0)
-        out = pem_fit(state0, dat, priors2, settings, test_times)
-        push!(J_vec,mean(sum(out[1]["Sk_s"][1,1,1:10:end] ,dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][1,1,1:10:end], dims = 2), out[1]["Sk_s_loc"][1,1,1:10:end], h_test), dims = 3)[1,:,1])
-        push!(J_vec,mean(sum(out[2]["Sk_s"],dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][1,1,1:10:end], dims = 2), out[2]["Sk_s_loc"][1,1,1:10:end], h_test), dims = 3)[1,:,1])
+        out = pem_fit(state0, dat, priors2, settings, test_times, 10_000)
+        push!(J_vec,mean(sum(out[1]["Sk_s"][:,:,1:10:end] ,dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][:,:,1:10:end], dims = 2), out[1]["Sk_s_loc"][:,1:10:end], h_test), dims = 3)[1,:,1])
+        push!(J_vec,mean(sum(out[2]["Sk_s"][:,:,1:10:end],dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][:,:,1:10:end], dims = 2), out[2]["Sk_s_loc"][:,1:10:end], h_test), dims = 3)[1,:,1])
         push!(it, 2*i - 1)
         push!(it, 2*i)
         push!(sampler,"PDMPRJ")
@@ -311,17 +316,17 @@ println("-----------")
 nits = 150_000
 for σ in tuning_param
     for i in 1:exp_its
-        priors3 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [])
+        priors3 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 0.0, RJ(10.0, 1, σ, 100.0, 3.1), [RandomWalk()], [], 2)
         x0, v0, s0 = init_params(p, dat)
         v0 = v0./norm(v0)
         t0 = 0.0
         state0 = RWM(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0), 0.05, 0)
         settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.05, 50.0)
-        out = pem_fit(state0, dat, priors3, settings, test_times)
-        push!(J_vec, mean(sum(out[1]["Sk_s"][1,1,1:15:end],dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][1,1,1:15:end], dims = 2), out[1]["Sk_s_loc"][1,1,1:15:end], h_test), dims = 3)[1,:,1])
-        push!(J_vec,mean(sum(out[2]["Sk_s"],dims = 2)[1,1,:]))
-        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][1,1,1:15:end], dims = 2), out[2]["Sk_s_loc"][1,1,1:15:end], h_test), dims = 3)[1,:,1])
+        out = pem_fit(state0, dat, priors3, settings, test_times, 15_000)
+        push!(J_vec,mean(sum(out[1]["Sk_s"][:,:,1:15:end] ,dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[1]["Sk_x"][:,:,1:15:end], dims = 2), out[1]["Sk_s_loc"][:,1:15:end], h_test), dims = 3)[1,:,1])
+        push!(J_vec,mean(sum(out[2]["Sk_s"][:,:,1:15:end],dims = 2)[1,1,:]))
+        h_mat = hcat(h_mat, mean(cts_transform(cumsum(out[2]["Sk_x"][:,:,1:15:end], dims = 2), out[2]["Sk_s_loc"][:,1:15:end], h_test), dims = 3)[1,:,1])
         push!(it, 2*i - 1)
         push!(it, 2*i)
         push!(sampler,"MHRJ")
@@ -331,6 +336,8 @@ for σ in tuning_param
         push!(h_ess, out[4])
     end
 end
+
+
 
 df = DataFrame(Sampler = sampler, Iter = it, Tuning = tuning, J = J_vec,  h1 = h_mat[1,:], h2 = h_mat[2,:], h3 = h_mat[3,:])
 ess3 = copy(h_ess)

@@ -8,11 +8,12 @@ function barker_extrapolation(out::Dict, diffs::Diffusion, grid::Grid, t_start::
         end
     end
     ## Get time points
-    times = extrapolation_times(out, grid, t_start, t_end, n_smp, ω.*(σ./step_size), Γ)
+    times = extrapolation_times(out, grid, t_start, t_end, n_smp, ω, Γ.*(σ.^2)./step_size)
+    #times = extrapolation_times(out, grid, t_start, t_end, n_smp, ω, Γ)
     ## Simulate dynamics
     paths = Vector{Vector{Float64}}()
     for i in 1:n_smp
-        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, step_size, times[i]))
+        push!(paths, barker_dynamics(initial[i], size(times[i],1), diffs, sqrt(step_size), times[i]))
     end
     output = fill(Inf, length(plot_grid), n_smp)
     for i in 1:n_smp
@@ -34,13 +35,13 @@ function get_smps(out::Dict, typeof, k::Int)
         Σθ = cumsum(out["Sk_θ"], dims = 2)
         ω = out["Sk_ω"][k,:]
         Γ = out["Sk_Γ"]
-        σ = out["Sk_σ"][k,:]
+        σ = out["Sk_σ"]
     elseif typeof == "Smp"
         n_smp = size(out["Smp_t"],1)
         Σθ = cumsum(out["Smp_θ"], dims = 2)
         ω = out["Smp_ω"][k,:]
         Γ = out["Smp_Γ"]
-        σ = out["Smp_σ"][k,:]
+        σ = out["Smp_σ"]
     else
         error("typeof must be one of Sk or Smp")
     end

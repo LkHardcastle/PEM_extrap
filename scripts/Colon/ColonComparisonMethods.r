@@ -15,14 +15,32 @@ library("discSurv")
 
 nd_modr1 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
                       smooth_model = "random_walk",
-                      mspline = list(add_knots=4))
+                      mspline = list(add_knots=5))
+plot(nd_modr1)
+nd_modr2 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
+                      smooth_model = "random_walk",
+                      mspline = list(add_knots=10))
+plot(nd_modr2)
+nd_modr3 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
+                      smooth_model = "random_walk",
+                      mspline = list(add_knots=15))
+plot(nd_modr3)
+
 spline_out1 = hazard(nd_modr1, t = seq(0.01, 15, .001))
+
+
+
 extdat <- data.frame(start = c(10), stop =  c(15), 
                      n = c(20), r = c(6))
 nd_modr2 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
                       smooth_model = "random_walk", external = extdat)
 spline_out2 = hazard(nd_modr2, t = seq(0.01, 15, .001))
-rmst(nd_modr1, t = c(3.1,15), niter=100)
+
+rmst(nd_modr1, t = c(3.1, 15), summ_fns = list(mean = mean, ~quantile(.x, probs=c(0.025, 0.975))), niter=1000)
+rmst(nd_modr2, t = c(3.1, 15), summ_fns = list(mean = mean, ~quantile(.x, probs=c(0.025, 0.975))),niter=1000)
+rmst(nd_modr3, t = c(3.1, 15), summ_fns = list(mean = mean, ~quantile(.x, probs=c(0.025, 0.975))),niter=1000)
+
+
 rmst(nd_modr2, t = c(3.1,15), niter=100)
 write.csv(spline_out1, "C:\\Users\\hardc\\Documents\\PEM_extrap\\data\\ColonSmps\\spline.csv")
 write.csv(spline_out2, "C:\\Users\\hardc\\Documents\\PEM_extrap\\data\\ColonSmps\\spline_ext.csv")
@@ -151,3 +169,14 @@ plot(mod2)
     max_fu = max(tmp2$Time) # = tmp2$Time[length(tmp2$Time)] as ordered
   time_int = filter(new_df, Time <= max_fu) 
     int_est = approx(x=tmp2$Time, y=tmp2$mean, xout=time_int$Time, rule=2)$y
+
+
+### SurvHE
+library(survHE)
+out = fit.models(formula=Surv(years,status)~1,data=colons,
+                distr=c("exponential","gamma","gompertz","weibull","loglogistic","lognormal"),method="mle")
+
+out$model.fitting
+out$models$'log-Normal'
+
+summary.survHE(out, t = seq(0.1,15,by= 0.1))
