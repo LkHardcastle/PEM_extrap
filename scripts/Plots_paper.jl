@@ -391,5 +391,39 @@ p4 <- dat_2 %>%
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("S(y)") + xlab("Time (years)") + ylim(0,1.0) + geom_vline(xintercept = 4, linetype = "dotted") 
 p5 <- plot_grid(p1,p2,p3,p4, nrow = 2)
 p6 <- plot_grid(p5, leg, nrow = 2, rel_heights = c(0.9, 0.1))
-ggsave($plotsdir("Paper", "TA174Survival.pdf"), width = 14, height = 12)
+ggsave($plotsdir("Paper", "TA174Survival.pdf"), width = 14, height = 8)
+"""
+
+
+df1_ = CSV.read(datadir("TA174Models","CovCtrl.csv"),DataFrame)
+df2_ = CSV.read(datadir("TA174Models","CovTrt.csv"),DataFrame)
+df3_ = CSV.read(datadir("TA174Models","CovWane.csv"),DataFrame)
+
+R"""
+dat1 = data.frame($df1_)
+dat1$Arm = "Placebo"
+dat2 = data.frame($df2_)
+dat2$Arm = "Treatment"
+dat1 = rbind(dat1, dat2)
+dat3 = data.frame($df3_)
+dat3$Arm = "Treatment (Waning)"
+dat3 = rbind(dat1,dat3)
+colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Arm") 
+colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Arm") 
+p1 <- dat1 %>%
+    subset(Time < 4.1) %>%
+    pivot_longer(c(Mean, LCI, UCI),) %>%
+    ggplot(aes(x = Time, y = value, col = Arm, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.3) + xlim(0.01,4) 
+p2 <- dat3 %>%
+    pivot_longer(c(Mean, LCI, UCI),) %>%
+    subset(Time > 4.0) %>%
+    ggplot(aes(x = Time, y = log(value), col = Arm, linetype = name)) + geom_step() +
+    theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
+    theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7,4)]) +
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("log(h(y))") + xlab("Time (years)") + xlim(4.01,NA) #+ ylim(0,2)
+plot_grid(p1,p2)
+ggsave($plotsdir("Paper", "TA174covariate.pdf"), width = 14, height = 6)
 """
