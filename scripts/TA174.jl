@@ -19,6 +19,10 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 
 Random.seed!(2352)
 df = CSV.read(datadir("TA174.csv"), DataFrame)
+length(findall(df.death .== 1.0))./810
+
+Random.seed!(2352)
+df = CSV.read(datadir("TA174.csv"), DataFrame)
 y = df.death_ty[findall(df.treat .== 0)]
 maximum(y)
 n = length(y)
@@ -212,6 +216,7 @@ n = length(y)
 breaks = vcat(0.01,collect(0.26:0.25:4.01))
 p = 1
 cens = df.death[findall(df.treat .== 0.0)]
+sum(cens)/n
 covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
@@ -400,6 +405,7 @@ n = length(y)
 breaks = vcat(0.01,collect(0.26:0.25:4.01))
 p = 1
 cens = df.death[findall(df.treat .== 1)]
+sum(cens)./n
 covar = fill(1.0, 1, n)
 dat = init_data(y, cens, covar, breaks)
 x0, v0, s0 = init_params(p, dat)
@@ -609,32 +615,32 @@ df8 = CSV.read(datadir("TA174Models","GompCentTreatSurv.csv"),DataFrame)
 
 R"""
 dat1 = data.frame($df1)
-dat1 = cbind(dat1, "Gamma fixed")
+dat1 = cbind(dat1, "Gamma (fixed)")
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat2 = data.frame($df3)
-dat2 = cbind(dat2, "Gamma - converging")
+dat2 = cbind(dat2, "Gamma (converging)")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat3 = data.frame($df5)
-dat3 = cbind(dat3, "Gompertz baseline")
+dat3 = cbind(dat3, "Gompertz (baseline)")
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat4 = data.frame($df7)
-dat4 = cbind(dat4, "Gompertz centred")
+dat4 = cbind(dat4, "Gompertz (centred)")
 colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_1 <- rbind(dat1, dat2, dat3, dat4)
 """
 
 R"""
 dat1 = data.frame($df2)
-dat1 = cbind(dat1, "Gamma fixed")
+dat1 = cbind(dat1, "Gamma (fixed)")
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat2 = data.frame($df4)
-dat2 = cbind(dat2, "Gamma - converging")
+dat2 = cbind(dat2, "Gamma (converging)")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat3 = data.frame($df6)
-dat3 = cbind(dat3, "Gompertz baseline")
+dat3 = cbind(dat3, "Gompertz (baseline)")
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat4 = data.frame($df8)
-dat4 = cbind(dat4, "Gompertz centred")
+dat4 = cbind(dat4, "Gompertz (centred)")
 colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_2 <- rbind(dat1, dat2, dat3, dat4)
 """

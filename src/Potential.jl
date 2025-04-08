@@ -1,11 +1,11 @@
 
 function AV_calc!(state::State, dyn::Dynamics, priors::Prior)
     x = copy(state.x)
-    x[:,1]./priors.σ.σ
+    #x[:,1] .= x[:,1]./priors.σ.σ
     A = cumsum(x, dims = 2)
     dyn.A = transpose(dat.UQ)*A
     v = copy(state.v)
-    v[:,1]./priors.σ.σ
+    #v[:,1] .= v[:,1]./priors.σ.σ
     V = cumsum(v, dims = 2)
     dyn.V = transpose(dat.UQ)*V
 end
@@ -28,6 +28,19 @@ function U_eval(state::State, t::Float64, dyn::Dynamics, priors::Prior)
     return U_, ∂U_
 end
 
+function U_eval_rj(state::State, t::Float64, dyn::Dynamics, priors::Prior)
+    U_ = sum((exp.(dyn.A).*dyn.W .- dyn.δ.*dyn.A)) 
+    active_j = filter(idx -> idx[1] == j, state.active)
+    for k in active_j
+        if k != active_j[1]
+            U_ -= logpdf(Normal(0.0, 1), (state.x[k] + state.v[k]*t)*priors.σ.σ)
+        else
+            U_ -= logpdf(Normal(0.0, priors.σ0), (state.x[k] + state.v[k]*t)*priors.σ.σ)
+        end
+    end
+    return U_, ∂U_
+end
+
 function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv::Matrix{Float64}, U_::Float64, ∂U_::Float64, priors::BasicPrior)
     #error("Not ready yet")
     μθ = drift_U(Σθ[j,:], priors.diff[j])
@@ -35,13 +48,13 @@ function U_prior(state::State, t::Float64, j::Int64, Σθ::Matrix{Float64}, Σv:
     active_j = filter(idx -> idx[1] == j, state.active)
     for k in active_j
         if k != active_j[1]
-            U_ -= logpdf(Normal(0.0, 1), state.x[k] + state.v[k]*t)
-            U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)*priors.σ.σ))
-            ∂U_ += state.v[k]*(state.x[k] + state.v[k]*t) 
-            ∂U_ += -2*priors.σ.σ*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + priors.σ.σ*state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]*priors.σ.σ) + 1)
+            U_ -= logpdf(Normal(0.0, 1), (state.x[k] + state.v[k]*t)*priors.σ.σ)
+            #U_ += -log(1 + tanh(μθ[k[2]-1]*(state.x[k] + state.v[k]*t)*priors.σ.σ))
+            #∂U_ += state.v[k]*(state.x[k] + state.v[k]*t) 
+            #∂U_ += -2*priors.σ.σ*(Σv[k[1],k[2] - 1]*(state.x[k] + state.v[k]*t)*∂μθ[k[2]-1] + priors.σ.σ*state.v[k]*μθ[k[2]-1])/(exp(2*(state.x[k] + state.v[k]*t)*μθ[k[2]-1]*priors.σ.σ) + 1)
         else
-            U_ -= logpdf(Normal(0.0, 1), state.x[k] + state.v[k]*t)
-            ∂U_ += state.v[k]*(state.x[k] + state.v[k]*t)
+            U_ -= logpdf(Normal(0.0, priors.σ0), (state.x[k] + state.v[k]*t)*priors.σ.σ)
+            #∂U_ += state.v[k]*(state.x[k] + state.v[k]*t)
         end
     end
     return U_, ∂U_
@@ -73,7 +86,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
     U_ind = (dat.UQ*U_ind).*priors.σ.σ
     ∇U_out = U_ind[state.active]
     x = copy(state.x)
-    x[:,1]./priors.σ.σ
+    #x[:,1] = x[:,1]./priors.σ.σ
     Σθ = cumsum(x, dims = 2).*priors.σ.σ
     μθ = Vector{Vector{Float64}}()
     ∂μθ = Vector{Array{Float64}}()
@@ -97,7 +110,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
     U_ind = (dat.UQ*U_ind).*priors.σ.σ
     ∇U_out = U_ind[state.active]
     x = copy(state.x)
-    x[:,1]./priors.σ.σ
+    #x[:,1] = x[:,1]./priors.σ.σ
     Σθ = cumsum(x, dims = 2).*priors.σ.σ
     μθ = Vector{Vector{Float64}}()
     ∂μθ = Vector{Array{Float64}}()
@@ -121,7 +134,7 @@ function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::Uni
         out = ∇σp(priors.σ)
     end
     x = copy(state.x)
-    x[:,1]./priors.σ.σ
+    #x[:,1] = x[:,1]./priors.σ.σ
     Σθ = cumsum(x, dims = 2).*priors.σ.σ
     μθ = Vector{Vector{Float64}}()
     ∂μθ = Vector{Array{Float64}}()

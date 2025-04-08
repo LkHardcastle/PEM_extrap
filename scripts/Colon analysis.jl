@@ -289,7 +289,7 @@ settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.01, 50
 test_times = collect(0.2:0.2:3.0)
 
 priors = BasicPrior(1.0, PC(1.0, 2, 0.5, Inf), FixedW([0.5]), 1.0, CtsPois(7.0, 1.0, 100.0, 3.1), [RandomWalk()], [0.1], 2)
-out1 = pem_fit(state0, dat, priors, settings, test_times, burn_in)
+@time out1 = pem_fit(state0, dat, priors, settings, test_times, burn_in)
 println(out1[3]);println(out1[4])
 #priors = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(7.0, 1.0, 100.0, 3.1), [GaussLangevin(log(0.2),1.0)], [0.1], 2)
 priors = BasicPrior(1.0, PC(1.0, 2, 0.5, Inf), FixedW([0.5]), 1.0, CtsPois(7.0, 1.0, 100.0, 3.1), [GaussLangevin(t -> log(0.29), t-> 0.4)], [0.1], 2)

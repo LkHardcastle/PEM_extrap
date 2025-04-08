@@ -21,7 +21,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 Random.seed!(12515)
 n = 0
 y = rand(Exponential(1.0),n)
-breaks = collect(1:1:300)
+breaks = collect(1:1:3)
 p = 1
 cens = fill(1.0,n)
 covar = fill(1.0, 1, n)
@@ -30,27 +30,32 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, fill(false, size(s0)), breaks, t0, length(breaks),  true, findall(s0))
-nits = 100_000
+nits = 10_000
 nsmp = 20
 
 Random.seed!(23462)
 test_times = [10.0]
 settings = Splitting(nits, nsmp, 1_000_000, 1.0, 0.0, 0.1, false, true, 0.01, 10.0)
-priors1 = BasicPrior(1.0, FixedV([0.2]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 300.0, 3.1), [RandomWalk()], [], 2)
-#@time out1 = pem_fit(state0, dat, priors1, settings, test_times)
-priors2 = BasicPrior(1.0, FixedV([0.2]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 300.0, 3.1), [GaussLangevin(2.0,1.0)], [], 1)
-#@time out2 = pem_fit(state0, dat, priors2, settings, test_times)
-priors3 =  BasicPrior(1.0, FixedV([0.2]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 300.0, 3.1), [GompertzBaseline(0.1)], [], 1)
-#@time out3 = pem_fit(state0, dat, priors3, settings, test_times)
+priors1 = BasicPrior(1.0, FixedV(0.05), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 300.0, 3.1), [RandomWalk()], [], 2)
+@time out1 = pem_fit(state0, dat, priors1, settings, test_times, 1_000)
+priors2 = BasicPrior(1.0, FixedV(0.05), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 300.0, 3.1), [GaussLangevin(t -> 2.0,t -> 1.0)], [], 1)
+@time out2 = pem_fit(state0, dat, priors2, settings, test_times, 1_000)
+priors3 =  BasicPrior(1.0, FixedV(0.05), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 300.0, 3.1), [GompertzBaseline(0.5)], [], 1)
+@time out3 = pem_fit(state0, dat, priors3, settings, test_times, 1_000)
 
-s1 = view(exp.(cumsum(out1[1]["Sk_θ"], dims = 2)), 1, :, :)
-df1 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+breaks_extrap = collect(4.0:500.0)
+extrap1 = barker_extrapolation(out2[1], priors1.diff[1], priors1.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1, 0.05)
+extrap2 = barker_extrapolation(out2[1], priors2.diff[1], priors2.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1, 0.05)
+extrap3 = barker_extrapolation(out2[1], priors3.diff[1], priors3.grid, breaks_extrap[begin], breaks_extrap[end] + 0.1, breaks_extrap, 1, 0.05)
 
-s1 = view(exp.(cumsum(out2[1]["Sk_θ"], dims = 2)), 1, :, :)
-df2 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+s1 = exp.(extrap1)
+df1 = DataFrame(hcat(breaks_extrap./100, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
-s1 = view(exp.(cumsum(out3[1]["Sk_θ"], dims = 2)), 1, :, :)
-df3 = DataFrame(hcat(breaks, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+s1 = exp.(extrap2)
+df2 = DataFrame(hcat(breaks_extrap./100, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
+
+s1 = exp.(extrap3)
+df3 = DataFrame(hcat(breaks_extrap./100, median(s1, dims = 2), quantile.(eachrow(s1), 0.025), quantile.(eachrow(s1), 0.25), quantile.(eachrow(s1), 0.75), quantile.(eachrow(s1), 0.975)), :auto)
 
 R"""
 dat1 = data.frame($df1)
@@ -88,7 +93,7 @@ p3 <- dat_diffusion %>%
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(4)]) +
     scale_linetype_manual(values = c("solid","dotdash","dotdash")) + ylab("h(y)") + xlab("Time (arbitrary units)") + ylim(0,17)
 plot_grid(p1,p2,p3,ncol = 3)
-#ggsave($plotsdir("Talks","Diffusions.pdf"), width = 14, height = 6)
+ggsave($plotsdir("Paper","Diffusions.pdf"), width = 14, height = 6)
 """
 
 
@@ -96,17 +101,38 @@ plot_grid(p1,p2,p3,ncol = 3)
 
 
 x = -2:0.005:7
-y1 = (1 .+ tanh.(x.*3.0)).*pdf.(Normal(0,1), x)
-y2 = pdf.(Normal(3,1), x)
+y1 = (1 .+ tanh.(x.*1)).*pdf.(Normal(0,1), x)
+y2 = pdf.(Normal(1,1), x)
+df1 = DataFrame(x = x, Barker = y1, EM = y2, ind = "= 1")
 
-df = DataFrame(x = x, Barker = y1, EM = y2)
+x = -2:0.005:7
+y1 = (1 .+ tanh.(x.*2)).*pdf.(Normal(0,1), x)
+y2 = pdf.(Normal(2,1), x)
+df2 = DataFrame(x = x, Barker = y1, EM = y2, ind = "= 2")
+
+x = -2:0.005:7
+y1 = (1 .+ tanh.(x.*3)).*pdf.(Normal(0,1), x)
+y2 = pdf.(Normal(3,1), x)
+df3 = DataFrame(x = x, Barker = y1, EM = y2, ind = "= 3")
+
+x = -2:0.005:7
+y1 = (1 .+ tanh.(x.*4)).*pdf.(Normal(0,1), x)
+y2 = pdf.(Normal(4,1), x)
+df4 = DataFrame(x = x, Barker = y1, EM = y2, ind = "= 4")
+
+df = vcat(df1, df2, df3, df4)
 
 R"""
 $df %>%
     pivot_longer(Barker:EM, names_to = "Method", values_to = "y") %>%
-    ggplot(aes(x = x, y = y, col = Method)) + geom_line(size = 0.8) + theme_classic() +
-    scale_colour_manual(values = cbPalette[6:7]) + xlab(expression(theta)) + ylab(expression("f("*theta*")")) + theme(legend.title = element_blank(), legend.position = "bottom", text = element_text(size = 20)) + 
-    geom_vline(xintercept = 0, linetype = "dashed")
+    mutate(Method = case_when(
+        Method == "Barker" ~ "Skew-Symmetric",
+        Method == "EM" ~ "Euler-Maruyama"
+    )) %>%
+    ggplot(aes(x = x, y = y, col = ind, linetype = Method)) + geom_line(size = 0.8) + theme_classic() +
+    scale_colour_manual(values = cbPalette[c(2,4,6,7)]) + xlab(expression(theta)) + ylab(expression("f("*theta*")")) + 
+    theme(legend.title = element_blank(), legend.position = "bottom", text = element_text(size = 20)) + 
+    geom_vline(xintercept = 0, linetype = "dashed") + scale_linetype_manual(values = c("dashed", "solid")) 
     ggsave($plotsdir("Paper","Discretisation.pdf"), width = 14, height = 5)
 """
 
@@ -123,13 +149,13 @@ dat = init_data(y, cens, covar, breaks)
 nits = 2_000
 nsmp = 1_000
 test_times = collect(0.05:0.05:2.95)
-priors1 = BasicPrior(1.0, FixedV([0.5]), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.1), [RandomWalk()], [], 1)
+priors1 = BasicPrior(1.0, FixedV(0.5), FixedW([0.5]), 1.0, CtsPois(10.0, 10.0, 100.0, 3.1), [RandomWalk()], [], 1)
 x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 t0 = 0.0
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
 settings = Splitting(nits, nsmp, 1_000_000, 1.0, 0.0, 0.1, false, true, 0.01, 1.0)
-out = pem_fit(state0, dat, priors1, settings, test_times)
+out = pem_fit(state0, dat, priors1, settings, test_times, 100)
 
 t = vec(out[1]["Sk_t"])
 y1 = vec(out[1]["Sk_x"][1,1,:])
@@ -143,26 +169,18 @@ R"""
 p1 <- $df %>%
     pivot_longer(x2:x1) %>%
     ggplot(aes(x = t, y = value, col = factor(name, levels = c("x2","x1")))) + geom_line() +
-    theme_classic() + scale_colour_manual(values = cbPalette[7:6]) + ylab("State") + xlab("Sampler time (arbitrary units)") +
+    theme_classic() + scale_colour_manual(values = cbPalette[7:6]) + ylab(expression(alpha*"-space")) + xlab("Sampler time (arbitrary units)") +
     theme(legend.position = "none", text = element_text(size = 20))
 p2 <- $df %>%
     pivot_longer(y1:y2) %>%
     ggplot(aes(x = t, y = value, col = name)) + geom_line() +
-    theme_classic() + scale_colour_manual(values = cbPalette[6:7]) + ylab("State") + xlab("Sampler time (arbitrary units)") +
+    theme_classic() + scale_colour_manual(values = cbPalette[6:7]) + ylab(expression(theta*"-space")) + xlab("Sampler time (arbitrary units)") +
     theme(legend.position = "none", text = element_text(size = 20))
 plot_grid(p1,p2)
 ggsave($plotsdir("Paper","SM.pdf"), width = 14, height = 6)
 """
 
-########### Efficiency vs reversible jump & Paramerisation experiment #########
-
-df1 = CSV.read(datadir("RJExp1.csv"), DataFrame)
-df2 = CSV.read(datadir("RJExp2.csv"), DataFrame)
-df3 = CSV.read(datadir("RJExp3.csv"), DataFrame)
-df1[!,"Exp"] .= "Prior"
-df2[!,"Exp"] .= "Changepoint"
-df3[!,"Exp"] .= "Colon data" 
-df_rj = vcat(df1,df2,df3)
+########### Paramerisation experiment #########
 
 df1 = CSV.read(datadir("ParamExp1.csv"), DataFrame)
 df2 = CSV.read(datadir("ParamExp2.csv"), DataFrame)
@@ -173,41 +191,39 @@ df2[!, "Exp"] .= "Diffusion 2"
 df_param = vcat(df1, df2)
 
 R"""
-dat = data.frame($df_rj)
-dat = dat %>%
-    pivot_longer(J:h3, names_to = "Param", values_to = "Mean_est") %>%
-    mutate(Exp = factor(Exp, c("Prior", "Changepoint", "Colon data")))
-
-param_names <- c(
-    `J` = "J",
-    `h1` = "h(0.5)",
-    `h2` = "h(1.5)",
-    `h3` = "h(2.5)"
-    )
-
-p1 <- dat %>%
-    subset(Exp == "Colon data") %>%
-    ggplot(aes(x = as.factor(Tuning), y = 0.5*Mean_est, col = Sampler)) + geom_boxplot() +
-    theme_classic() + facet_wrap(Param ~ ., scales = "free", nrow = 1, labeller = labeller(Param = param_names)) +
-    theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position = "bottom", text = element_text(size = 20)) + ylab(expression("E["*theta*"]")) + xlab("Step size")
-p2 <- $df_param %>%
+p1 <- $df_param %>%
+    mutate(Method = case_when(
+       Method == "Barker" ~ "Skew-Symmetric",
+       Method == "Euler-Maruyama" ~ "Euler-Maruyama"
+    )) %>%
     pivot_longer("0.001":"0.5", names_to  = "step_size") %>%
     ggplot(aes(x = step_size, y = value, col = Method)) + geom_boxplot() +
-    theme_classic() + facet_wrap(Exp ~ ., scales = "free", nrow = 1, labeller = labeller(Param = param_names)) + 
+    theme_classic() + facet_wrap(Exp ~ ., scales = "free", nrow = 1) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[6:7]) + geom_hline(yintercept = 0.5, linetype = "dotted") + xlab("Step size") + ylab(expression("P["*theta*"=0]"))
-#plot_grid(p1,p2, nrow = 2, labels = c("A", "B"), label_size = 30)
 p1
-#ggsave($plotsdir("Paper","Eff_exp.pdf"), width = 14, height = 12)
-#p1 <- dat %>%
-#    subset(Exp == "Changepoint") %>%
-#    subset(Sampler != "PDMPRJ") %>%
-#    subset(Param != "J") %>%
-#    ggplot(aes(x = as.factor(Tuning), y = 0.5*Mean_est, col = Sampler)) + geom_boxplot() +
-#    theme_classic() + facet_wrap(Param ~ ., scales = "free", nrow = 1, labeller = labeller(Param = param_names)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
-#    theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position = "bottom", text = element_text(size = 20)) + ylab(expression("E["*theta*"]")) + xlab("Step size")
-#ggsave($plotsdir("Talks","Eff_exp_talk1.png"), p1, width = 14, height = 4.8)
-#ggsave($plotsdir("Talks","Eff_exp_talk2.png"), p2, width = 14, height = 4.8)
+ggsave($plotsdir("Paper", "Param_Eff.pdf"), width = 14, height = 6)
 """   
+
+########### Reversible jump experiment ###########
+
+df1 = CSV.read(datadir("RJexp", "trace_plots_main.csv"), DataFrame)
+df2 = CSV.read(datadir("RJexp", "hazards.csv"), DataFrame)
+
+R"""
+p1 <- $df1 %>%
+    mutate(Iteration = 1:n()) %>%
+    subset(Iteration < 10000) %>%
+    pivot_longer(PDMP:RJ, names_to = "Method", values_to = "log(h(1.2))") %>%
+    ggplot(aes(x = Iteration, y = `log(h(1.2))`, col = Method)) + geom_path() + theme_classic() + 
+    scale_colour_manual(values = cbPalette[6:7]) + theme(legend.position = "bottom", text = element_text(size = 20)) 
+p2 <- $df2 %>% 
+    pivot_longer(median:UCI, values_to = "h(y)", names_to = "Quantity") %>%
+    ggplot(aes(x = Time, y = `h(y)`, col = Method, linetype = Quantity)) + geom_line() + theme_classic() + guides(linetype = FALSE) + 
+    scale_colour_manual(values = cbPalette[6:7]) + scale_linetype_manual(values = c("dashed", "solid", "dashed")) + 
+    theme(legend.position = "bottom", text = element_text(size = 20))
+plot_grid(p2, p1, nrow = 1)
+ggsave($plotsdir("Paper", "RJ.pdf"), width = 14, height = 6)
+"""
 
 #### Colon hazards ####
 df1 = CSV.read(datadir("ColonModels","RW_Pois.csv"),DataFrame)
@@ -221,7 +237,7 @@ df8 = CSV.read(datadir("ColonModels","Gomp_NB.csv"),DataFrame)
 
 R"""
 dat1 = data.frame($df1)
-dat1 = cbind(dat1, "RW")
+dat1 = cbind(dat1, "Random Walk")
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat2 = data.frame($df2)
 dat2 = cbind(dat2, "Gaussian")
@@ -237,7 +253,7 @@ dat_1 <- rbind(dat1, dat2, dat3, dat4)
 
 R"""
 dat1 = data.frame($df5)
-dat1 = cbind(dat1, "RW")
+dat1 = cbind(dat1, "Random Walk")
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat2 = data.frame($df6)
 dat2 = cbind(dat2, "Gaussian")
@@ -271,7 +287,7 @@ p1 <- dat_1 %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) 
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(y)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3) 
 
 p2 <- dat_2 %>%
     subset(Time < 3.1) %>%
@@ -280,7 +296,7 @@ p2 <- dat_2 %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7,2)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3)
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(y)") + xlab("Time (years)") + ylim(0,0.5) + xlim(0,3)
 
 p3 <- dat_1 %>%
     subset(Time > 0.01) %>%
@@ -288,7 +304,7 @@ p3 <- dat_1 %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,2.0)
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(y)") + xlab("Time (years)") + ylim(0,2.0)
 
 p4 <- dat_2 %>%
     subset(Time > 0.01) %>%
@@ -296,7 +312,7 @@ p4 <- dat_2 %>%
     ggplot(aes(x = Time, y = value, col = Model, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "none", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(8,4,6,7,2)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,2.0) 
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(y)") + xlab("Time (years)") + ylim(0,2.0) 
 p5 <- plot_grid(p1,p2,p3,p4, nrow = 2)
 p6 <- plot_grid(p5, leg, nrow = 2, rel_heights = c(0.9, 0.1))
 ggsave($plotsdir("Paper", "ColonModels.pdf"), width = 14, height = 8)
@@ -311,39 +327,37 @@ df5 = CSV.read(datadir("TA174Models","GompBasePlaceboSurv.csv"),DataFrame)
 df6 = CSV.read(datadir("TA174Models","GompBaseTreatSurv.csv"),DataFrame)
 df7 = CSV.read(datadir("TA174Models","GompCentPlaceboSurv.csv"),DataFrame)
 df8 = CSV.read(datadir("TA174Models","GompCentTreatSurv.csv"),DataFrame)
-
 R"""
 dat1 = data.frame($df1)
-dat1 = cbind(dat1, "Gamma fixed")
+dat1 = cbind(dat1, "Gamma (fixed)")
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat2 = data.frame($df3)
-dat2 = cbind(dat2, "Gamma - converging")
+dat2 = cbind(dat2, "Gamma (converging)")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat3 = data.frame($df5)
-dat3 = cbind(dat3, "Gompertz baseline")
+dat3 = cbind(dat3, "Gompertz (baseline)")
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat4 = data.frame($df7)
-dat4 = cbind(dat4, "Gompertz centred")
+dat4 = cbind(dat4, "Gompertz (centred)")
 colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_1 <- rbind(dat1, dat2, dat3, dat4)
 """
 
 R"""
 dat1 = data.frame($df2)
-dat1 = cbind(dat1, "Gamma fixed")
+dat1 = cbind(dat1, "Gamma (fixed)")
 colnames(dat1) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat2 = data.frame($df4)
-dat2 = cbind(dat2, "Gamma - converging")
+dat2 = cbind(dat2, "Gamma (converging)")
 colnames(dat2) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat3 = data.frame($df6)
-dat3 = cbind(dat3, "Gompertz baseline")
+dat3 = cbind(dat3, "Gompertz (baseline)")
 colnames(dat3) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model")  
 dat4 = data.frame($df8)
-dat4 = cbind(dat4, "Gompertz centred")
+dat4 = cbind(dat4, "Gompertz (centred)")
 colnames(dat4) <- c("Time","Mean","LCI","Q1","Q4","UCI","Model") 
 dat_2 <- rbind(dat1, dat2, dat3, dat4)
 """
-
 
 
 R"""
@@ -402,7 +416,7 @@ df3_ = CSV.read(datadir("TA174Models","CovWane.csv"),DataFrame)
 
 R"""
 dat1 = data.frame($df1_)
-dat1$Arm = "Placebo"
+dat1$Arm = "Control"
 dat2 = data.frame($df2_)
 dat2$Arm = "Treatment"
 dat1 = rbind(dat1, dat2)
@@ -417,7 +431,7 @@ p1 <- dat1 %>%
     ggplot(aes(x = Time, y = value, col = Arm, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(t)") + xlab("Time (years)") + ylim(0,0.3) + xlim(0.01,4) 
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(y)") + xlab("Time (years)") + ylim(0,0.3) + xlim(0.01,4) 
 p2 <- dat3 %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     subset(Time > 4.0) %>%
