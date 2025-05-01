@@ -16,25 +16,32 @@ library("discSurv")
 nd_modr1 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
                       smooth_model = "random_walk",
                       mspline = list(add_knots=5))
-plot(nd_modr1)
+windows()
+plot_hazard(nd_modr1, tmax = 15)
+dev.off()
+pdf(file = "C:\\Users\\hardc\\Documents\\PEM_extrap\\plots\\Paper\\Mspline1.pdf")
+plot_hazard(nd_modr1, tmax = 15)
+dev.off()
+
 nd_modr2 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
                       smooth_model = "random_walk",
                       mspline = list(add_knots=10))
-plot(nd_modr2)
+windows()
+plot_hazard(nd_modr2, tmax = 15)
+dev.off()
+pdf(file = "C:\\Users\\hardc\\Documents\\PEM_extrap\\plots\\Paper\\Mspline2.pdf")
+plot_hazard(nd_modr2, tmax = 15)
+dev.off()
+
 nd_modr3 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
                       smooth_model = "random_walk",
                       mspline = list(add_knots=15))
-plot(nd_modr3)
-
-spline_out1 = hazard(nd_modr1, t = seq(0.01, 15, .001))
-
-
-
-extdat <- data.frame(start = c(10), stop =  c(15), 
-                     n = c(20), r = c(6))
-nd_modr2 <- survextrap(Surv(years, status) ~ 1, data=colons, chains=2, 
-                      smooth_model = "random_walk", external = extdat)
-spline_out2 = hazard(nd_modr2, t = seq(0.01, 15, .001))
+windows()
+plot_hazard(nd_modr3, tmax = 15)
+dev.off()
+pdf(file = "C:\\Users\\hardc\\Documents\\PEM_extrap\\plots\\Paper\\Mspline3.pdf")
+plot_hazard(nd_modr3, tmax = 15)
+dev.off()
 
 rmst(nd_modr1, t = c(3.1, 15), summ_fns = list(mean = mean, ~quantile(.x, probs=c(0.025, 0.975))), niter=1000)
 rmst(nd_modr2, t = c(3.1, 15), summ_fns = list(mean = mean, ~quantile(.x, probs=c(0.025, 0.975))),niter=1000)
@@ -55,6 +62,12 @@ Collapsing_Model <- collapsing.model(data.frame(status = colons$status, time = c
                                      n.chains = 2,
                                      timescale = "years")
 
+windows()
+plot(Collapsing_Model, type = "hazard")
+
+pdf(file = "C:\\Users\\hardc\\Documents\\PEM_extrap\\plots\\Paper\\IndPEM.pdf")
+plot(Collapsing_Model, type = "hazard")
+dev.off()
 
 object = Collapsing_Model
 chng.num = "all"
@@ -178,5 +191,35 @@ out = fit.models(formula=Surv(years,status)~1,data=colons,
 
 out$model.fitting
 out$models$'log-Normal'
+windows()
+plot(out, what = "hazard", xlim = c(0,15))
 
-summary.survHE(out, t = seq(0.1,15,by= 0.1))
+pdf(file = "C:\\Users\\hardc\\Documents\\PEM_extrap\\plots\\Paper\\StdParam.pdf")
+plot(out, what = "hazard", xlim = c(0,15))
+dev.off()
+summary.survHE(out, mod = 1, t = seq(0.1,15,by= 0.1))
+summary.survHE(out, mod = 2, t = seq(0.1,15,by= 0.1))
+summary.survHE(out, mod = 3, t = seq(0.1,15,by= 0.1))
+summary.survHE(out, mod = 4, t = seq(0.1,15,by= 0.1))
+summary.survHE(out, mod = 5, t = seq(0.1,15,by= 0.1))
+summary.survHE(out, mod = 6, t = seq(0.1,15,by= 0.1))
+print("---------------")
+summary.survHE(out, mod = 1, t = seq(0.1,3.1,by= 0.1))
+summary.survHE(out, mod = 2, t = seq(0.1,3.1,by= 0.1))
+summary.survHE(out, mod = 3, t = seq(0.1,3.1,by= 0.1))
+summary.survHE(out, mod = 4, t = seq(0.1,3.1,by= 0.1))
+summary.survHE(out, mod = 5, t = seq(0.1,3.1,by= 0.1))
+summary.survHE(out, mod = 6, t = seq(0.1,3.1,by= 0.1))
+out$models
+
+
+### RJ comp.
+
+library("BayesReversePLLH")
+m1 = BayesPiecewiseHazard(colons$years, colons$status, 15, 10000)
+out = GetALLHazPiece(seq(0.05,3.0, by = 0.05),m1)
+dat = data.frame(hy = colMeans(exp(out)), y = seq(0.05,3.0, by = 0.05))
+windows()
+dat %>%
+  ggplot(aes(x = y, y = hy)) + geom_line(col = "black") + theme_classic() + ylab("h(y)") + theme(text = element_text(size = 20))
+ggsave("C:\\Users\\hardc\\Documents\\PEM_extrap\\plots\\Paper\\BayesReversePLLH.pdf", height = 6, width = 18)

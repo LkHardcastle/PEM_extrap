@@ -225,6 +225,29 @@ plot_grid(p2, p1, nrow = 1)
 ggsave($plotsdir("Paper", "RJ.pdf"), width = 14, height = 6)
 """
 
+df2 = CSV.read(datadir("RJexp", "hazards_supp.csv"), DataFrame)
+
+R"""
+p2 <- $df2 %>% 
+    pivot_longer(median:UCI, values_to = "h(y)", names_to = "Quantity") %>%
+    ggplot(aes(x = Time, y = `h(y)`, linetype = Quantity)) + geom_line(col = cbPalette[6]) + theme_classic() + guides(linetype = FALSE) + 
+    scale_linetype_manual(values = c("dashed", "solid", "dashed")) + xlim(0.1,NA) +
+    theme(legend.position = "bottom", text = element_text(size = 20))
+p2
+ggsave($plotsdir("Paper", "RJ_supp.pdf"), width = 14, height = 6)
+"""
+
+#### Colon LOOIC ####
+
+df_LOOIC = CSV.read(datadir("ColonModels","LOOIC.csv"),DataFrame)
+
+R"""
+$df_LOOIC %>%
+    ggplot(aes(x = Gamma, y = LOOIC)) + geom_point(col = cbPalette[6], size = 2) + theme_classic() + 
+    theme(text = element_text(size = 20))
+ggsave($plotsdir("Paper", "ColonLOOIC.pdf"), width = 14, height = 6)
+"""
+
 #### Colon hazards ####
 df1 = CSV.read(datadir("ColonModels","RW_Pois.csv"),DataFrame)
 df2 = CSV.read(datadir("ColonModels","Gauss_Pois.csv"),DataFrame)
@@ -441,4 +464,20 @@ p2 <- dat3 %>%
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("log(h(y))") + xlab("Time (years)") + xlim(4.01,NA) #+ ylim(0,2)
 plot_grid(p1,p2)
 ggsave($plotsdir("Paper", "TA174covariate.pdf"), width = 14, height = 6)
+"""
+
+#### TA174 LOOIC
+
+df_LOOIC1 = CSV.read(datadir("TA174Models","LOOIC_trt.csv"),DataFrame)
+df_LOOIC2 = CSV.read(datadir("TA174Models","LOOIC_control.csv"),DataFrame)
+
+R"""
+p1 <- $df_LOOIC1 %>%
+    ggplot(aes(x = Gamma, y = LOOIC)) + geom_point(col = cbPalette[6], size = 2) + theme_classic() + 
+    theme(text = element_text(size = 20))
+p2 <- $df_LOOIC2 %>%
+    ggplot(aes(x = Gamma, y = LOOIC)) + geom_point(col = cbPalette[6], size = 2) + theme_classic() + 
+    theme(text = element_text(size = 20))
+plot_grid(p1,p2, nrow = 1)
+ggsave($plotsdir("Paper", "TA174LOOIC.pdf"), width = 14, height = 6)
 """

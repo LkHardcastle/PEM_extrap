@@ -51,7 +51,7 @@ for Γ_ in test_Gamma
     x0, v0, s0 = init_params(p, dat)
     v0 = v0./norm(v0)
     priors = BasicPrior(1.0, PC(1.0, 2, 0.5, Inf), FixedW([0.5]), 1.0, CtsPois(Γ_, 1.0, 100.0, 4.1), [RandomWalk()], [0.1], 2.0)
-    @time out = pem_fit(state0, dat, priors, settings, test_times)
+    @time out = pem_fit(state0, dat, priors, settings, test_times, 1_000)
     println(out[3]);println(out[4])
     llhood = get_llhood(out[1], dat, 1_000)
     est = ParetoSmooth.psis_loo(llhood, chain_index = ones(size(llhood, 2))).estimates
@@ -62,6 +62,8 @@ for Γ_ in test_Gamma
     push!(Gamma_used, Γ_)
     push!(Gamma_used, Γ_)
 end 
+loo_df = DataFrame(Gamma = Gamma_used, LOOIC = -2*loo_est)
+CSV.write(datadir("TA174Models","LOOIC_control.csv"),loo_df)
 plot(scatter(Gamma_used, -2*loo_est))
 
 Random.seed!(2352)
@@ -94,7 +96,7 @@ for Γ_ in test_Gamma
     x0, v0, s0 = init_params(p, dat)
     v0 = v0./norm(v0)
     priors = BasicPrior(1.0, PC(1.0, 2, 0.5, Inf), FixedW([0.5]), 1.0, CtsPois(Γ_, 1.0, 100.0, 4.1), [RandomWalk()], [0.1], 2.0)
-    @time out = pem_fit(state0, dat, priors, settings, test_times)
+    @time out = pem_fit(state0, dat, priors, settings, test_times, 1_000)
     println(out[3]);println(out[4])
     llhood = get_llhood(out[1], dat, 1_000)
     est = ParetoSmooth.psis_loo(llhood, chain_index = ones(size(llhood, 2))).estimates
@@ -105,6 +107,8 @@ for Γ_ in test_Gamma
     push!(Gamma_used, Γ_)
     push!(Gamma_used, Γ_)
 end 
+loo_df = DataFrame(Gamma = Gamma_used, LOOIC = -2*loo_est)
+CSV.write(datadir("TA174Models","LOOIC_trt.csv"),loo_df)
 plot(scatter(Gamma_used, -2*loo_est))
 
 

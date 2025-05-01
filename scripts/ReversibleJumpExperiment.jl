@@ -121,3 +121,6 @@ df2 = vcat(df_pdmp, df_rj)
 CSV.write(datadir("RJexp", "trace_plots_main.csv"),df1)
 CSV.write(datadir("RJexp", "hazards.csv"),df2)
 
+df_rj_supp = DataFrame(Time = collect(0.01:0.01:3.0), median = exp.(vec(median(h11[:,:,:], dims = 3))), 
+                    LCI = exp.(quantile.(eachrow(h11[1,:,:]), 0.025)), UCI = exp.(quantile.(eachrow(h11[1,:,:]), 0.975)), Method = "RJ")
+CSV.write(datadir("RJexp", "hazards_supp.csv"),df_rj_supp)

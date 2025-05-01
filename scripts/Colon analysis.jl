@@ -48,8 +48,8 @@ loo_est = []
 for Γ_ in test_Gamma
     x0, v0, s0 = init_params(p, dat)
     v0 = v0./norm(v0)
-    priors = BasicPrior(1.0, PC([1.0], [2], [0.5], Inf), FixedW([0.5]), 1.0, CtsPois(Γ_, 1.0, 100.0, 3.1), [RandomWalk()], [0.1], 2.0)
-    @time out = pem_fit(state0, dat, priors, settings, test_times)
+    priors = BasicPrior(1.0, PC(1.0, 2, 0.5, Inf), FixedW([0.5]), 1.0, CtsPois(Γ_, 1.0, 100.0, 3.1), [RandomWalk()], [0.1], 2.0)
+    @time out = pem_fit(state0, dat, priors, settings, test_times, 1_000)
     println(out[3]);println(out[4])
     push!(WAIC, get_WAIC(out[1], dat, 1_000)[1])
     push!(WAIC, get_WAIC(out[2], dat, 1_000)[1])
@@ -65,6 +65,8 @@ end
 
 plot(scatter(Gamma_used, WAIC))
 scatter!(Gamma_used, -2*loo_est)
+loo_df = DataFrame(Gamma = Gamma_used, LOOIC = -2*loo_est)
+CSV.write(datadir("ColonModels","LOOIC.csv"),loo_df)
 
 x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
