@@ -33,6 +33,7 @@ $df %>%
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.12, col = cbPalette[4], linetype = "dashed") + 
     annotate("segment", x = 2.7, y = 0.15, xend = 4, yend = 0.7, col = cbPalette[7], linetype = "dashed")
     #ggsave($plotsdir("Extrap.png"), width = 9, height = 4)
+    ggsave($plotsdir("Extrap_square.png"), width = 6, height = 6)
     #ggsave($plotsdir("Extrap.pdf"), width = 14, height = 6)
 """
 
@@ -422,4 +423,48 @@ p3 <- dat_diffusion %>%
 plot_grid(p1,p2,p3,ncol = 3)
 #ggsave($plotsdir("Talks","Diffusions.png"), width = 17, height = 4.8)
 ggsave($plotsdir("Talks","Diffusions.pdf"), width = 14, height = 4.5)
+"""
+
+
+### Simple parametric
+
+R"""
+y <- seq(0.01,5,0.01)
+lambda <- 0.5
+gamma <- 0.6
+h_y <- lambda*gamma*y^(gamma-1)
+df <- data.frame(Time = y, h_y = h_y)
+df %>%
+  ggplot(aes(x = Time, y = h_y)) + geom_path(col = cbPalette[6]) + 
+  theme_classic() + ylab("h(y)") + ylim(0,1) + theme(text = element_text(size = 20)) + 
+  geom_vline(xintercept = 3, linetype = "dotted")
+ggsave($plotsdir("Talks","Parametric.png"), width = 12, height = 6)
+"""
+
+R"""
+set.seed(8090)
+t <- seq(0,3,0.001)
+innovations <- rnorm(length(t),0,sqrt(0.001))
+brownian_motion <- c(cumsum(innovations))
+plot(t, brownian_motion, type = "lty")
+discretisation <- rep(NA,length(brownian_motion))
+for(i in seq(1,length(brownian_motion)- 300,300)){
+    discretisation[i:(i+299)] <- brownian_motion[i]
+}
+plot_data <- data.frame(Time = t, Diffusion = brownian_motion, Discretisation = discretisation)
+plot_data %>%
+    pivot_longer(Diffusion:Discretisation, values_to = "Process") %>%
+    subset(name == "Diffusion") %>%
+    ggplot(aes(x = Time, y = Process, col = name)) + geom_line() + 
+    theme_classic() + scale_colour_manual(values = cbPalette[6]) + 
+  theme(legend.position="none") +
+  theme(legend.title=element_blank(), text = element_text(size = 20))
+  ggsave($plotsdir("Talks","Diffusion1.png"), width = 8  , height = 6)
+plot_data %>%
+    pivot_longer(Diffusion:Discretisation, values_to = "Process") %>%
+    ggplot(aes(x = Time, y = Process, col = name)) + geom_line() + 
+    theme_classic() + scale_colour_manual(values = cbPalette[6:7]) + 
+  theme(legend.position="none") +
+  theme(legend.title=element_blank(), text = element_text(size = 20))
+  ggsave($plotsdir("Talks","Diffusion2.png"), width = 8, height = 6)
 """

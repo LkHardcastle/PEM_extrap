@@ -216,11 +216,12 @@ p1 <- $df1 %>%
     pivot_longer(PDMP:RJ, names_to = "Method", values_to = "log(h(1.2))") %>%
     ggplot(aes(x = Iteration, y = `log(h(1.2))`, col = Method)) + geom_path() + theme_classic() + 
     scale_colour_manual(values = cbPalette[6:7]) + theme(legend.position = "bottom", text = element_text(size = 20)) 
+
 p2 <- $df2 %>% 
     pivot_longer(median:UCI, values_to = "h(y)", names_to = "Quantity") %>%
     ggplot(aes(x = Time, y = `h(y)`, col = Method, linetype = Quantity)) + geom_line() + theme_classic() + guides(linetype = FALSE) + 
     scale_colour_manual(values = cbPalette[6:7]) + scale_linetype_manual(values = c("dashed", "solid", "dashed")) + 
-    theme(legend.position = "bottom", text = element_text(size = 20))
+    theme(legend.position = "bottom", text = element_text(size = 20)) + xlim(0.15,NA)
 plot_grid(p2, p1, nrow = 1)
 ggsave($plotsdir("Paper", "RJ.pdf"), width = 14, height = 6)
 """
@@ -454,7 +455,7 @@ p1 <- dat1 %>%
     ggplot(aes(x = Time, y = value, col = Arm, linetype = name)) + geom_step() +
     theme_classic() + guides(col = guide_legend(nrow = 2), linetype = FALSE) + 
     theme(legend.position = "bottom", text = element_text(size = 20)) + scale_colour_manual(values = cbPalette[c(6,7)]) +
-    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(y)") + xlab("Time (years)") + ylim(0,0.3) + xlim(0.01,4) 
+    scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("h(y)") + xlab("Time (years)") + ylim(0,0.3) + xlim(0.05,4) 
 p2 <- dat3 %>%
     pivot_longer(c(Mean, LCI, UCI),) %>%
     subset(Time > 4.0) %>%
@@ -464,6 +465,8 @@ p2 <- dat3 %>%
     scale_linetype_manual(values = c("dotdash","solid","dotdash")) + ylab("log(h(y))") + xlab("Time (years)") + xlim(4.01,NA) #+ ylim(0,2)
 plot_grid(p1,p2)
 ggsave($plotsdir("Paper", "TA174covariate.pdf"), width = 14, height = 6)
+ggsave($plotsdir("Paper", "TA174covariate.png"), width = 12, height = 6)
+ggsave($plotsdir("Paper", "TA174covariate1.png"), width = 8 p2, height = 6)
 """
 
 #### TA174 LOOIC
@@ -481,3 +484,4 @@ p2 <- $df_LOOIC2 %>%
 plot_grid(p1,p2, nrow = 1)
 ggsave($plotsdir("Paper", "TA174LOOIC.pdf"), width = 14, height = 6)
 """
+

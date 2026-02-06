@@ -178,9 +178,15 @@ v0 = v0./norm(v0)
 nits = 10_000
 nsmp = 10
 state0 = ECMC2(x0, v0, s0, collect(.!s0), breaks, t0, length(breaks), true, findall(s0))
-priors = BasicPrior(1.0, PC(1.0, 2, 0.5, Inf), FixedW([0.5,0.5]), 1.0, CtsPois(15.0, 1.0, 100.0, 4.1), [RandomWalk(), RandomWalk()], [0.01], 2)
+
 settings = Splitting(nits, nsmp, 1_000_000, 1.0, 5.0, 0.1, false, true, 0.01, 50.0)
+
+# Define priors - structs within
+priors = BasicPrior(1.0, PC(1.0, 2, 0.5, Inf), FixedW([0.5,0.5]), 1.0, CtsPois(15.0, 1.0, 100.0, 4.1), [RandomWalk(), RandomWalk()], [0.01], 2)
+
 out = pem_fit(state0, dat, priors, settings, test_times)
+
+
 println(out[3]);println(out[4])
 
 grid = sort(unique(out[1]["Sk_s_loc"][cumsum(out[1]["Sk_s"],dims = 1)[1,:,:] .> 0.0]))
