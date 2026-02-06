@@ -15,8 +15,8 @@ function grid_update!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior, 
 end
 
 function pois_gen(grid::CtsPois, priors::Prior, state::State)
-    Pois_new = []
-    weight_vec = []
+    Pois_new = Int[]     
+    weight_vec = Float64[]
     for k in axes(state.x,1)
         push!(Pois_new, rand(Poisson((priors.grid.max_time - state.s_loc[1])*priors.grid.Γ*(1 - priors.ω.ω[k]))))
         push!(weight_vec, (1 - priors.ω.ω[k]))
@@ -25,8 +25,8 @@ function pois_gen(grid::CtsPois, priors::Prior, state::State)
 end
 
 function pois_gen(grid::CtsNB, priors::Prior, state::State)
-    Pois_new = []
-    weight_vec = []
+    Pois_new = Int[]     
+    weight_vec = Float64[]
     # Γ∣J+K ∼ Gamma(α + J + K, β + 1)
     #priors.grid.Γ = rand(Gamma(state.J + priors.grid.α, 1/(priors.grid.β + 1)))
     priors.grid.Γ = rand(Gamma(sum(state.s) + priors.grid.α, priors.ω.ω[1]/(priors.grid.β + 1)))
@@ -38,8 +38,8 @@ function pois_gen(grid::CtsNB, priors::Prior, state::State)
 end
 
 function pois_gen(grid::CtsNB2, priors::Prior, state::State)
-    Pois_new = []
-    weight_vec = []
+    Pois_new = Int[]     
+    weight_vec = Float64[]
     # Γ∣J+K ∼ Gamma(α + J + K, β + 1)
     priors.grid.β = rand(Gamma(priors.grid.a, priors.grid.Γ + priors.grid.b))
     priors.grid.Γ = rand(Gamma(sum(state.s) + priors.grid.α, priors.ω.ω[1]/(priors.grid.β + 1)))

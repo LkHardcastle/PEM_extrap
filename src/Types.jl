@@ -68,6 +68,8 @@ mutable struct Dynamics
     δ::Matrix{Int64}
     W::Matrix{Float64}
     sampler_eval::SamplerEval
+    buf_cum_x::Matrix{Float64} 
+    buf_cum_v::Matrix{Float64}
 end
 
 mutable struct Times 
@@ -309,4 +311,4 @@ function Base.copy(state::RWM)
     return RWM(copy(state.x), copy(state.v), copy(state.s), copy(state.g), copy(state.s_loc), copy(state.t), copy(state.J), copy(state.b), copy(state.active), copy(state.step_size), copy(state.acc))
 end
 
-Dynamics(state::State, dat::PEMData) = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.s), copy(dat.δ), copy(dat.W), SamplerEval(zeros(2),0, 0 ,zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2))))
+Dynamics(state::State, dat::PEMData) = Dynamics(1, 1, 0.0, 0, copy(state.x), copy(state.x), copy(state.s), copy(dat.δ), copy(dat.W), SamplerEval(zeros(2),0, 0 ,zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2)), zeros(Int,size(state.x,2))), zeros(size(state.x)), zeros(size(state.x)))

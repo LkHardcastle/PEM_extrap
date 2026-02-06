@@ -41,6 +41,7 @@ x0, v0, s0 = init_params(p, dat)
 v0 = v0./norm(v0)
 
 test_Gamma = [1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0]
+test_Gamma = [10.0]
 Random.seed!(23521)
 Gamma_used = []
 WAIC = []

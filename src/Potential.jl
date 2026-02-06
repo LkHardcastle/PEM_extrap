@@ -1,17 +1,23 @@
-
-function AV_calc!(state::State, dyn::Dynamics, priors::Prior)
-    x = copy(state.x)
-    #x[:,1] .= x[:,1]./priors.σ.σ
-    A = cumsum(x, dims = 2)
-    dyn.A = transpose(dat.UQ)*A
-    v = copy(state.v)
-    #v[:,1] .= v[:,1]./priors.σ.σ
-    V = cumsum(v, dims = 2)
-    dyn.V = transpose(dat.UQ)*V
+function AV_calc!(state::State, dyn::Dynamics, dat::PEMData, priors::Prior)
+    rows_x, cols_x = size(state.x)
+    if !isdefined(dyn, :buf_cum_x) || size(dyn.buf_cum_x) != (rows_x, cols_x)
+        dyn.buf_cum_x = Matrix{Float64}(undef, rows_x, cols_x)
+        dyn.buf_cum_v = Matrix{Float64}(undef, rows_x, cols_x)
+    end
+    out_rows = size(dat.UQ, 2) 
+    
+    if size(dyn.A) != (out_rows, cols_x)
+        dyn.A = Matrix{Float64}(undef, out_rows, cols_x)
+        dyn.V = Matrix{Float64}(undef, out_rows, cols_x)
+    end
+    cumsum!(dyn.buf_cum_x, state.x, dims = 2)
+    mul!(dyn.A, transpose(dat.UQ), dyn.buf_cum_x)
+    cumsum!(dyn.buf_cum_v, state.v, dims = 2)
+    mul!(dyn.V, transpose(dat.UQ), dyn.buf_cum_v)
 end
 
 function U_new!(state::State, dyn::Dynamics, priors::Prior)
-    AV_calc!(state, dyn, priors)
+    AV_calc!(state, dyn, priors, dat)
     U_, ∂U_ = U_eval(state, 0.0, dyn, priors)
     return U_, ∂U_
 end
@@ -30,12 +36,19 @@ end
 
 function U_eval_rj(state::State, t::Float64, dyn::Dynamics, priors::Prior)
     U_ = sum((exp.(dyn.A).*dyn.W .- dyn.δ.*dyn.A)) 
-    active_j = filter(idx -> idx[1] == j, state.active)
-    for k in active_j
-        if k != active_j[1]
-            U_ -= logpdf(Normal(0.0, 1), (state.x[k] + state.v[k]*t)*priors.σ.σ)
-        else
-            U_ -= logpdf(Normal(0.0, priors.σ0), (state.x[k] + state.v[k]*t)*priors.σ.σ)
+    ∂U_ = 0.0 # Define return variable
+    for j in axes(state.x, 1)
+        active_j = filter(idx -> idx[1] == j, state.active)
+        if isempty(active_j)
+            continue
+        end
+        for k in active_j
+            val = (state.x[k] + state.v[k]*t) * priors.σ.σ[j] 
+            if k != active_j[1]
+                U_ -= logpdf(Normal(0.0, 1), val)
+            else
+                U_ -= logpdf(Normal(0.0, priors.σ0), val)
+            end
         end
     end
     return U_, ∂U_
@@ -79,7 +92,7 @@ end
 
 function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::BasicPrior)
     ∇U_out = zeros(size(state.active))
-    AV_calc!(state, dyn, priors)
+    AV_calc!(state, dyn, priors, dat)
     # L x J matrix
     U_ind = reverse(cumsum(reverse(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
     # Convert to p x J matrix
@@ -103,7 +116,7 @@ end
 
 function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
     ∇U_out = zeros(size(state.active))
-    AV_calc!(state, dyn, priors)
+    AV_calc!(state, dyn, priors, dat)
     # L x J matrix
     U_ind = reverse(cumsum(reverse(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ, dims = 2), dims = 2), dims = 2)
     # Convert to p x J matrix
@@ -125,7 +138,7 @@ function ∇U(state::State, dat::PEMData, dyn::Dynamics, priors::EulerMaruyama)
 end
 
 function ∇σ(state::State, dat::PEMData, dyn::Dynamics, priors::Prior, σ::Union{PC, InvGamma})
-    AV_calc!(state, dyn, priors)
+    AV_calc!(state, dyn, priors, dat)
     out = sum(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ))
     #println(dyn.A.*priors.σ.σ.*(exp.(dyn.A.*priors.σ.σ).*dyn.W .- dyn.δ))
     #println(out)
