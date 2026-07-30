@@ -140,6 +140,9 @@ function sampler_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, 
 end
 
 function split_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, dat::PEMData, times::Times, settings::Splitting)
+    #### Store initial state 
+    #state_curr = copy(state)
+
     if settings.h_rate > 0.0
         grid_update!(state, dyn, dat, priors, priors.grid)
     end
@@ -165,6 +168,8 @@ function split_inner!(state::Union{ECMC2, BPS}, dyn::Dynamics, priors::Prior, da
     if rand() < 1 - exp(-settings.r_rate*settings.δ*0.5)
         refresh!(state, dat, dyn, priors)
     end
+    #### Metropolis correction
+
 end
 
 function get_time!(dyn::Dynamics, times::Times)
